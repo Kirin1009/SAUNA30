@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#121517">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SAUNA 30</title>
+<style>
+  :root{
+    --ground:#121517; --panel:#1A1E21; --line:#2B3135;
+    --text:#E6E9E7; --mid:#9BA3A8; --muted:#6B7378;
+    --ok:#8FB88A; --hot:#E2603C; --cold:#4A8FB8;
+    --gifu:#D9A441; --aichi:#E2603C; --shiga:#4A8FB8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--text);
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;padding-bottom:44px}
+  .mono{font-family:ui-monospace,"SF Mono","Roboto Mono",monospace}
+  .wrap{max-width:520px;margin:0 auto;padding:0 18px}
+  header{padding:calc(24px + env(safe-area-inset-top)) 0 14px;border-bottom:1px solid var(--line)}
+  .hrow{display:flex;justify-content:space-between;align-items:baseline}
+  h1{font-family:ui-monospace,"SF Mono","Roboto Mono",monospace;font-size:15px;font-weight:500;letter-spacing:.3em;margin:0}
+  .edition{font-size:9.5px;color:var(--muted);letter-spacing:.1em}
+  .sub{margin:8px 0 0;font-size:12px;color:var(--muted);line-height:1.7}
+  .prefgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:16px}
+  .prefcell{background:var(--panel);padding:12px 10px}
+  .prefcell .row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px}
+  .prefcell .num{font-family:ui-monospace,monospace;font-size:14px}
+  .prefcell .num small{color:var(--muted);font-size:10px}
+  .bar{height:3px;background:var(--line);margin-top:9px;border-radius:2px;overflow:hidden}
+  .bar>div{height:100%;border-radius:2px;transition:width .3s}
+  .actions{display:flex;gap:10px;margin-top:16px;align-items:center}
+  button{font-family:inherit;cursor:pointer}
+  .btn{font-size:13px;padding:11px 16px;border-radius:3px;border:1px solid var(--line);background:transparent;color:var(--text)}
+  .btn.primary{background:var(--text);color:var(--ground);border-color:var(--text)}
+  .btn:disabled{opacity:.4}
+  .total{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);white-space:nowrap}
+  .notice{margin-top:13px;padding:11px 13px;border:1px solid var(--line);border-left:2px solid var(--ok);
+    background:var(--panel);font-size:12.5px;line-height:1.7;color:var(--mid);border-radius:2px}
+  .notice.err{border-left-color:var(--hot)}
+  nav{display:flex;gap:20px;margin-top:26px;border-bottom:1px solid var(--line)}
+  nav button{background:none;border:none;border-bottom:1px solid transparent;color:var(--muted);
+    font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.14em;padding:0 0 10px}
+  nav button.on{color:var(--text);border-bottom-color:var(--text)}
+  .pane{margin-top:16px;display:none}
+  .pane.on{display:block}
+  svg{width:100%;display:block}
+  .legend{display:flex;gap:16px;justify-content:center;margin-top:4px;font-family:ui-monospace,monospace;font-size:10px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dotchip{width:7px;height:7px;border-radius:4px;display:inline-block}
+  .maphint{font-size:11.5px;color:var(--muted);line-height:1.8;margin-top:14px}
+  .filters{display:flex;gap:8px;margin-bottom:14px}
+  .filters button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:3px;font-size:12px;padding:6px 12px}
+  .filters button.on{background:var(--text);color:var(--ground);border-color:var(--text)}
+  .card{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel);
+    border:1px solid var(--line);border-radius:3px;padding:12px 14px;margin-bottom:8px;color:var(--text)}
+  .rank{font-family:ui-monospace,monospace;font-size:11px;width:34px;flex-shrink:0}
+  .dot{width:9px;height:9px;border-radius:5px;flex-shrink:0}
+  .card .body{flex:1;min-width:0}
+  .card .name{font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card .meta{font-family:ui-monospace,monospace;font-size:10px;color:var(--muted)}
+  .card .best{font-family:ui-monospace,monospace;font-size:12px;color:var(--mid);flex-shrink:0}
+  .logitem{border-bottom:1px solid var(--line);padding:13px 2px}
+  .logitem .top{display:flex;justify-content:space-between;align-items:baseline}
+  .logitem .meta{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--muted);display:flex;gap:14px;margin-top:7px}
+  .logitem .memo{margin:8px 0 0;font-size:13px;color:var(--mid);line-height:1.75}
+  .empty{border:1px dashed var(--line);border-radius:3px;padding:24px 18px;font-size:13px;color:var(--muted);line-height:1.85}
+  .eyebrow{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.18em;color:var(--muted)}
+  .settext{font-size:12px;color:var(--muted);line-height:1.85;margin:8px 0 0}
+  input[type=range]{width:100%;accent-color:var(--hot)}
+  .overlay{position:fixed;inset:0;background:rgba(8,10,11,.74);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .overlay.on{display:flex}
+  .sheet{background:var(--panel);border-top:1px solid var(--line);width:100%;max-width:520px;max-height:88vh;
+    overflow-y:auto;padding:20px 18px calc(28px + env(safe-area-inset-bottom));border-radius:10px 10px 0 0}
+  .sheet .shead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  .xbtn{background:none;border:none;color:var(--muted);font-size:20px;line-height:1}
+  .field{display:block;margin-bottom:16px}
+  .field .eyebrow{margin-bottom:6px}
+  .input{width:100%;background:var(--ground);border:1px solid var(--line);border-radius:3px;color:var(--text);
+    font-family:inherit;font-size:15px;padding:10px 12px;outline:none}
+  textarea.input{min-height:80px;resize:vertical;line-height:1.7}
+  .slidelabel{font-family:ui-monospace,monospace;font-size:11px;margin-bottom:6px}
+  .tempsrow{display:flex;gap:14px;margin-bottom:16px}
+  .tempsrow>div{flex:1}
+  .choosebtn{display:flex;justify-content:space-between;width:100%;background:var(--ground);border:1px solid var(--line);
+    border-radius:3px;padding:13px 14px;margin-bottom:8px;color:var(--text);font-size:14px}
+  .choosebtn .d{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="hrow">
+      <h1>SAUNA&nbsp;30</h1>
+      <span class="mono edition" id="edition"></span>
+    </div>
+    <p class="sub">愛知・岐阜・滋賀 — イキタイTOP10を踏破する</p>
+  </header>
+
+  <div class="prefgrid" id="prefgrid"></div>
+
+  <div class="actions">
+    <button class="btn primary" id="stampBtn" style="flex:1">現在地でスタンプ</button>
+    <span class="total" id="total"></span>
+  </div>
+
+  <div id="notice" style="display:none"></div>
+
+  <nav id="tabs">
+    <button data-tab="map" class="on">地図</button>
+    <button data-tab="list">施設</button>
+    <button data-tab="log">履歴</button>
+    <button data-tab="set">設定</button>
+  </nav>
+
+  <div class="pane on" id="pane-map">
+    <div id="mapbox"></div>
+    <div class="legend">
+      <span><i class="dotchip" style="background:var(--gifu)"></i>岐阜</span>
+      <span><i class="dotchip" style="background:var(--aichi)"></i>愛知</span>
+      <span><i class="dotchip" style="background:var(--shiga)"></i>滋賀</span>
+      <span><i class="dotchip" style="border:1px solid var(--muted)"></i>未踏</span>
+    </div>
+    <p class="maphint">点をタップすると施設詳細。灯りが増えるほど地図が埋まっていきます。</p>
+  </div>
+
+  <div class="pane" id="pane-list">
+    <div class="filters" id="filters"></div>
+    <div id="listbox"></div>
+  </div>
+
+  <div class="pane" id="pane-log"><div id="logbox"></div></div>
+
+  <div class="pane" id="pane-set">
+    <div class="eyebrow" id="radlabel"></div>
+    <input type="range" min="100" max="1000" step="50" id="radius">
+    <p class="settext">名古屋・栄はTOP10のうち3施設が徒歩圏に密集しています。複数が半径内に入った場合は候補から選択する方式です。</p>
+    <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
+      <div class="eyebrow">この版について</div>
+      <p class="settext" id="editionNote"></p>
+    </div>
+    <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
+      <div class="eyebrow">データ</div>
+      <p class="settext">記録はこの端末のブラウザに保存されます。バックアップはここから：</p>
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn" id="exportBtn" style="flex:1">書き出し (JSON)</button>
+        <button class="btn" id="importBtn" style="flex:1">読み込み</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+
+<script>
+"use strict";
+/* ============ 定数・データ ============ */
+const EDITION = "2026.08.05版";
+const PREF = {
+  gifu:{label:"岐阜", color:"#D9A441"},
+  aichi:{label:"愛知", color:"#E2603C"},
+  shiga:{label:"滋賀", color:"#4A8FB8"},
+};
+const FRAME = [
+  {id:"g1",pref:"gifu",rank:1,name:"大垣サウナ",city:"大垣市",ikitai:8685,lat:35.363156,lng:136.633431,note:"男性専用"},
+  {id:"g2",pref:"gifu",rank:2,name:"岐阜各務原 恵みの湯",city:"各務原市",ikitai:5829,lat:35.399955,lng:136.896571},
+  {id:"g3",pref:"gifu",rank:3,name:"SAUNA RESORT 天光の湯",city:"多治見市",ikitai:5675,lat:35.315542,lng:137.135484},
+  {id:"g4",pref:"gifu",rank:4,name:"新岐阜サウナ",city:"岐阜市",ikitai:5472,lat:35.417667,lng:136.76173,note:"男性専用"},
+  {id:"g5",pref:"gifu",rank:5,name:"田辺温熱保養所",city:"大垣市",ikitai:4785,lat:35.365174,lng:136.653147,note:"事前予約制"},
+  {id:"g6",pref:"gifu",rank:6,name:"湯どころ みのり",city:"岐南町",ikitai:3120,lat:35.390689,lng:136.769918},
+  {id:"g7",pref:"gifu",rank:7,name:"ITADORI SAUNA",city:"関市板取",ikitai:2755,lat:35.665296,lng:136.819135,note:"事前予約制"},
+  {id:"g8",pref:"gifu",rank:8,name:"Kanzaki Sanga Sauna",city:"山県市",ikitai:2346,lat:35.619731,lng:136.728471},
+  {id:"g9",pref:"gifu",rank:9,name:"天然温泉 三峰",city:"可児市",ikitai:1721,lat:35.388862,lng:137.080499},
+  {id:"g10",pref:"gifu",rank:10,name:"時のホテル",city:"土岐市",ikitai:1557,lat:35.384621,lng:137.19034},
+  {id:"a1",pref:"aichi",rank:1,name:"ウェルビー栄",city:"名古屋市中区",ikitai:24264,lat:35.166396,lng:136.905682,note:"男性専用"},
+  {id:"a2",pref:"aichi",rank:2,name:"KIWAMI SAUNA",city:"名古屋市西区",ikitai:11304,lat:35.185174,lng:136.890274,note:"男性専用"},
+  {id:"a3",pref:"aichi",rank:3,name:"SaunaLab Nagoya",city:"名古屋市中区",ikitai:10422,lat:35.166971,lng:136.904088},
+  {id:"a4",pref:"aichi",rank:4,name:"サウナイーグル",city:"知立市",ikitai:9164,lat:35.008653,lng:137.035657,note:"男性専用・24h"},
+  {id:"a5",pref:"aichi",rank:5,name:"キャナルリゾート",city:"名古屋市中川区",ikitai:7990,lat:35.118885,lng:136.87841},
+  {id:"a6",pref:"aichi",rank:6,name:"ウェルビー今池",city:"名古屋市千種区",ikitai:6804,lat:35.166573,lng:136.938512,note:"男性専用"},
+  {id:"a7",pref:"aichi",rank:7,name:"リラクゼーションスパ アペゼ",city:"名古屋市千種区",ikitai:5531,lat:35.167713,lng:136.937118},
+  {id:"a8",pref:"aichi",rank:8,name:"サウナ&カプセル フジ",city:"名古屋市中区錦",ikitai:4978,lat:35.169116,lng:136.903605,note:"男性専用"},
+  {id:"a9",pref:"aichi",rank:9,name:"竜泉寺の湯 名古屋守山本店",city:"名古屋市守山区",ikitai:4888,lat:35.223876,lng:136.987668},
+  {id:"a10",pref:"aichi",rank:10,name:"サウナピア",city:"豊橋市",ikitai:4587,lat:34.741408,lng:137.347675,note:"男性専用"},
+  {id:"s1",pref:"shiga",rank:1,name:"8Seas Sauna HIRA",city:"大津市南小松",ikitai:3799,lat:35.237337,lng:135.946617,note:"事前予約制"},
+  {id:"s2",pref:"shiga",rank:2,name:"都湯 -膳所本店-",city:"大津市",ikitai:3774,lat:34.998398,lng:135.88372},
+  {id:"s3",pref:"shiga",rank:3,name:"DOGA SAUNA",city:"多賀町",ikitai:2354,lat:35.183052,lng:136.309335,note:"営業日注意"},
+  {id:"s4",pref:"shiga",rank:4,name:"おふろcaféびわこ座",city:"大津市",ikitai:1955,lat:34.990652,lng:135.935434},
+  {id:"s5",pref:"shiga",rank:5,name:"長命寺温泉 天葉の湯",city:"近江八幡市",ikitai:1792,lat:35.158022,lng:136.061604},
+  {id:"s6",pref:"shiga",rank:6,name:"スパリゾート雄琴 あがりゃんせ",city:"大津市雄琴",ikitai:1551,lat:35.086016,lng:135.894641},
+  {id:"s7",pref:"shiga",rank:7,name:"北近江リゾート 北近江の湯",city:"長浜市",ikitai:1089,lat:35.486025,lng:136.226969},
+  {id:"s8",pref:"shiga",rank:8,name:"草津湯元 水春",city:"草津市",ikitai:860,lat:34.997689,lng:135.918095},
+  {id:"s9",pref:"shiga",rank:9,name:"守山湯元水春 ピエリ守山",city:"守山市",ikitai:689,lat:35.12293,lng:135.944614},
+  {id:"s10",pref:"shiga",rank:10,name:"SHIGARAKI SAUNA",city:"甲賀市信楽",ikitai:688,lat:34.857337,lng:135.973943,note:"宿泊者限定"},
+];
+const KEY = "sauna30-tokai:v1";
+
+/* ============ 状態 ============ */
+let state = { visits: [], radius: 300 };
+try {
+  const raw = localStorage.getItem(KEY);
+  if (raw) { const d = JSON.parse(raw); state.visits = d.visits||[]; state.radius = d.radius||300; }
+} catch(e) {}
+let tab = "map", prefFilter = "all", lastPos = null;
+
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ notify("保存に失敗しました。","err"); } };
+const stamped = () => new Set(state.visits.map(v=>v.facilityId));
+const visitsOf = id => state.visits.filter(v=>v.facilityId===id);
+const byId = id => FRAME.find(f=>f.id===id);
+const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+const uid = () => Math.random().toString(36).slice(2,10);
+
+/* ============ geo ============ */
+const R=6371000, rad=d=>d*Math.PI/180;
+function distance(a,b){
+  const dLat=rad(b.lat-a.lat), dLng=rad(b.lng-a.lng);
+  const s=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+const fmtDist = m => m<1000 ? Math.round(m)+"m" : (m/1000).toFixed(1)+"km";
+function getPosition(){
+  return new Promise((res,rej)=>{
+    if(!navigator.geolocation){ rej(new Error("この端末では位置情報を取得できません。施設一覧から手動スタンプが使えます。")); return; }
+    navigator.geolocation.getCurrentPosition(
+      p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),
+      e=>rej(new Error(e.code===1
+        ? "位置情報が許可されていません。ブラウザ設定で許可するか、施設一覧から手動スタンプを。"
+        : "現在地を取得できませんでした。施設一覧から手動スタンプが使えます。")),
+      {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+  });
+}
+
+/* ============ 通知 ============ */
+let noticeTimer=null;
+function notify(msg,type){
+  const el=document.getElementById("notice");
+  el.className="notice"+(type==="err"?" err":"");
+  el.textContent=msg; el.style.display="block";
+  clearTimeout(noticeTimer);
+  noticeTimer=setTimeout(()=>{el.style.display="none";},4800);
+}
+
+/* ============ 描画 ============ */
+function renderHeader(){
+  document.getElementById("edition").textContent=EDITION;
+  document.getElementById("editionNote").textContent=
+    "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。ランキングが変動しても枠は動かさず、更新時は新しい版として発行します。押したスタンプが消えることはありません。";
+  const st=stamped();
+  const grid=document.getElementById("prefgrid");
+  grid.innerHTML=Object.entries(PREF).map(([k,p])=>{
+    const n=FRAME.filter(f=>f.pref===k&&st.has(f.id)).length;
+    return `<div class="prefcell">
+      <div class="row"><span>${p.label}</span><span class="num">${n}<small>/10</small></span></div>
+      <div class="bar"><div style="width:${n*10}%;background:${p.color}"></div></div></div>`;
+  }).join("");
+  document.getElementById("total").innerHTML=`計 ${st.size}<span style="font-size:10px">/30</span>`;
+}
+
+function renderMap(){
+  const st=stamped(), pad=26, W=400;
+  const lats=FRAME.map(f=>f.lat), lngs=FRAME.map(f=>f.lng);
+  const minLat=Math.min(...lats), maxLat=Math.max(...lats);
+  const minLng=Math.min(...lngs), maxLng=Math.max(...lngs);
+  const k=Math.cos(rad((minLat+maxLat)/2));
+  const spanX=(maxLng-minLng)*k, spanY=maxLat-minLat;
+  const H=pad*2+(W-pad*2)*spanY/spanX;
+  const px=f=>pad+((f.lng-minLng)*k)/spanX*(W-pad*2);
+  const py=f=>pad+(maxLat-f.lat)/spanY*(H-pad*2);
+  let s=`<svg viewBox="0 0 ${W} ${H.toFixed(1)}">`;
+  for(const t of [0.25,0.5,0.75]){
+    s+=`<line x1="${pad+t*(W-pad*2)}" y1="${pad}" x2="${pad+t*(W-pad*2)}" y2="${(H-pad).toFixed(1)}" stroke="#2B3135" stroke-width="0.5"/>`;
+    s+=`<line x1="${pad}" y1="${(pad+t*(H-pad*2)).toFixed(1)}" x2="${W-pad}" y2="${(pad+t*(H-pad*2)).toFixed(1)}" stroke="#2B3135" stroke-width="0.5"/>`;
+  }
+  s+=`<rect x="${pad}" y="${pad}" width="${W-pad*2}" height="${(H-pad*2).toFixed(1)}" fill="none" stroke="#2B3135" stroke-width="0.8"/>`;
+  if(lastPos && lastPos.lat<=maxLat+0.2 && lastPos.lat>=minLat-0.2 && lastPos.lng>=minLng-0.2 && lastPos.lng<=maxLng+0.2){
+    s+=`<circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="3" fill="none" stroke="#8FB88A" stroke-width="1"/>`;
+    s+=`<circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="1.2" fill="#8FB88A"/>`;
+  }
+  for(const f of FRAME){
+    const col=PREF[f.pref].color, on=st.has(f.id);
+    s+=`<g data-id="${f.id}" style="cursor:pointer">`;
+    s+=`<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="11" fill="transparent"/>`;
+    if(on){
+      s+=`<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="7" fill="${col}" opacity="0.16"/>`;
+      s+=`<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="3.4" fill="${col}"/>`;
+    } else {
+      s+=`<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="3" fill="none" stroke="#6B7378" stroke-width="1.1"/>`;
+    }
+    s+=`</g>`;
+  }
+  const biwa={lng:135.9,lat:35.09}, ngo={lng:136.906,lat:35.167};
+  s+=`<text x="${(px(biwa)-4).toFixed(1)}" y="${py(biwa).toFixed(1)}" text-anchor="end" font-family="ui-monospace,monospace" font-size="8.5" fill="#6B7378">琵琶湖</text>`;
+  s+=`<text x="${(px(ngo)+9).toFixed(1)}" y="${(py(ngo)+3).toFixed(1)}" font-family="ui-monospace,monospace" font-size="8.5" fill="#6B7378">名古屋</text>`;
+  s+=`</svg>`;
+  const box=document.getElementById("mapbox");
+  box.innerHTML=s;
+  box.querySelectorAll("g[data-id]").forEach(g=>g.addEventListener("click",()=>openDetail(g.dataset.id)));
+}
+
+function renderList(){
+  const st=stamped();
+  document.getElementById("filters").innerHTML=
+    [["all","全て"],["gifu","岐阜"],["aichi","愛知"],["shiga","滋賀"]]
+    .map(([k,l])=>`<button data-f="${k}" class="${prefFilter===k?"on":""}">${l}</button>`).join("");
+  document.querySelectorAll("#filters button").forEach(b=>b.addEventListener("click",()=>{prefFilter=b.dataset.f;renderList();}));
+  const rows=FRAME.filter(f=>prefFilter==="all"||f.pref===prefFilter).map(f=>{
+    const vs=visitsOf(f.id), on=vs.length>0;
+    const best=vs.reduce((m,v)=>typeof v.score==="number"&&(m==null||v.score>m)?v.score:m,null);
+    const col=PREF[f.pref].color;
+    return `<button class="card" data-id="${f.id}">
+      <span class="rank" style="color:${col}">${PREF[f.pref].label[0]}-${f.rank}</span>
+      <span class="dot" style="${on?`background:${col}`:`border:1px solid var(--muted)`}"></span>
+      <span class="body">
+        <span class="name" style="opacity:${on?1:0.6}">${esc(f.name)}</span>
+        <span class="meta">${esc(f.city)} · イキタイ ${f.ikitai.toLocaleString()}${f.note?" · "+esc(f.note):""}</span>
+      </span>${best!=null?`<span class="best">${best}</span>`:""}</button>`;
+  }).join("");
+  document.getElementById("listbox").innerHTML=rows;
+  document.querySelectorAll("#listbox .card").forEach(b=>b.addEventListener("click",()=>openDetail(b.dataset.id)));
+}
+
+function renderLog(){
+  const box=document.getElementById("logbox");
+  if(!state.visits.length){ box.innerHTML=`<div class="empty">スタンプの記録がここに並びます。</div>`; return; }
+  box.innerHTML=state.visits.map(v=>{
+    const f=byId(v.facilityId); if(!f) return "";
+    const col=PREF[f.pref].color;
+    return `<div class="logitem">
+      <div class="top"><span style="font-size:14px"><span class="mono" style="color:${col};font-size:10px;margin-right:8px">${PREF[f.pref].label[0]}-${f.rank}</span>${esc(f.name)}</span>
+      <span class="mono" style="font-size:10px;color:var(--muted)">${esc(v.date)}</span></div>
+      <div class="meta">${typeof v.score==="number"?`<span>${v.score}点</span>`:""}
+        ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>→<span style="color:var(--cold)">${v.cold}°</span> Δ${v.hot-v.cold}</span>`:""}
+        <span>${v.method==="gps"?"GPS":"手動"}</span></div>
+      ${v.memo?`<p class="memo">${esc(v.memo)}</p>`:""}</div>`;
+  }).join("");
+}
+
+function renderAll(){ renderHeader(); renderMap(); renderList(); renderLog(); }
+
+/* ============ シート ============ */
+const overlay=document.getElementById("overlay"), sheetEl=document.getElementById("sheet");
+function openSheet(html){ sheetEl.innerHTML=html; overlay.classList.add("on"); }
+function closeSheet(){ overlay.classList.remove("on"); }
+overlay.addEventListener("click",e=>{ if(e.target===overlay) closeSheet(); });
+
+function sheetHead(title){
+  return `<div class="shead"><span class="eyebrow">${esc(title)}</span><button class="xbtn" onclick="window.__close()">×</button></div>`;
+}
+window.__close=closeSheet;
+
+function openDetail(id){
+  const f=byId(id), vs=visitsOf(id);
+  const recs=vs.length
+    ? `<div style="margin-bottom:18px"><div class="eyebrow">記録</div>`+vs.map(v=>
+        `<div class="mono" style="font-size:11.5px;color:var(--mid);margin-top:8px;display:flex;gap:14px">
+        <span>${esc(v.date)}</span>${typeof v.score==="number"?`<span>${v.score}点</span>`:""}
+        ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>/<span style="color:var(--cold)">${v.cold}°</span></span>`:""}</div>`).join("")+`</div>`
+    : `<p style="font-size:13px;color:var(--muted);margin-bottom:18px">未踏破。</p>`;
+  openSheet(sheetHead(`${PREF[f.pref].label} ${f.rank}位`)+`
+    <div style="font-size:17px;margin-bottom:4px">${esc(f.name)}</div>
+    <div class="mono" style="font-size:11px;color:var(--muted);margin-bottom:16px">
+      ${esc(f.city)} · イキタイ ${f.ikitai.toLocaleString()}${f.note?" · "+esc(f.note):""}</div>
+    ${recs}
+    <div style="display:flex;gap:10px">
+      <button class="btn primary" style="flex:1" onclick="window.__checkin('${f.id}','manual')">手動でスタンプ</button>
+      <button class="btn" onclick="window.__maps(${f.lat},${f.lng})">地図</button>
+    </div>`);
+}
+window.__maps=(lat,lng)=>{ window.open(`https://www.google.com/maps?q=${lat},${lng}`,"_blank"); };
+
+function openChooser(cands){
+  openSheet(sheetHead("どの施設にいますか？")+cands.map(c=>
+    `<button class="choosebtn" onclick="window.__checkin('${c.id}','gps',${c.d})">
+     <span>${esc(c.name)}</span><span class="d">${c.d}m</span></button>`).join(""));
+}
+
+window.__checkin=(id,method,dist)=>{
+  const f=byId(id);
+  openSheet(sheetHead("スタンプ — "+f.name)+`
+    <div class="mono" style="font-size:10.5px;color:var(--muted);margin-bottom:18px">
+      ${method==="gps"?`GPS判定 · ${dist}m`:"手動チェックイン"}</div>
+    <label class="field"><div class="eyebrow">日付</div>
+      <input class="input mono" type="date" id="ci-date" value="${today()}"></label>
+    <div class="tempsrow">
+      <div><div class="slidelabel" style="color:var(--hot)">サウナ室 <span id="ci-hot-v">90</span>°C</div>
+        <input type="range" min="50" max="130" value="90" id="ci-hot" style="accent-color:var(--hot)"></div>
+      <div><div class="slidelabel" style="color:var(--cold)">水風呂 <span id="ci-cold-v">16</span>°C</div>
+        <input type="range" min="2" max="30" value="16" id="ci-cold" style="accent-color:var(--cold)"></div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="slidelabel" style="color:var(--mid)">点数 <span id="ci-score-v">80</span></div>
+      <input type="range" min="0" max="100" value="80" id="ci-score" style="accent-color:var(--text)">
+    </div>
+    <label class="field"><div class="eyebrow">メモ</div>
+      <textarea class="input" id="ci-memo" placeholder="ととのい方、導線、音、匂い"></textarea></label>
+    <button class="btn primary" style="width:100%" id="ci-save">スタンプを押す</button>`);
+  for(const key of ["hot","cold","score"]){
+    const el=document.getElementById("ci-"+key);
+    el.addEventListener("input",()=>{document.getElementById("ci-"+key+"-v").textContent=el.value;});
+  }
+  document.getElementById("ci-save").addEventListener("click",()=>{
+    const st=stamped(), first=!st.has(id);
+    state.visits.unshift({
+      id:uid(), facilityId:id,
+      date:document.getElementById("ci-date").value||today(),
+      hot:Number(document.getElementById("ci-hot").value),
+      cold:Number(document.getElementById("ci-cold").value),
+      score:Number(document.getElementById("ci-score").value),
+      memo:document.getElementById("ci-memo").value.trim(),
+      method:method
+    });
+    save(); closeSheet(); renderAll();
+    if(first){
+      const n=FRAME.filter(x=>x.pref===f.pref&&stamped().has(x.id)).length;
+      notify(n===10?`${PREF[f.pref].label} 県制覇！ 10/10`:`初スタンプ。${PREF[f.pref].label} ${n}/10`);
+    } else notify("再訪を記録しました");
+  });
+};
+
+/* ============ GPSスタンプ ============ */
+document.getElementById("stampBtn").addEventListener("click",async()=>{
+  const btn=document.getElementById("stampBtn");
+  btn.disabled=true; btn.textContent="測位中…";
+  try{
+    const p=await getPosition();
+    lastPos=p; renderMap();
+    const near=FRAME.map(f=>({f,d:distance(p,f)})).filter(x=>x.d<=state.radius).sort((a,b)=>a.d-b.d);
+    if(!near.length){
+      const c=FRAME.map(f=>({f,d:distance(p,f)})).sort((a,b)=>a.d-b.d)[0];
+      notify(`半径${state.radius}m以内に対象施設なし。最寄りは ${c.f.name}（${fmtDist(c.d)}）。`,"err");
+    } else if(near.length===1){
+      window.__checkin(near[0].f.id,"gps",Math.round(near[0].d));
+    } else {
+      openChooser(near.map(x=>({...x.f,d:Math.round(x.d)})));
+    }
+  }catch(e){ notify(e.message,"err"); }
+  btn.disabled=false; btn.textContent="現在地でスタンプ";
+});
+
+/* ============ タブ・設定 ============ */
+document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
+  tab=b.dataset.tab;
+  document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.id==="pane-"+tab));
+}));
+const radEl=document.getElementById("radius");
+radEl.value=state.radius;
+const radLabel=()=>{document.getElementById("radlabel").textContent=`GPS判定半径 — ${state.radius}m`;};
+radLabel();
+radEl.addEventListener("input",()=>{state.radius=Number(radEl.value);radLabel();save();});
+
+/* ============ バックアップ ============ */
+document.getElementById("exportBtn").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`sauna30-backup-${today()}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+});
+document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change",e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!Array.isArray(d.visits)) throw new Error();
+      state.visits=d.visits; if(d.radius) state.radius=d.radius;
+      radEl.value=state.radius; radLabel(); save(); renderAll();
+      notify(`読み込み完了。${state.visits.length}件の記録を復元しました`);
+    }catch{ notify("読み込めませんでした。書き出したJSONファイルを選んでください。","err"); }
+  };
+  r.readAsText(file);
+  e.target.value="";
+});
+
+renderAll();
+</script>
+</body>
+</html>
