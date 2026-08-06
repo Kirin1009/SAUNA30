@@ -1,5 +1,8 @@
-/* SAUNA 30 service worker */
-const CACHE = "sauna30-v9";
+/* SAUNA 30 service worker
+   キャッシュ名は登録URLの ?v=（index.html の APP_VERSION）から決まる。
+   このファイルを手で書き換える必要はない。 */
+const VERSION = new URL(self.location).searchParams.get("v") || "0";
+const CACHE = "sauna30-" + VERSION;
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
