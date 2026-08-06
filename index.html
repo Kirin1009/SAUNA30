@@ -122,6 +122,9 @@
   .empty{border:1.5px dashed var(--line2);border-radius:14px;padding:24px 18px;font-size:13px;color:var(--muted);line-height:1.85;background:var(--panel)}
   .eyebrow{font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--muted)}
   .settext{font-size:12px;color:var(--mid);line-height:1.85;margin:8px 0 0}
+  .verrow{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;
+    color:var(--mid);padding:6px 0;border-bottom:1px dashed var(--line)}
+  .verrow .mono{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--text)}
   .spectbl{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:9px}
   .spectbl th,.spectbl td{border:1px solid var(--line);padding:6px 6px;text-align:center;font-weight:400;color:var(--mid)}
   .spectbl th{background:#FBF1DC;font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.02em}
@@ -251,6 +254,8 @@
     </div>
     <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
       <div class="eyebrow">この版について</div>
+      <div class="verrow"><span>アプリ</span><span class="mono" id="appVer"></span></div>
+      <div class="verrow"><span>枠データ</span><span class="mono" id="dataVer"></span></div>
       <p class="settext" id="editionNote"></p>
     </div>
     <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
@@ -270,6 +275,11 @@
 
 <script>
 "use strict";
+/* アプリのバージョン。ここだけ上げればService Workerのキャッシュ名も追従する
+   （登録URLに ?v= を付けて渡すので、sw.js側を手で書き換える必要はない）。
+   MAJOR=データ構造やlocalStorageの互換が変わる / MINOR=機能追加 / PATCH=修正 */
+const APP_VERSION = "1.0.0";
+/* 枠データの版。アプリのバージョンとは別物で、サウナイキタイのランキングを固定した日付を指す */
 const EDITION = "2026.08.06版";
 const REGIONS = [
   ["北海道・東北",["hokkaido","aomori","iwate","miyagi","akita","yamagata","fukushima"]],
@@ -943,6 +953,8 @@ function stampFx(f, date, seiha){
 let openReg=null;
 function renderHeader(){
   document.getElementById("edition").textContent=EDITION;
+  document.getElementById("appVer").textContent="v"+APP_VERSION;
+  document.getElementById("dataVer").textContent=EDITION;
   document.getElementById("editionNote").textContent=
     "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。更新時は新しい版として発行し、押したスタンプは消えません。台帳は枠外の施設を自由に記録する層です。現在の県パックは"+Object.keys(PREF).length+"都道府県の"+FRAME.length+"枠。営業時間・料金・スペックはこの版の時点でサウナイキタイに掲載されていた参考値です。";
   const st=stamped();
@@ -1621,7 +1633,8 @@ document.getElementById("importFile").addEventListener("change",e=>{
 });
 
 renderAll();
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+/* ?v= を付けるとURLが変わるのでブラウザがsw.jsを取り直し、キャッシュ名もそのバージョンになる */
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v="+APP_VERSION).catch(()=>{});
 </script>
 </body>
 </html>
