@@ -82,6 +82,9 @@
     border-radius:999px;font-size:12px;font-weight:600;padding:6px 13px;flex-shrink:0}
   .filters button.on{background:var(--text);color:var(--cream);border-color:var(--text)}
   .frow.sub button{font-size:11.5px;padding:5px 11px}
+  #bathsel button{border:1.5px solid var(--line2);background:var(--panel);color:var(--mid);white-space:nowrap;
+    border-radius:999px;font-size:12px;font-weight:600;padding:6px 15px;flex-shrink:0}
+  #bathsel button.on{background:var(--text);color:var(--cream);border-color:var(--text)}
   .card{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--panel);
     border:1.5px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:8px;color:var(--text);
     box-shadow:0 1px 0 rgba(74,59,46,.05)}
@@ -92,6 +95,19 @@
     background:rgba(217,72,59,.08);display:flex;align-items:center;justify-content:center;
     font-size:9.5px;font-weight:700;flex-shrink:0;transform:rotate(-8deg)}
   .hanko.sq{border-radius:5px}
+  .hanko.sm{width:17px;height:17px;font-size:9px;display:inline-flex;vertical-align:-3px;margin-right:7px}
+  .card.offlimits{opacity:.62;border-style:dashed}
+  .nobath{font-size:9.5px;color:var(--muted);border:1px solid var(--line2);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:1px}
+  .prefcell.done{border-color:#C7973F;background:#FFFBEF}
+  .seihamark{font-size:9px;color:#C7973F;border:1px solid #C7973F;border-radius:4px;padding:0 3px;margin-left:5px;font-weight:700}
+  .fixrow{display:flex;gap:8px;margin-top:10px}
+  .fixrow button{background:none;border:1.5px solid var(--line2);border-radius:999px;color:var(--muted);
+    font-size:11px;font-family:inherit;padding:4px 11px}
+  .fixrow button.del{color:var(--stamp);border-color:rgba(217,72,59,.35)}
+  .pchip{position:relative;flex-shrink:0;display:inline-block}
+  .pchip.gone img{opacity:.25;filter:grayscale(1)}
+  .pchip button{position:absolute;top:-5px;right:-5px;width:20px;height:20px;border-radius:50%;
+    border:1.5px solid var(--line2);background:var(--panel);color:var(--mid);font-size:12px;line-height:1;padding:0}
   .card .body{flex:1;min-width:0}
   .card .name{font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .card .meta{font-family:ui-monospace,monospace;font-size:10px;color:var(--muted)}
@@ -220,6 +236,12 @@
   <div class="pane" id="pane-log"><div id="logbox"></div></div>
 
   <div class="pane" id="pane-set">
+    <div class="eyebrow">利用する浴室</div>
+    <div class="frow" id="bathsel" style="margin:9px 0 0">
+      <button data-b="">指定なし</button><button data-b="m">男性</button><button data-b="w">女性</button>
+    </div>
+    <p class="settext" id="bathnote"></p>
+    <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px"></div>
     <div class="eyebrow" id="radlabel"></div>
     <input type="range" min="100" max="1000" step="50" id="radius">
     <p class="settext">複数施設が半径内に入った場合は候補から選択します。</p>
@@ -786,7 +808,7 @@ const KEY = "sauna30:v2";
 const OLDKEY = "sauna30-tokai:v1";
 
 /* ---------- 状態・移行 ---------- */
-let state = { userFacilities: [], visits: [], wants: [], tags: {}, customTags: [], radius: 300 };
+let state = { userFacilities: [], visits: [], wants: [], tags: {}, customTags: [], radius: 300, bath: null };
 (function load(){
   try {
     const raw = localStorage.getItem(KEY);
@@ -810,6 +832,14 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } c
 let tab="map", seg="frame", prefFilter="all", regFilter="all", lastPos=null;
 const REG_OF={}; for(const [rn,ks] of REGIONS) for(const k of ks) REG_OF[k]=rn;
 const regKeys=n=>(REGIONS.find(r=>r[0]===n)||[null,[]])[1];
+/* 利用する浴室（男/女）。男性専用53枠・女性専用2枠があるため、分母と県制覇の判定を各自に合わせる。
+   未設定(null)なら470枠すべてが対象。台帳は浴室の区別を持たないので常に対象。 */
+const bathOK = f => {
+  if(!f.pref || !state.bath) return true;
+  return state.bath==="m" ? !!(f.m||f.u) : !!(f.w||f.u);
+};
+const bathLabel = () => state.bath==="m" ? "男性" : state.bath==="w" ? "女性" : null;
+const framesOf = k => FRAME.filter(f=>f.pref===k&&bathOK(f));
 const allFacilities = () => FRAME.concat(state.userFacilities);
 const byId = id => allFacilities().find(f=>f.id===id);
 const stamped = () => new Set(state.visits.map(v=>v.facilityId));
@@ -882,8 +912,12 @@ function notify(msg,type){
 
 /* ---------- 押印エフェクト ---------- */
 let fxT1=null, fxT2=null;
-function stampFx(name, date){
+function stampFx(f, date, seiha){
   const el=document.getElementById("stampfx");
+  const gold=!!seiha, ink=gold?"#C7973F":"#D9483B";
+  const big=gold?"制覇":sealText(f);
+  const top=gold?esc(PREF[f.pref].label):(f.pref?esc(PREF[f.pref].label):"台帳");
+  const fs=big.length>=3?34:big.length===2?42:48;
   el.innerHTML=`<div class="seal">
     <svg width="140" height="140" viewBox="0 0 140 140">
       <defs><filter id="fxrough" x="-15%" y="-15%" width="130%" height="130%">
@@ -891,14 +925,14 @@ function stampFx(name, date){
         <feDisplacementMap in="SourceGraphic" scale="4"/>
       </filter></defs>
       <g filter="url(#fxrough)" opacity="0.9">
-        <circle cx="70" cy="70" r="62" fill="none" stroke="#D9483B" stroke-width="5.5"/>
-        <circle cx="70" cy="70" r="53" fill="none" stroke="#D9483B" stroke-width="1.5"/>
-        <text x="70" y="41" text-anchor="middle" font-size="11" letter-spacing="3" font-weight="700" fill="#D9483B">SAUNA 30</text>
-        <text x="70" y="87" text-anchor="middle" font-size="46" font-weight="800" fill="#D9483B" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">湯</text>
-        <text x="70" y="113" text-anchor="middle" font-size="10.5" letter-spacing="1" fill="#D9483B" font-family="ui-monospace,monospace">${esc(date)}</text>
+        <circle cx="70" cy="70" r="62" fill="none" stroke="${ink}" stroke-width="${gold?7:5.5}"/>
+        <circle cx="70" cy="70" r="53" fill="none" stroke="${ink}" stroke-width="1.5"/>
+        <text x="70" y="41" text-anchor="middle" font-size="11" letter-spacing="3" font-weight="700" fill="${ink}">${top}</text>
+        <text x="70" y="${gold?90:88}" text-anchor="middle" font-size="${fs}" font-weight="800" fill="${ink}" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${big}</text>
+        <text x="70" y="113" text-anchor="middle" font-size="10.5" letter-spacing="1" fill="${ink}" font-family="ui-monospace,monospace">${esc(date)}</text>
       </g>
     </svg></div>
-    <div class="fxname">${esc(name)}</div>`;
+    <div class="fxname">${esc(f.name)}${gold?"　県制覇":""}</div>`;
   el.classList.remove("bye"); el.classList.add("on");
   clearTimeout(fxT1); clearTimeout(fxT2);
   fxT1=setTimeout(()=>el.classList.add("bye"),1500);
@@ -912,19 +946,20 @@ function renderHeader(){
   document.getElementById("editionNote").textContent=
     "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。更新時は新しい版として発行し、押したスタンプは消えません。台帳は枠外の施設を自由に記録する層です。現在の県パックは"+Object.keys(PREF).length+"都道府県の"+FRAME.length+"枠。営業時間・料金・スペックはこの版の時点でサウナイキタイに掲載されていた参考値です。";
   const st=stamped();
-  const cnt=k=>FRAME.filter(f=>f.pref===k&&st.has(f.id)).length;
+  const cnt=k=>framesOf(k).filter(f=>st.has(f.id)).length;
+  const tot=k=>framesOf(k).length;
   document.getElementById("prefgrid").innerHTML=REGIONS.map(([name,keys])=>{
-    const tot=keys.length*10, n=keys.reduce((a,k)=>a+cnt(k),0), open=openReg===name;
+    const rtot=keys.reduce((a,k)=>a+tot(k),0), n=keys.reduce((a,k)=>a+cnt(k),0), open=openReg===name;
     const cells=keys.map(k=>{
-      const p=PREF[k], m=cnt(k);
-      return `<div class="prefcell"><div class="row"><span>${p.label}</span><span class="num">${m}<small>/10</small></span></div>
-        <div class="bar"><div style="width:${m*10}%;background:${p.color}"></div></div></div>`;
+      const p=PREF[k], m=cnt(k), t=tot(k), done=t>0&&m===t;
+      return `<div class="prefcell${done?" done":""}"><div class="row"><span>${p.label}${done?'<span class="seihamark">制覇</span>':""}</span><span class="num">${m}<small>/${t}</small></span></div>
+        <div class="bar"><div style="width:${t?m/t*100:0}%;background:${p.color}"></div></div></div>`;
     }).join("");
     return `<div class="regbox">
       <button class="reghead" data-r="${esc(name)}" aria-expanded="${open}">
         <span>${name}</span>
-        <span class="bar"><div style="width:${(n/tot*100).toFixed(1)}%;background:${PREF[keys[0]].color}"></div></span>
-        <span class="num">${n}<small>/${tot}</small></span>
+        <span class="bar"><div style="width:${(rtot?n/rtot*100:0).toFixed(1)}%;background:${PREF[keys[0]].color}"></div></span>
+        <span class="num">${n}<small>/${rtot}</small></span>
         <span class="cv">${open?"−":"＋"}</span>
       </button>
       ${open?`<div class="prefgrid">${cells}</div>`:""}</div>`;
@@ -932,12 +967,19 @@ function renderHeader(){
   document.querySelectorAll(".reghead").forEach(b=>b.addEventListener("click",()=>{
     openReg = openReg===b.dataset.r ? null : b.dataset.r; renderHeader();
   }));
-  const frameN = FRAME.filter(f=>st.has(f.id)).length;
-  document.getElementById("total").innerHTML=`計 ${frameN}<span style="font-size:10px">/${FRAME.length}</span>`;
+  const usable=FRAME.filter(bathOK);
+  const frameN = usable.filter(f=>st.has(f.id)).length;
+  const bl=bathLabel();
+  document.getElementById("total").innerHTML=`計 ${frameN}<span style="font-size:10px">/${usable.length}</span>`
+    +(bl?`<span style="font-size:9px;color:var(--muted);display:block;text-align:right">${bl}で入れる枠</span>`:"");
 }
 
 /* ---------- 地図（全国・ズーム対応） ---------- */
 let view=null, mapMoved=false, renderedW=0;
+/* 判子の字。枠は「岐1」＝県の一文字＋順位、台帳は「湯」 */
+const sealText = f => f.pref ? PREF[f.pref].label[0]+f.rank : "湯";
+/* その人が入れる枠を全部押した県＝制覇（男性専用53枠があるので固定10ではなく各自の枠数で判定） */
+const conquered = k => { const a=framesOf(k); const st=stamped(); return a.length>0 && a.every(f=>st.has(f.id)); };
 /* 県名ラベルの置き位置＝最大サブパスの重心（SHAPESは投影済みpx、沖縄インセットもそのまま） */
 const _anchor={};
 function prefAnchor(key){
@@ -1011,17 +1053,30 @@ function renderMap(){
       : `<rect x="${(x-z(2.5)).toFixed(1)}" y="${(y-z(2.5)).toFixed(1)}" width="${z(5)}" height="${z(5)}" fill="#FFFDF4" stroke="#A08C72" stroke-width="${z(1.1)}"/>`;
     s+=`</g>`;
   }
-  // 枠施設（丸＝朱印）
+  // 枠施設（丸＝朱印）。判子の字は拡大時のみ（全国表示だと潰れて読めない）
+  const showSeal = zf<=0.55;
   for(const f of FRAME){
-    const col=PREF[f.pref].color, on=st.has(f.id), x=px(f), y=py(f);
+    const col=PREF[f.pref].color, on=st.has(f.id), x=px(f), y=py(f), ok=bathOK(f);
     s+=`<g data-id="${f.id}" style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${hitR}" fill="transparent"/>`;
     s+= on
       ? `<g filter="url(#mrough)" opacity="0.92">
            <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(4.6)}" fill="#D9483B"/>
-           <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(2.9)}" fill="none" stroke="#FEF6E6" stroke-width="${z(0.55)}"/>
+           ${showSeal
+             ? `<text x="${x.toFixed(1)}" y="${(y+z(1.9)).toFixed(1)}" text-anchor="middle" font-size="${z(4.4)}" font-weight="800" fill="#FEF6E6" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${sealText(f)}</text>`
+             : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(2.9)}" fill="none" stroke="#FEF6E6" stroke-width="${z(0.55)}"/>`}
          </g>`
-      : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(3)}" fill="#FFFDF4" stroke="${col}" stroke-width="${z(1.3)}"/>`;
+      : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(3)}" fill="#FFFDF4" stroke="${col}" stroke-width="${z(1.3)}" ${ok?"":`stroke-dasharray="${z(1.2)} ${z(1)}" opacity="0.5"`}/>`;
     s+=`</g>`;
+  }
+  // 県制覇の金判（その県の重心に重ねる）
+  for(const key in SHAPES.prefs){
+    if(!PREF[key] || !conquered(key)) continue;
+    const c=prefAnchor(key);
+    s+=`<g filter="url(#mrough)" opacity="0.95" transform="rotate(-9 ${c.x.toFixed(1)} ${c.y.toFixed(1)})">
+        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${z(9)}" fill="none" stroke="#C7973F" stroke-width="${z(1.6)}"/>
+        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${z(7.2)}" fill="#C7973F" opacity="0.14"/>
+        <text x="${c.x.toFixed(1)}" y="${(c.y+z(3.2)).toFixed(1)}" text-anchor="middle" font-size="${z(8.4)}" font-weight="800" fill="#C7973F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">制</text>
+      </g>`;
   }
   s+=`</svg>`;
   const box=document.getElementById("mapbox");
@@ -1133,12 +1188,15 @@ function renderList(){
     const on=st.has(f.id), sc=fScore(f.id), isFree=!f.pref;
     const col=isFree?"#A69374":PREF[f.pref].color;
     const tag=isFree?"台帳":`${PREF[f.pref].short}${f.rank}`;
-    const mark=on?`<span class="hanko ${isFree?"sq":""}">済</span>`:`<span class="dot ${isFree?"sq":""}" style="border-color:${col}"></span>`;
-    return `<button class="card" data-id="${f.id}">
+    const ok=bathOK(f);
+    const mark=on
+      ? `<span class="hanko ${isFree?"sq":""}">${isFree?"済":PREF[f.pref].label[0]}</span>`
+      : `<span class="dot ${isFree?"sq":""}" style="border-color:${col}"></span>`;
+    return `<button class="card${ok?"":" offlimits"}" data-id="${f.id}">
       <span class="rank" style="color:${col}">${tag}</span>
       ${mark}
       <span class="body">
-        <span class="name" style="opacity:${on?1:0.6}">${esc(f.name)}${state.wants.includes(f.id)?' <span style="color:#C7973F">◇</span>':""}</span>
+        <span class="name" style="opacity:${on?1:0.6}">${esc(f.name)}${state.wants.includes(f.id)?' <span style="color:#C7973F">◇</span>':""}${ok?"":'<span class="nobath">枠外</span>'}</span>
         <span class="meta">${esc(f.city||"")}${f.ikitai?` · イキタイ ${f.ikitai.toLocaleString()}`:""}${f.note?" · "+esc(f.note):""}</span>
       </span>
       ${sc?`<span class="best">${sc.t}${sc.legacy?'<small>旧</small>':""}</span>`:""}
@@ -1159,7 +1217,7 @@ function renderLog(){
     const t=vTotal(v);
     const stars=v.totonoi?`<span style="color:#C7973F">★${v.totonoi}</span>`:"";
     return `<div class="logitem">
-      <div class="top"><span style="font-size:14px"><span class="mono" style="color:${col};font-size:10px;margin-right:8px">${isFree?"台帳":PREF[f.pref].short+f.rank}</span>${esc(f.name)}</span>
+      <div class="top"><span style="font-size:14px"><span class="hanko sm ${isFree?"sq":""}">${isFree?"済":PREF[f.pref].label[0]}</span><span class="mono" style="color:${col};font-size:10px;margin-right:8px">${isFree?"台帳":PREF[f.pref].short+f.rank}</span>${esc(f.name)}</span>
       <span class="mono" style="font-size:10px;color:var(--muted)">${esc(v.date)}</span></div>
       <div class="meta"><span>${nthOf(v)}回目</span>${t!=null?`<span>${t}点${v.axes?"":"（旧）"}</span>`:""}${stars}
         ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>→<span style="color:var(--cold)">${v.cold}°</span></span>`:""}
@@ -1167,6 +1225,11 @@ function renderLog(){
         <span>${v.method==="gps"?"GPS":"手動"}</span></div>
       ${v.memo?`<p class="memo">${esc(v.memo)}</p>`:""}
       ${v.photos&&v.photos.length?`<div class="photorow">${v.photos.map(p=>`<img data-photo="${p}" alt="">`).join("")}</div>`:""}
+      <div class="fixrow">
+        <button onclick="window.__editVisit('${v.id}')">修正</button>
+        <button onclick="window.__moveVisit('${v.id}')">施設を変更</button>
+        <button class="del" onclick="window.__delVisit('${v.id}')">削除</button>
+      </div>
     </div>`;
   }).join("");
   fillPhotos(box);
@@ -1228,6 +1291,11 @@ function openDetail(id){
           ${v.totonoi?`<span style="color:#C7973F">★${v.totonoi}</span>`:""}
           ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>/<span style="color:var(--cold)">${v.cold}°</span></span>`:""}</div>
           ${v.photos&&v.photos.length?`<div class="photorow">${v.photos.map(p=>`<img data-photo="${p}" alt="">`).join("")}</div>`:""}
+          <div class="fixrow">
+            <button onclick="window.__editVisit('${v.id}')">修正</button>
+            <button onclick="window.__moveVisit('${v.id}')">施設を変更</button>
+            <button class="del" onclick="window.__delVisit('${v.id}')">削除</button>
+          </div>
         </div>`;
       }).join("")
     : `<p style="font-size:13px;color:var(--muted);margin:8px 0 0">未踏破。</p>`;
@@ -1317,37 +1385,51 @@ function openAddFree(){
 }
 
 /* ---------- チェックイン（4軸スライダー） ---------- */
-window.__checkin=(id,method,dist)=>{
+window.__checkin=(id,method,dist,editId)=>{
   const f=byId(id); if(!f) return;
+  const ev = editId ? state.visits.find(v=>v.id===editId) : null;
+  if(editId && !ev) return;
   const prev=fScore(id);
-  const init = prev && prev.v.axes ? {...prev.v.axes} : {sauna:20,water:20,rest:20,clean:20};
-  openSheet(sheetHead("スタンプ — "+f.name)+`
+  const init = ev && ev.axes ? {...ev.axes}
+    : prev && prev.v.axes ? {...prev.v.axes} : {sauna:20,water:20,rest:20,clean:20};
+  const keep = ev && ev.photos ? ev.photos.slice() : [];
+  openSheet(sheetHead((ev?"記録を修正 — ":"スタンプ — ")+f.name)+`
     <div class="mono" style="font-size:10.5px;color:var(--muted);margin-bottom:14px">
-      ${method==="gps"?`GPS判定 · ${dist}m`:"手動チェックイン"}</div>
+      ${ev?"保存すると内容を上書きします":method==="gps"?`GPS判定 · ${dist}m`:"手動チェックイン"}</div>
     <label class="field"><div class="eyebrow">日付</div>
-      <input class="input mono" type="date" id="ci-date" value="${today()}"></label>
+      <input class="input mono" type="date" id="ci-date" value="${ev?esc(ev.date):today()}"></label>
     <div class="eyebrow" style="margin-bottom:10px">採点（各25点）</div>
     ${AXES.map(([k,label])=>`
       <div class="axis"><div class="slidelabel"><span style="color:var(--mid)">${label}</span><span id="ci-${k}-v">${init[k]}</span></div>
       <input type="range" min="0" max="25" value="${init[k]}" id="ci-${k}" style="accent-color:var(--text)"></div>`).join("")}
     <div class="axis"><div class="slidelabel"><span style="color:var(--mid)">特別加減点</span><span id="ci-adj-v">0</span></div>
-      <input type="range" min="-10" max="10" value="0" id="ci-adj"></div>
-    <input class="input" id="ci-adjr" placeholder="加減点の理由（例：混雑 −2）" style="font-size:13px;display:none;margin-bottom:6px">
+      <input type="range" min="-10" max="10" value="${ev?(ev.adj||0):0}" id="ci-adj"></div>
+    <input class="input" id="ci-adjr" placeholder="加減点の理由（例：混雑 −2）" value="${ev?esc(ev.adjReason||""):""}" style="font-size:13px;display:none;margin-bottom:6px">
     <div class="scoretotal" id="ci-total">80<small> /100±</small></div>
     <div class="axis"><div class="slidelabel"><span style="color:#C7973F">今日の整い</span><span id="ci-ttn-v">—</span></div>
-      <input type="range" min="0" max="5" step="0.5" value="0" id="ci-ttn" style="accent-color:#C7973F"></div>
+      <input type="range" min="0" max="5" step="0.5" value="${ev?(ev.totonoi||0):0}" id="ci-ttn" style="accent-color:#C7973F"></div>
     <div class="tempsrow">
-      <div><div class="slidelabel"><span style="color:var(--hot)">サウナ室</span><span id="ci-hot-v">90°C</span></div>
-        <input type="range" min="50" max="130" value="90" id="ci-hot" style="accent-color:var(--hot)"></div>
-      <div><div class="slidelabel"><span style="color:var(--cold)">水風呂</span><span id="ci-cold-v">16°C</span></div>
-        <input type="range" min="2" max="30" value="16" id="ci-cold" style="accent-color:var(--cold)"></div>
+      <div><div class="slidelabel"><span style="color:var(--hot)">サウナ室</span><span id="ci-hot-v">${ev&&ev.hot!=null?ev.hot:90}°C</span></div>
+        <input type="range" min="50" max="130" value="${ev&&ev.hot!=null?ev.hot:90}" id="ci-hot" style="accent-color:var(--hot)"></div>
+      <div><div class="slidelabel"><span style="color:var(--cold)">水風呂</span><span id="ci-cold-v">${ev&&ev.cold!=null?ev.cold:16}°C</span></div>
+        <input type="range" min="2" max="30" value="${ev&&ev.cold!=null?ev.cold:16}" id="ci-cold" style="accent-color:var(--cold)"></div>
     </div>
     <label class="field"><div class="eyebrow">メモ</div>
-      <textarea class="input" id="ci-memo" placeholder="ととのい方、導線、音、匂い"></textarea></label>
+      <textarea class="input" id="ci-memo" placeholder="ととのい方、導線、音、匂い">${ev?esc(ev.memo||""):""}</textarea></label>
     <div class="field"><div class="eyebrow">写真</div>
+      ${keep.length?`<div class="photorow" id="ci-keep">${keep.map(p=>
+        `<span class="pchip"><img data-photo="${p}" alt=""><button type="button" data-rm="${p}">×</button></span>`).join("")}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">×で削除（保存時に反映）</div>`:""}
       <input type="file" id="ci-photos" accept="image/*" multiple style="margin-top:6px;font-size:12px;color:var(--muted)">
     </div>
-    <button class="btn primary" style="width:100%" id="ci-save">スタンプを押す</button>`);
+    <button class="btn primary" style="width:100%" id="ci-save">${ev?"修正を保存":"スタンプを押す"}</button>`);
+  const rm=new Set();
+  sheetEl.querySelectorAll("#ci-keep [data-rm]").forEach(b=>b.addEventListener("click",()=>{
+    const p=b.dataset.rm;
+    if(rm.has(p)){ rm.delete(p); b.parentElement.classList.remove("gone"); }
+    else { rm.add(p); b.parentElement.classList.add("gone"); }
+  }));
+  if(keep.length) fillPhotos(sheetEl);
 
   const upd=()=>{
     let t=0;
@@ -1367,10 +1449,11 @@ window.__checkin=(id,method,dist)=>{
     document.getElementById("ci-ttn-v").textContent = v>0 ? "★"+v : "—";
   });
   document.getElementById("ci-save").addEventListener("click",async e=>{
+    const label=ev?"修正を保存":"スタンプを押す";
     e.target.disabled=true; e.target.textContent="保存中…";
     const adj=+document.getElementById("ci-adj").value;
     const adjReason=document.getElementById("ci-adjr").value.trim();
-    if(adj!==0 && !adjReason){ notify("加減点には理由を一言。","err"); e.target.disabled=false; e.target.textContent="スタンプを押す"; return; }
+    if(adj!==0 && !adjReason){ notify("加減点には理由を一言。","err"); e.target.disabled=false; e.target.textContent=label; return; }
     const photoIds=[];
     const files=document.getElementById("ci-photos").files;
     try{
@@ -1383,19 +1466,69 @@ window.__checkin=(id,method,dist)=>{
     const axes={}; for(const [k] of AXES) axes[k]=+document.getElementById("ci-"+k).value;
     const first=!stamped().has(id);
     const vdate=document.getElementById("ci-date").value||today();
-    state.visits.unshift({
-      id:uid(), facilityId:id, date:vdate, method,
-      axes, adj, adjReason, totonoi:(+document.getElementById("ci-ttn").value)||null,
+    const body={
+      date:vdate, axes, adj, adjReason, totonoi:(+document.getElementById("ci-ttn").value)||null,
       hot:+document.getElementById("ci-hot").value, cold:+document.getElementById("ci-cold").value,
-      memo:document.getElementById("ci-memo").value.trim(), photos:photoIds
-    });
+      memo:document.getElementById("ci-memo").value.trim()
+    };
+    if(ev){
+      for(const p of rm) await photoDel(p);               // 外した写真はIndexedDBからも消して孤児を残さない
+      const kept=keep.filter(p=>!rm.has(p));
+      Object.assign(ev, body, {photos:kept.concat(photoIds)});
+      save(); closeSheet(); renderAll(); notify("記録を修正しました");
+      return;
+    }
+    state.visits.unshift({id:uid(), facilityId:id, method, ...body, photos:photoIds});
     save(); closeSheet(); renderAll();
-    stampFx(f.name, vdate);
+    const seiha = first && f.pref && conquered(f.pref);
+    stampFx(f, vdate, seiha);
     if(first && f.pref){
-      const n=FRAME.filter(x=>x.pref===f.pref&&stamped().has(x.id)).length;
-      notify(n===10?`${PREF[f.pref].label} 県制覇！ 10/10`:`初スタンプ。${PREF[f.pref].label} ${n}/10`);
+      const a=framesOf(f.pref), n=a.filter(x=>stamped().has(x.id)).length;
+      notify(seiha?`${PREF[f.pref].label} 県制覇！ ${n}/${a.length}`:`初スタンプ。${PREF[f.pref].label} ${n}/${a.length}`);
     } else notify(first?"台帳に初スタンプ。":"再訪を記録しました");
   });
+};
+
+/* ---------- 記録の修正（削除・編集・施設の付け替え） ---------- */
+async function photoDel(id){ const db=await dbp; return new Promise((res,rej)=>{ const tx=db.transaction("photos","readwrite"); tx.objectStore("photos").delete(id); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+window.__editVisit=vid=>{
+  const v=state.visits.find(x=>x.id===vid); if(!v) return;
+  window.__checkin(v.facilityId, v.method, null, vid);
+};
+window.__delVisit=async vid=>{
+  const v=state.visits.find(x=>x.id===vid); if(!v) return;
+  const f=byId(v.facilityId);
+  if(!confirm(`${f?f.name:"この施設"} の ${v.date} の記録を削除します。写真も一緒に消えます。`)) return;
+  for(const p of (v.photos||[])){ try{ await photoDel(p); }catch(e){} }
+  state.visits=state.visits.filter(x=>x.id!==vid);
+  save(); renderAll(); notify("記録を削除しました");
+};
+window.__moveVisit=vid=>{
+  const v=state.visits.find(x=>x.id===vid); if(!v) return;
+  const cur=byId(v.facilityId);
+  const draw=q=>{
+    const list=allFacilities()
+      .filter(f=>!q || (f.name+(f.city||"")).toLowerCase().includes(q.toLowerCase()))
+      .slice(0,40);
+    return list.length
+      ? list.map(f=>`<button class="choosebtn" onclick="window.__moveTo('${vid}','${f.id}')">
+          <span>${esc(f.name)}</span><span class="d">${f.pref?PREF[f.pref].short+f.rank:"台帳"}</span></button>`).join("")
+      : `<div class="empty">該当なし。</div>`;
+  };
+  openSheet(sheetHead("記録の施設を変更")+`
+    <p style="font-size:12px;color:var(--mid);line-height:1.8;margin:0 0 12px">
+      いまは <b>${esc(cur?cur.name:"不明")}</b>（${esc(v.date)}）の記録です。GPSが隣の施設を拾ったときはここで付け替えてください。採点と写真はそのまま移ります。</p>
+    <input class="input" id="mv-q" placeholder="施設名や市区町村で絞り込む" style="margin-bottom:10px">
+    <div id="mv-list">${draw("")}</div>`);
+  document.getElementById("mv-q").addEventListener("input",e=>{
+    document.getElementById("mv-list").innerHTML=draw(e.target.value.trim());
+  });
+};
+window.__moveTo=(vid,fid)=>{
+  const v=state.visits.find(x=>x.id===vid); if(!v) return;
+  v.facilityId=fid; v.method="manual";
+  save(); closeSheet(); renderAll();
+  const f=byId(fid); notify(`${f?f.name:"施設"} に付け替えました`);
 };
 
 /* ---------- GPSスタンプ ---------- */
@@ -1427,6 +1560,18 @@ document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",
   document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
   document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.id==="pane-"+tab));
 }));
+/* 利用する浴室 — 分母と県制覇の判定が変わる。押したスタンプ自体は消えない */
+function renderBath(){
+  document.querySelectorAll("#bathsel button").forEach(b=>b.classList.toggle("on",(b.dataset.b||null)===state.bath));
+  const usable=FRAME.filter(bathOK).length, bl=bathLabel();
+  document.getElementById("bathnote").textContent = bl
+    ? `${bl}が入れる枠だけを分母にします（${usable}/${FRAME.length}枠）。入れない枠は「枠外」と表示され、県制覇の判定からも外れます。`
+    : `全${FRAME.length}枠を分母にします。男性専用・女性専用の枠も含むため、片方の性別では埋まらない枠があります。`;
+}
+document.querySelectorAll("#bathsel button").forEach(b=>b.addEventListener("click",()=>{
+  state.bath=b.dataset.b||null; save(); renderBath(); renderAll();
+}));
+renderBath();
 const radEl=document.getElementById("radius");
 radEl.value=state.radius;
 const radLabel=()=>document.getElementById("radlabel").textContent=`GPS判定半径 — ${state.radius}m`;
@@ -1460,7 +1605,7 @@ document.getElementById("importFile").addEventListener("change",e=>{
     try{
       const d=JSON.parse(r.result);
       if(!d.state||!Array.isArray(d.state.visits)) throw new Error();
-      state=Object.assign({userFacilities:[],visits:[],wants:[],tags:{},customTags:[],radius:300}, d.state);
+      state=Object.assign({userFacilities:[],visits:[],wants:[],tags:{},customTags:[],radius:300,bath:null}, d.state);
       save();
       if(Array.isArray(d.photos)){
         for(const p of d.photos){
@@ -1468,7 +1613,7 @@ document.getElementById("importFile").addEventListener("change",e=>{
           await photoPut(p.id,b);
         }
       }
-      radEl.value=state.radius; radLabel(); renderAll();
+      radEl.value=state.radius; radLabel(); renderBath(); renderAll();
       notify(`読み込み完了。${state.visits.length}件の記録を復元しました`);
     }catch{ notify("読み込めませんでした。書き出したファイルを選んでください。","err"); }
   };
