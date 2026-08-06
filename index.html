@@ -28,12 +28,20 @@
   h1{font-size:17px;font-weight:800;letter-spacing:.24em;margin:0;color:var(--text)}
   .edition{font-size:9.5px;color:var(--muted);letter-spacing:.1em}
   .sub{margin:8px 0 0;font-size:12px;color:var(--mid);line-height:1.7}
-  .prefgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
-  .prefcell{background:var(--panel);padding:11px 10px;border:1.5px solid var(--line);border-radius:12px;
-    box-shadow:0 1px 0 rgba(74,59,46,.05)}
-  .prefcell .row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px}
-  .prefcell .num{font-family:ui-monospace,monospace;font-size:14px}
-  .prefcell .num small{color:var(--muted);font-size:10px}
+  .reglist{margin-top:14px}
+  .regbox{background:var(--panel);border:1.5px solid var(--line);border-radius:12px;margin-top:6px;
+    overflow:hidden;box-shadow:0 1px 0 rgba(74,59,46,.05)}
+  .reghead{width:100%;display:grid;grid-template-columns:1fr 60px auto 14px;align-items:center;gap:9px;
+    padding:8px 12px;background:none;border:none;color:var(--text);font-size:12px;font-weight:700;text-align:left}
+  .reghead .num{font-family:ui-monospace,monospace;font-size:13px;font-weight:400;text-align:right}
+  .reghead .num small{color:var(--muted);font-size:10px}
+  .reghead .bar{margin-top:0;display:block}
+  .reghead .cv{color:var(--muted);font-size:12px;text-align:center}
+  .prefgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:2px 10px 11px}
+  .prefcell{background:#FFFDF4;padding:8px 9px;border:1.5px solid var(--line);border-radius:10px}
+  .prefcell .row{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;gap:4px}
+  .prefcell .num{font-family:ui-monospace,monospace;font-size:12px}
+  .prefcell .num small{color:var(--muted);font-size:9px}
   .bar{height:4px;background:#F2E6CC;margin-top:9px;border-radius:3px;overflow:hidden}
   .bar>div{height:100%;border-radius:3px;transition:width .3s}
   .actions{display:flex;gap:10px;margin-top:16px;align-items:center}
@@ -66,14 +74,18 @@
   .seg button{flex:1;background:transparent;border:none;border-radius:9px;color:var(--muted);
     font-size:12px;font-weight:600;padding:8px 0}
   .seg button.on{background:var(--text);color:var(--cream)}
-  .filters{display:flex;gap:8px;margin-bottom:14px}
-  .filters button{border:1.5px solid var(--line2);background:var(--panel);color:var(--mid);
-    border-radius:999px;font-size:12px;font-weight:600;padding:6px 13px}
+  .filters{margin-bottom:14px}
+  .frow{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .frow::-webkit-scrollbar{display:none}
+  .frow+.frow{margin-top:7px}
+  .filters button{border:1.5px solid var(--line2);background:var(--panel);color:var(--mid);white-space:nowrap;
+    border-radius:999px;font-size:12px;font-weight:600;padding:6px 13px;flex-shrink:0}
   .filters button.on{background:var(--text);color:var(--cream);border-color:var(--text)}
+  .frow.sub button{font-size:11.5px;padding:5px 11px}
   .card{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--panel);
     border:1.5px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:8px;color:var(--text);
     box-shadow:0 1px 0 rgba(74,59,46,.05)}
-  .rank{font-family:ui-monospace,monospace;font-size:11px;width:34px;flex-shrink:0}
+  .rank{font-family:ui-monospace,monospace;font-size:11px;width:42px;flex-shrink:0;line-height:1.3}
   .dot{width:11px;height:11px;border-radius:6px;border:1.5px solid var(--muted);flex-shrink:0;margin:0 5px}
   .dot.sq{border-radius:3px}
   .hanko{width:21px;height:21px;border-radius:50%;border:1.5px solid var(--stamp);color:var(--stamp);
@@ -94,6 +106,16 @@
   .empty{border:1.5px dashed var(--line2);border-radius:14px;padding:24px 18px;font-size:13px;color:var(--muted);line-height:1.85;background:var(--panel)}
   .eyebrow{font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--muted)}
   .settext{font-size:12px;color:var(--mid);line-height:1.85;margin:8px 0 0}
+  .spectbl{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:9px}
+  .spectbl th,.spectbl td{border:1px solid var(--line);padding:6px 6px;text-align:center;font-weight:400;color:var(--mid)}
+  .spectbl th{background:#FBF1DC;font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.02em}
+  .spectbl td.k{background:#FBF1DC;font-size:10.5px;color:var(--muted);font-weight:700;width:38px}
+  .infolist{font-size:11.5px;color:var(--mid);line-height:1.85;margin-top:9px}
+  .infolist div{display:flex;gap:9px}
+  .infolist b{color:var(--muted);font-weight:700;font-size:10px;letter-spacing:.08em;flex-shrink:0;width:52px;padding-top:2px}
+  .linkrow{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+  .linkrow a{font-size:11.5px;color:var(--mid);border:1.5px solid var(--line2);border-radius:999px;
+    padding:5px 12px;text-decoration:none;background:#FFFDF4}
   input[type=range]{width:100%;accent-color:var(--hot)}
   .overlay{position:fixed;inset:0;background:rgba(74,59,46,.38);display:none;align-items:flex-end;justify-content:center;z-index:50}
   .overlay.on{display:flex}
@@ -155,7 +177,7 @@
     <p class="sub">県ごとのイキタイTOP10を踏破する — 全国版</p>
   </header>
 
-  <div class="prefgrid" id="prefgrid"></div>
+  <div class="reglist" id="prefgrid"></div>
 
   <div class="actions">
     <button class="btn primary" id="stampBtn" style="flex:1">現在地でスタンプ</button>
@@ -188,7 +210,7 @@
 
   <div class="pane" id="pane-list">
     <div class="seg" id="seg">
-      <button data-s="frame" class="on">枠 30</button>
+      <button data-s="frame" class="on" id="segFrame">枠</button>
       <button data-s="free">台帳</button>
       <button data-s="want">行きたい</button>
     </div>
@@ -228,15 +250,120 @@
 
 <script>
 "use strict";
-const EDITION = "2026.08.05版";
+const EDITION = "2026.08.06版";
+const REGIONS = [
+  ["北海道・東北",["hokkaido","aomori","iwate","miyagi","akita","yamagata","fukushima"]],
+  ["関東",["ibaraki","gunma"]],
+  ["中部",["gifu","aichi"]],
+  ["近畿",["shiga"]],
+];
 const PREF = {
-  gifu:{label:"岐阜", color:"#C7973F"},
-  aichi:{label:"愛知", color:"#C75B47"},
-  shiga:{label:"滋賀", color:"#5E88A0"},
+  hokkaido:{label:"北海道",short:"北海",color:"#3F6E85"},
+  aomori:{label:"青森",short:"青森",color:"#55809A"},
+  iwate:{label:"岩手",short:"岩手",color:"#6E96A8"},
+  miyagi:{label:"宮城",short:"宮城",color:"#4C7D8A"},
+  akita:{label:"秋田",short:"秋田",color:"#628FA0"},
+  yamagata:{label:"山形",short:"山形",color:"#7BA1AE"},
+  fukushima:{label:"福島",short:"福島",color:"#56899B"},
+  ibaraki:{label:"茨城",short:"茨城",color:"#7B6E96"},
+  gunma:{label:"群馬",short:"群馬",color:"#6B6390"},
+  gifu:{label:"岐阜",short:"岐阜",color:"#C7973F"},
+  aichi:{label:"愛知",short:"愛知",color:"#C75B47"},
+  shiga:{label:"滋賀",short:"滋賀",color:"#5E88A0"},
 };
 const AXES = [["sauna","サウナ室"],["water","水風呂"],["rest","外気浴・休憩"],["clean","清潔・雰囲気"]];
 const TAGSET = ["セルフロウリュ","オートロウリュ","アウフグース/熱波","薪ストーブ","湖・川水風呂","女性側同等","24時間","宿泊可","飯うまい"];
 const FRAME = [
+  {id:"hokkaido1",pref:"hokkaido",rank:1,name:"吹上温泉保養センター 白銀荘",city:"上富良野町",ikitai:11630,sakatsu:7029,lat:43.431429,lng:142.641584,sid:98,m:[92,14,1,0],w:[88,12,1,0],fee:700,hours:"毎日 10:00〜22:00",off:"なし",hp:"http://kamifurano-hokkaido.com/"},
+  {id:"hokkaido2",pref:"hokkaido",rank:2,name:"ニコーリフレ SAPPORO",city:"札幌市",ikitai:10920,sakatsu:28292,lat:43.0572101,lng:141.3554825,sid:166,m:[85,16,0,1],fee:1900,off:"なし",hp:"https://www.nikoh.info",note:"男性専用"},
+  {id:"hokkaido3",pref:"hokkaido",rank:3,name:"北こぶし知床 ホテル&リゾート",city:"斜里町",ikitai:8245,sakatsu:2843,lat:44.0721206,lng:144.9950561,sid:4521,m:[89,5.6,1,0],w:[90,15,1,0],fee:2200,off:"なし",hp:"https://www.shiretoko.co.jp/",note:"宿泊者限定"},
+  {id:"hokkaido4",pref:"hokkaido",rank:4,name:"森のスパリゾート 北海道ホテル",city:"帯広市",ikitai:7812,sakatsu:6426,lat:42.9104215,lng:143.1971966,sid:233,m:[90,17,1,0],w:[94,17,1,0],fee:2000,off:"なし",hp:"https://www.hokkaidohotel.co.jp/stay/hotspring.html"},
+  {id:"hokkaido5",pref:"hokkaido",rank:5,name:"定山渓 鹿の湯",city:"札幌市",ikitai:5883,sakatsu:4708,lat:42.9657548,lng:141.1630392,sid:8555,m:[110,7,1,1],w:[100,8,1,1],fee:1500,off:"なし",hp:"https://shikanoyu.co.jp/shikanoyu/"},
+  {id:"hokkaido6",pref:"hokkaido",rank:6,name:"月見湯",city:"札幌市",ikitai:4989,sakatsu:17828,lat:43.0267,lng:141.404176,sid:4998,m:[100,15,1,1],w:[85,16,1,1],fee:500,hours:"月 13:45〜24:00／火 休／水〜日 13:45〜24:00",off:"火曜日",hp:"https://9056899086.amebaownd.com/"},
+  {id:"hokkaido7",pref:"hokkaido",rank:7,name:"GARDENS CABIN (ガーデンズキャビン)",city:"札幌市",ikitai:4917,sakatsu:8399,lat:43.0586669,lng:141.3518999,sid:6182,m:[96,18,0,0],w:[92,16,0,0],fee:1500,off:"なし",hp:"https://www.gardenscabin.com/"},
+  {id:"hokkaido8",pref:"hokkaido",rank:8,name:"OMO7旭川(おも) by 星野リゾート サウナプラトー",city:"旭川市",ikitai:4792,sakatsu:4030,lat:43.770171,lng:142.364155,sid:55,m:[85,17,0,0],w:[83,15,0,0],off:"なし",hp:"https://omo-hotels.com/asahikawa/facilities/spa/",note:"宿泊者限定"},
+  {id:"hokkaido9",pref:"hokkaido",rank:9,name:"ログホテル ザ メープルロッジ",city:"岩見沢市",ikitai:4362,sakatsu:4757,lat:43.156776,lng:141.9301081,sid:131,m:[80,14,1,0],w:[80,14,1,0],fee:800,off:"なし",hp:"http://www.maplelodge.or.jp/"},
+  {id:"hokkaido10",pref:"hokkaido",rank:10,name:"サウナコタンサッポロ",city:"札幌市",ikitai:3888,sakatsu:6934,lat:43.0172579,lng:141.3893256,sid:79919,m:[95,15,1,1],w:[88,15,1,1],fee:900,hours:"月〜木 11:00〜23:00／金 11:00〜24:00／土 —／日 11:00〜23:00",off:"なし",hp:"https://sauna-cotan.com"},
+  {id:"aomori1",pref:"aomori",rank:1,name:"十和田サウナ",city:"十和田市",ikitai:1933,sakatsu:347,lat:40.4489783,lng:140.9271584,sid:10804,u:[88,18,1,0],fee:23000,off:"なし",hp:"https://towadasauna.com",note:"事前予約制"},
+  {id:"aomori2",pref:"aomori",rank:2,name:"まちなか温泉青森センターホテル",city:"青森市",ikitai:1039,sakatsu:2712,lat:40.8247648,lng:140.7353479,sid:351,m:[89,24,1,1],w:[80,22,1,0],fee:530,off:"なし",hp:"https://aomori.atinnhotels.com/onsen.html"},
+  {id:"aomori3",pref:"aomori",rank:3,name:"青森ねぶたサウナ(青森屋 by 星野リゾート)",city:"三沢市",ikitai:1023,sakatsu:533,lat:40.6617344,lng:141.3554737,sid:387,m:[85,17,1,0],w:[90,15,1,0],off:"なし",hp:"https://hoshinoresorts.com/ja/hotels/aomoriya/",note:"宿泊者限定"},
+  {id:"aomori4",pref:"aomori",rank:4,name:"カプセルイン弘前・アサヒサウナ",city:"弘前市",ikitai:738,sakatsu:3392,lat:40.602255,lng:140.471127,sid:406,m:[98,22,0,1],fee:700,off:"なし",hp:"http://asahiweb.jp/asahisauna.html",note:"男性専用"},
+  {id:"aomori5",pref:"aomori",rank:5,name:"大鰐町地域交流センター 鰐come(ワニカム)",city:"大鰐町",ikitai:708,sakatsu:1547,lat:40.5204646,lng:140.5650247,sid:424,m:[100,16,1,0],w:[94,14.4,1,0],fee:400,hours:"毎日 09:00〜22:00",off:"なし",hp:"https://www.wanicome.com/onsen/"},
+  {id:"aomori6",pref:"aomori",rank:6,name:"八甲田ホテル",city:"青森市",ikitai:675,sakatsu:119,lat:40.6456978,lng:140.8521402,sid:389,m:[90,17,0,0],w:[90,15,0,0],fee:4500,off:"なし",hp:"http://www.hakkodahotel.co.jp/top/"},
+  {id:"aomori7",pref:"aomori",rank:7,name:"壽浴場",city:"八戸市",ikitai:529,sakatsu:931,lat:40.5189454,lng:141.5510363,sid:4813,m:[90,15,0,0],w:[88,15,0,0],fee:480,hours:"毎日 05:00〜23:00",off:"なし",hp:"http://www.ukipal.jp/asayokosen/subpage/sento/areas/d_kotobuki.html"},
+  {id:"aomori8",pref:"aomori",rank:8,name:"八戸銭湯 オールウェイズ",city:"八戸市",ikitai:415,sakatsu:1634,lat:40.503502,lng:141.536163,sid:434,m:[90,15,0,0],w:[88,18,0,0],fee:500,hours:"毎日 06:00〜22:00",off:"なし",hp:"https://hachinohesento.com/"},
+  {id:"aomori9",pref:"aomori",rank:9,name:"からんころん温泉",city:"平川市",ikitai:393,sakatsu:1021,lat:40.6021741,lng:140.5362633,sid:407,m:[85,15,1,0],w:[90,15,1,0],fee:380,hours:"毎日 05:00〜22:00",off:"なし",hp:"https://karankoron.denen.biz/"},
+  {id:"aomori10",pref:"aomori",rank:10,name:"熊ノ沢温泉",city:"八戸市",ikitai:359,sakatsu:1268,lat:40.5205346,lng:141.4243596,sid:425,m:[92,20,1,0],w:[80,17,1,0],fee:530,hours:"毎日 06:30〜22:00",off:"なし",hp:"http://kumanosawaonsen.com/"},
+  {id:"iwate1",pref:"iwate",rank:1,name:"古戦場",city:"一関市",ikitai:4473,sakatsu:9405,lat:38.9392556,lng:141.1073031,sid:4353,m:[95,20,1,1],w:[110,15,1,1],fee:900,hours:"毎日 10:00〜21:30",off:"なし",hp:"http://kosenjyo.com/"},
+  {id:"iwate2",pref:"iwate",rank:2,name:"SPA銭湯ゆっこ盛岡",city:"盛岡市",ikitai:3018,sakatsu:12567,lat:39.733677,lng:141.123586,sid:505,m:[78,18,1,0],w:[75,19,1,0],fee:580,hours:"毎日 05:00〜翌01:00",off:"なし",hp:"https://yukko-morioka.jp"},
+  {id:"iwate3",pref:"iwate",rank:3,name:"星降る山荘 七時雨山荘",city:"八幡平市",ikitai:2328,sakatsu:514,lat:40.084541,lng:141.129303,sid:6690,u:[85,11,1,1],fee:3000,off:"月曜日, 火曜日, 水曜日",hp:"https://nanashigure.iwate.jp/",note:"事前予約制"},
+  {id:"iwate4",pref:"iwate",rank:4,name:"ひづめゆ",city:"紫波町",ikitai:2289,sakatsu:4337,lat:39.5549161,lng:141.1677058,sid:35788,m:[100,20,1,1],w:[92,20,1,1],fee:900,hours:"毎日 10:00〜22:00",off:"第1月曜日",hp:"https://hizumeyu.jp/"},
+  {id:"iwate5",pref:"iwate",rank:5,name:"KANAN SPA(HOTEL MAZARIUM)",city:"盛岡市",ikitai:1672,sakatsu:2714,lat:39.6995345,lng:141.1572465,sid:54929,m:[92,22,1,0],w:[90,25,1,0],fee:1100,off:"なし",hp:"https://hotelmazarium.com/"},
+  {id:"iwate6",pref:"iwate",rank:6,name:"喜盛の湯",city:"盛岡市",ikitai:1073,sakatsu:3879,lat:39.678644,lng:141.151476,sid:515,m:[85,14,1,0],w:[80,15,1,0],fee:600,hours:"毎日 05:00〜翌02:00",off:"なし",hp:"http://www.kimorinoyu.com/"},
+  {id:"iwate7",pref:"iwate",rank:7,name:"久慈サウナ",city:"久慈市",ikitai:650,sakatsu:1640,lat:40.19091,lng:141.7715831,sid:458,m:[90,15,0,0],fee:600,hours:"毎日 14:00〜22:00",off:"なし",note:"男性専用"},
+  {id:"iwate8",pref:"iwate",rank:8,name:"盛南温泉 開運の湯",city:"盛岡市",ikitai:633,sakatsu:2075,lat:39.692532,lng:141.133936,sid:513,m:[80,20,1,1],w:[82,20,1,1],fee:600,hours:"月〜金 10:00〜24:00／土日 06:30〜24:00",off:"なし",hp:"https://www.kaiunnoyu.info/"},
+  {id:"iwate9",pref:"iwate",rank:9,name:"三陸四季湯彩ますと乃湯",city:"大槌町",ikitai:546,sakatsu:2626,lat:39.3592137,lng:141.9081869,sid:11695,m:[90,17,1,1],w:[89,19,1,1],fee:770,hours:"毎日 11:00〜22:00",off:"なし",hp:"https://www.mast-no-yu.com/"},
+  {id:"iwate10",pref:"iwate",rank:10,name:"一関温泉 山桜桃の湯",city:"一関市",ikitai:543,sakatsu:1448,lat:38.9504967,lng:141.1070322,sid:589,m:[78,18,1,0],w:[80,18,1,0],fee:850,hours:"毎日 05:00〜23:00",off:"なし",hp:"https://www.momonoyu.co.jp/guide#ttl-navi01"},
+  {id:"miyagi1",pref:"miyagi",rank:1,name:"スパメッツァ 仙台 竜泉寺の湯",city:"仙台市",ikitai:6753,sakatsu:14223,lat:38.3531358,lng:140.8766725,sid:640,m:[94,8.7,1,0],w:[85,16.1,1,0],fee:950,hours:"毎日 06:00〜翌02:00",off:"なし",hp:"https://ryusenjinoyu.com/spametsasendai/"},
+  {id:"miyagi2",pref:"miyagi",rank:2,name:"サウナ&カプセル キュア国分町",city:"仙台市",ikitai:4288,sakatsu:19902,lat:38.2634349,lng:140.8679311,sid:654,m:[98,16,1,1],fee:1500,off:"なし",hp:"https://cure-kokubuncho.jp",note:"男性専用"},
+  {id:"miyagi3",pref:"miyagi",rank:3,name:"汗蒸幕のゆ",city:"仙台市",ikitai:3800,sakatsu:13520,lat:38.3187849,lng:140.8966275,sid:643,m:[90,18,1,0],w:[80,15.6,1,0],fee:1100,hours:"月〜金 09:00〜翌01:00／土日 08:00〜翌01:00",off:"なし",hp:"https://hanjunmakunoyu.jp/"},
+  {id:"miyagi4",pref:"miyagi",rank:4,name:"愛子天空の湯 そよぎの杜",city:"仙台市",ikitai:3099,sakatsu:10888,lat:38.2609866,lng:140.7638484,sid:79074,m:[88,16,1,1],w:[82,17.8,1,0],fee:950,hours:"毎日 09:00〜翌01:00",off:"なし",hp:"https://www.soyoginomori.site/"},
+  {id:"miyagi5",pref:"miyagi",rank:5,name:"MARUMORI-SAUNA",city:"丸森町",ikitai:2174,sakatsu:397,lat:37.8692115,lng:140.7815155,sid:4972,u:[100,17,1,0],fee:8000,hours:"毎日 10:00〜17:00",off:"なし",hp:"https://www.marumori-sauna.jp/",note:"事前予約制"},
+  {id:"miyagi6",pref:"miyagi",rank:6,name:"仙台湯処 サンピアの湯",city:"仙台市",ikitai:1946,sakatsu:5098,lat:38.2469891,lng:140.9320653,sid:4376,m:[93,18,1,0],w:[90,17,1,0],fee:990,hours:"毎日 09:00〜翌02:00",off:"第1木曜日",hp:"http://sunpia-sendai.jp/onsen/"},
+  {id:"miyagi7",pref:"miyagi",rank:7,name:"天然温泉 仙台コロナの湯",city:"仙台市",ikitai:1787,sakatsu:9411,lat:38.2602415,lng:140.9692799,sid:659,m:[96,13,1,1],w:[94,13,1,1],fee:1100,hours:"毎日 06:00〜翌02:00",off:"なし",hp:"https://www.korona.co.jp/sp/Onsen/sen/index.asp"},
+  {id:"miyagi8",pref:"miyagi",rank:8,name:"駅前人工温泉 とぽす 仙台駅西口",city:"仙台市",ikitai:1507,sakatsu:9631,lat:38.2615667,lng:140.8783402,sid:657,m:[106,14,1,0],fee:980,off:"なし",hp:"https://topos-hotel.jp/",note:"男性専用"},
+  {id:"miyagi9",pref:"miyagi",rank:9,name:"ゆ〜とぴあ仙台南",city:"仙台市",ikitai:1384,sakatsu:11149,lat:38.2193508,lng:140.8490267,sid:79995,m:[91,16,1,1],w:[82,18,1,1],fee:850,hours:"毎日 07:00〜翌02:00",off:"なし",hp:"https://ytp-sendaiminami.jp/"},
+  {id:"miyagi10",pref:"miyagi",rank:10,name:"アクアイグニス仙台 藤塚の湯",city:"仙台市",ikitai:1341,sakatsu:3899,lat:38.18495,lng:140.9551803,sid:23215,m:[90,18,1,0],w:[88,18,1,0],fee:950,hours:"月〜金 09:00〜21:00／土日 09:00〜22:00",off:"なし",hp:"https://aquaignis-sendai.jp/"},
+  {id:"akita1",pref:"akita",rank:1,name:"ユーランドホテル八橋",city:"秋田市",ikitai:1915,sakatsu:10313,lat:39.7357976,lng:140.092303,sid:503,m:[90,16,1,0],w:[84,15,1,0],fee:800,off:"なし",hp:"http://www.youland.jp/"},
+  {id:"akita2",pref:"akita",rank:2,name:"タザワコサウナ",city:"仙北市",ikitai:1450,sakatsu:305,lat:39.7337552,lng:140.6983667,sid:9116,u:[100,20,1,0],fee:18000,hours:"月 10:00〜15:30／火〜木 休／金 10:00〜15:30／土日 10:00〜18:30",off:"火曜日, 水曜日, 木曜日",hp:"https://tazawakosauna.com/",note:"事前予約制"},
+  {id:"akita3",pref:"akita",rank:3,name:"蔵サウナと文化財の宿 森長",city:"男鹿市",ikitai:701,sakatsu:554,lat:39.8839413,lng:139.8471393,sid:85091,m:[100,15,1,1],w:[90,20,1,0],fee:3500,off:"第2水曜日, 第2木曜日",hp:"https://morichoryokan.com/"},
+  {id:"akita4",pref:"akita",rank:4,name:"金浦温泉・学校の栖",city:"にかほ市",ikitai:588,sakatsu:1269,lat:39.2341181,lng:139.9376356,sid:12979,m:[100,17,1,0],w:[100,18,1,0],fee:500,off:"第2水曜日",hp:"https://onsen-sumika.com/"},
+  {id:"akita5",pref:"akita",rank:5,name:"リフレッシュ・スパ クォード (ホテル クォードインyokote)",city:"横手市",ikitai:488,sakatsu:1474,lat:39.3084015,lng:140.5557343,sid:554,m:[90,20,1,0],w:[80,17,1,0],fee:800,off:"なし",hp:"http://4inn.jp/"},
+  {id:"akita6",pref:"akita",rank:6,name:"ルートイングランティア秋田SPA RESORT (スーパー健康ランド 華のゆ)",city:"秋田市",ikitai:453,sakatsu:2018,lat:39.7129739,lng:140.1176335,sid:507,m:[88,22,1,0],w:[89,16,1,0],fee:800,off:"なし",hp:"http://www.route-inn.co.jp/hananoyu-akita/"},
+  {id:"akita7",pref:"akita",rank:7,name:"中里温泉",city:"大仙市",ikitai:439,sakatsu:900,lat:39.5003925,lng:140.5852113,sid:530,m:[96,18,1,0],w:[82,16,1,0],fee:600,hours:"毎日 09:00〜21:00",off:"第3月曜日",hp:"https://www.city.daisen.lg.jp/docs/2021061100018/"},
+  {id:"akita8",pref:"akita",rank:8,name:"田沢湖水沢温泉郷 セルリアンリゾートAONI",city:"仙北市",ikitai:400,sakatsu:248,lat:39.7652791,lng:140.7531816,sid:82457,m:[96,18,1,0],w:[90,18,1,0],fee:1200,off:"水曜日",hp:"https://cerulean-aoni.com/"},
+  {id:"akita9",pref:"akita",rank:9,name:"天然温泉 ホテルこまち",city:"秋田市",ikitai:370,sakatsu:2151,lat:39.7018018,lng:140.1078795,sid:512,m:[86,21,1,0],w:[94,18,1,0],fee:600,off:"なし",hp:"http://www.spa-komachi.jp/"},
+  {id:"akita10",pref:"akita",rank:10,name:"井戸端サウナ",city:"東成瀬村",ikitai:369,sakatsu:69,lat:39.1894456,lng:140.6434973,sid:11659,u:[100,15,1,0],fee:5000,hours:"月〜木 休／金〜日 10:00〜17:00",off:"月曜日, 火曜日, 水曜日, 木曜日",hp:"https://www.instagram.com/idobata.sauna/",note:"事前予約制"},
+  {id:"yamagata1",pref:"yamagata",rank:1,name:"SHONAI HOTEL SUIDEN TERRASSE / スイデンテラス",city:"鶴岡市",ikitai:5124,sakatsu:2469,lat:38.7465164,lng:139.8221995,sid:11030,m:[90,17,1,0],w:[90,19,1,0],fee:4750,off:"なし",hp:"https://suiden-terrasse.com/",note:"宿泊者限定"},
+  {id:"yamagata2",pref:"yamagata",rank:2,name:"高源ゆ",city:"上山市",ikitai:2487,sakatsu:6203,lat:38.1239233,lng:140.3941235,sid:8956,m:[95,14.4,1,0],w:[85,16,1,0],fee:1600,hours:"月〜水 06:00〜12:00／木 休／金〜日 06:00〜12:00",off:"第3木曜日",hp:"https://kogenyu.com/",note:"事前予約制"},
+  {id:"yamagata3",pref:"yamagata",rank:3,name:"水沢温泉館",city:"西川町",ikitai:1632,sakatsu:7158,lat:38.436031,lng:140.1000351,sid:628,m:[90,14,1,1],w:[90,19,1,0],fee:850,hours:"月〜水 07:00〜21:00／木 8:00〜21:00／金 07:00〜22:00／土 8:00〜22:00／日 07:00〜21:00",off:"第2火曜日",hp:"https://www.gassan.co.jp/facility/02_mizusawa"},
+  {id:"yamagata4",pref:"yamagata",rank:4,name:"黒沢温泉 悠湯の郷 ゆさ & おふろcafé yusa",city:"山形市",ikitai:1553,sakatsu:784,lat:38.1906055,lng:140.3031819,sid:59449,m:[60,18,0,0],w:[64,20,1,0],hours:"毎日 10:30〜22:00",off:"なし",hp:"https://ofurocafe-yusa.com/"},
+  {id:"yamagata5",pref:"yamagata",rank:5,name:"スーパー銭湯テルメ",city:"山形市",ikitai:1033,sakatsu:6641,lat:38.23588,lng:140.34676,sid:664,m:[100,16.4,1,0],w:[80,15,1,0],fee:640,hours:"月〜土 10:00〜24:00／日 06:00〜24:00",off:"なし",hp:"http://www.terme-mg.com/"},
+  {id:"yamagata6",pref:"yamagata",rank:6,name:"庄内町ギャラリー温泉 町湯",city:"庄内町",ikitai:711,sakatsu:2161,lat:38.8419592,lng:139.9054093,sid:594,m:[87,24,1,0],w:[88,22,1,0],fee:350,hours:"毎日 09:00〜21:00",off:"第2水曜日",hp:"http://www.machiyu.jp/"},
+  {id:"yamagata7",pref:"yamagata",rank:7,name:"水曜日の小野川温泉",city:"米沢市",ikitai:654,sakatsu:136,lat:37.8805667,lng:140.05419,sid:24535,m:[105,18,1,1],w:[null,null,0,0],fee:700,off:"木曜日",hp:"https://onogawa-sauna.jp/",note:"事前予約制"},
+  {id:"yamagata8",pref:"yamagata",rank:8,name:"KAMEYA HOTEL 龍宮殿サウナ",city:"鶴岡市",ikitai:537,sakatsu:256,lat:38.7770225,lng:139.7497016,sid:79069,m:[90,15,0,0],w:[90,11,1,0],fee:2000,off:"なし",hp:"https://www.kameya-net.com/sauna/",note:"事前予約制"},
+  {id:"yamagata9",pref:"yamagata",rank:9,name:"極楽湯グループ 鷹山の湯",city:"米沢市",ikitai:465,sakatsu:2658,lat:37.9366494,lng:140.1234162,sid:705,m:[94,16,1,0],w:[90,16,1,0],fee:600,hours:"毎日 08:00〜23:00",off:"なし",hp:"http://yozan.gokurakuyu.jp/"},
+  {id:"yamagata10",pref:"yamagata",rank:10,name:"天童最上川温泉 ゆぴあ",city:"天童市",ikitai:398,sakatsu:1589,lat:38.3640579,lng:140.3218759,sid:637,m:[101,25.5,1,0],w:[92,16,1,1],fee:350,hours:"毎日 06:30〜21:00",off:"なし",hp:"http://www.yupia.com/"},
+  {id:"fukushima1",pref:"fukushima",rank:1,name:"LAKE SIDE HOTEL MINATOYA (MINATOYA SAUNA)",city:"猪苗代町",ikitai:2348,sakatsu:718,lat:37.52359,lng:140.046651,sid:9550,u:[120,20,1,0],fee:2500,off:"なし",hp:"https://www.h-minatoya.com/sauna/",note:"事前予約制"},
+  {id:"fukushima2",pref:"fukushima",rank:2,name:"サウナ発達",city:"南相馬市",ikitai:2223,sakatsu:391,lat:37.6435342,lng:140.958579,sid:12419,u:[81,15,1,1],fee:19500,off:"なし",hp:"https://hattatsu.jp/",note:"事前予約制"},
+  {id:"fukushima3",pref:"fukushima",rank:3,name:"ひばり温泉",city:"須賀川市",ikitai:1811,sakatsu:10412,lat:37.3260026,lng:140.3641055,sid:814,m:[96,18,1,1],w:[85,20,1,0],fee:600,hours:"毎日 06:00〜23:00",off:"なし",hp:"http://www.hibari-land.jp/"},
+  {id:"fukushima4",pref:"fukushima",rank:4,name:"Sauna & Spa Green サウナ&スパ グリーン～愛宕山温泉～",city:"須賀川市",ikitai:1662,sakatsu:3497,lat:37.2910991,lng:140.3822936,sid:78226,m:[100,15,1,1],w:[83,15,1,1],fee:900,hours:"毎日 07:00〜22:00",off:"第3火曜日",hp:"http://green-hill-park.com/"},
+  {id:"fukushima5",pref:"fukushima",rank:5,name:"サウナ F-トゥーリSAUNA F-tuuli",city:"福島市",ikitai:1262,sakatsu:1801,lat:37.7544413,lng:140.4617307,sid:78165,m:[95,14.7,0,0],fee:1600,hours:"毎日 10:30〜24:00",off:"なし",hp:"https://f-tuuli.jp/",note:"男性専用"},
+  {id:"fukushima6",pref:"fukushima",rank:6,name:"北投の湯 いわき健康センター",city:"いわき市",ikitai:1199,sakatsu:3276,lat:36.921296,lng:140.839126,sid:920,m:[90,11,1,1],w:[76,16,1,1],fee:1350,hours:"月〜金 10:00〜24:00／土 —／日 10:00〜24:00",off:"なし",hp:"http://www.iwaki-kenkou.com/"},
+  {id:"fukushima7",pref:"fukushima",rank:7,name:"OUSE SAUNA TUULI(OUSE Camp&Sauna TUULI内)",city:"山市",ikitai:1136,sakatsu:286,lat:37.3905669,lng:140.2370238,sid:66148,u:[85,12,1,0],fee:3300,off:"なし",hp:"https://www.instagram.com/tuuli_camp_sauna",note:"事前予約制"},
+  {id:"fukushima8",pref:"fukushima",rank:8,name:"Roots猪苗代 LakeArea (THE LAKE)",city:"猪苗代町",ikitai:1118,sakatsu:289,lat:37.4898766,lng:140.1551401,sid:72188,u:[90,21,1,1],fee:2200,hours:"月火 11:00〜17:00／水 休／木〜日 11:00〜17:00",off:"水曜日",hp:"https://lakearea.roots.jp/",note:"事前予約制"},
+  {id:"fukushima9",pref:"fukushima",rank:9,name:"森のサウナ kaveri(カベリ)-エンゼルフォレスト白河高原",city:"天栄村",ikitai:815,sakatsu:391,lat:37.230891,lng:140.056713,sid:827,m:[100,17,1,0],w:[76,12,1,0],fee:2000,hours:"毎日 10:00〜18:15",off:"なし",hp:"https://www.ang-sk.com/activity/sauna/#top"},
+  {id:"fukushima10",pref:"fukushima",rank:10,name:"日帰り温泉 富士の湯",city:"会津若松市",ikitai:772,sakatsu:1924,lat:37.505874,lng:139.928956,sid:777,m:[90,18,1,0],w:[86,18,1,0],fee:750,hours:"毎日 10:00〜24:00",off:"なし",hp:"http://fujinoyu.jp/"},
+  {id:"ibaraki1",pref:"ibaraki",rank:1,name:"SPA&ごはん ゆるうむ yuluumu",city:"水戸市",ikitai:6835,sakatsu:15613,lat:36.3392709,lng:140.4362741,sid:79238,m:[92,12,1,1],w:[80,14,1,1],fee:750,hours:"毎日 10:00〜翌09:00",off:"なし",hp:"https://yuluumu.co.jp/"},
+  {id:"ibaraki2",pref:"ibaraki",rank:2,name:"常総ONSEN&SAUNA お湯むすび",city:"常総市",ikitai:4994,sakatsu:4686,lat:36.0821197,lng:139.9859328,sid:81944,m:[98,15.3,1,1],w:[90,14.4,1,1],fee:980,hours:"毎日 10:00〜23:00",off:"なし",hp:"https://www.oyumusubi.com/"},
+  {id:"ibaraki3",pref:"ibaraki",rank:3,name:"HARTA SAUNA YUKI-IBARAKI【ハルタサウナ】",city:"結城市",ikitai:4559,sakatsu:1491,lat:36.3025946,lng:139.874647,sid:11135,u:[88,16,1,1],fee:2500,hours:"月〜金 10:00〜21:30／土日 07:00〜20:30",off:"なし",hp:"https://harta-sauna.soun.co.jp/",note:"事前予約制"},
+  {id:"ibaraki4",pref:"ibaraki",rank:4,name:"85歳が創ったハンパない極熱サウナ~3UN~",city:"日立市",ikitai:2479,sakatsu:614,lat:36.6293417,lng:140.67133,sid:42883,u:[95,15,1,1],fee:2000,hours:"毎日 10:00〜21:00",off:"なし",hp:"https://instagram.com/3un_sauna?igshid=YmMyMTA2M2Y=",note:"事前予約制"},
+  {id:"ibaraki5",pref:"ibaraki",rank:5,name:"コアミガメ",city:"高萩市",ikitai:2321,sakatsu:454,lat:36.8094065,lng:140.590736,sid:12262,u:[90,10,1,1],fee:30000,hours:"月 10:00〜17:00／火〜木 休／金〜日 10:00〜17:00",off:"火曜日, 水曜日, 木曜日",hp:"https://koamigame.com/",note:"事前予約制"},
+  {id:"ibaraki6",pref:"ibaraki",rank:6,name:"SAUNA NAYA",city:"古河市",ikitai:2240,sakatsu:693,lat:36.1778388,lng:139.714095,sid:81798,u:[90,18,1,0],fee:3500,hours:"月火 10:00〜20:00／水木 休／金〜日 10:00〜20:00",off:"水曜日, 木曜日",hp:"https://naya-sauna.studio.site/#home",note:"事前予約制"},
+  {id:"ibaraki7",pref:"ibaraki",rank:7,name:"つくば温泉 喜楽里 別邸",city:"つくば市",ikitai:2199,sakatsu:5473,lat:36.0744759,lng:140.0829366,sid:4678,m:[90,17,1,0],w:[88,13,1,0],fee:1300,hours:"毎日 09:00〜24:00",off:"なし",hp:"http://www.yurakirari.com/kirari/tsukuba/ex/"},
+  {id:"ibaraki8",pref:"ibaraki",rank:8,name:"サウナ蓑蒸",city:"笠間市",ikitai:2124,sakatsu:1143,lat:36.2775249,lng:140.2728747,sid:81126,m:[86,19,1,0],w:[90,16,1,0],fee:2500,hours:"-",off:"-",hp:"https://www.instagram.com/saunaminomushi?igsh=MTN0cDYzeHNjZnBzZw%3D%3D&amp;utm_source=qr",note:"事前予約制"},
+  {id:"ibaraki9",pref:"ibaraki",rank:9,name:"天然温泉 湯舞音 龍ケ崎店",city:"龍ケ崎市",ikitai:1944,sakatsu:7150,lat:35.9301265,lng:140.2020174,sid:4785,m:[96,15,1,1],w:[96,16,1,1],fee:1050,hours:"月〜木 09:00〜24:00／金 09:00〜翌01:00／土 —／日 09:00〜24:00",off:"なし",hp:"http://yubune-ryugasaki.jp/"},
+  {id:"ibaraki10",pref:"ibaraki",rank:10,name:"潮騒の湯",city:"大洗町",ikitai:1320,sakatsu:1665,lat:36.2975695,lng:140.5607339,sid:1271,m:[92,18,1,0],w:[80,18,1,0],fee:900,hours:"月 10:00〜21:30／火〜日 10:00〜21:00",off:"第3木曜日",hp:"http://www.siosai.jp/"},
+  {id:"gunma1",pref:"gunma",rank:1,name:"毎日サウナ 前橋本店",city:"前橋市荒牧町2丁目33-5 Maebashi, Gumma",ikitai:5090,sakatsu:12332,lat:36.425598,lng:139.0555025,sid:19354,m:[98,15,0,1],fee:1100,hours:"月〜金 15:00〜24:00／土日 12:00〜24:00",off:"なし",hp:"https://everyday-sauna.com/",note:"男性専用"},
+  {id:"gunma2",pref:"gunma",rank:2,name:"観音山サウナ蒸寺",city:"高崎市",ikitai:3691,sakatsu:3436,lat:36.3123125,lng:138.9864014,sid:80443,m:[95,14,0,0],fee:1500,hours:"毎日 13:00〜23:00",off:"なし",hp:"http://www.kannonyama-sauna-mushidera.com/",note:"男性専用"},
+  {id:"gunma3",pref:"gunma",rank:3,name:"サウナの森水沼ヴィレッジ サウナ",city:"桐生市",ikitai:2370,sakatsu:1144,lat:36.4969868,lng:139.2776731,sid:80768,u:[95,20,1,1],fee:3000,off:"なし",hp:"https://mizunuma-village.jp/",note:"事前予約制"},
+  {id:"gunma4",pref:"gunma",rank:4,name:"【整処】サウナ薪",city:"みどり市",ikitai:2072,sakatsu:2402,lat:36.4281874,lng:139.2773508,sid:81337,m:[100,15.7,0,1],w:[100,15.7,0,0],fee:1100,hours:"毎日 15:00〜24:00",off:"なし",hp:"https://www.instagram.com/sauna.maki_2024/"},
+  {id:"gunma5",pref:"gunma",rank:5,name:"草津温泉 大滝乃湯",city:"草津町",ikitai:1878,sakatsu:2268,lat:36.6229722,lng:138.6018738,sid:1090,m:[98,13,1,0],w:[88,16,1,0],fee:1200,hours:"毎日 09:00〜21:00",off:"なし",hp:"http://ohtakinoyu.com/"},
+  {id:"gunma6",pref:"gunma",rank:6,name:"高崎 京ヶ島天然温泉 湯都里",city:"高崎市",ikitai:1571,sakatsu:3699,lat:36.33998,lng:139.0524771,sid:4372,m:[86,19,1,1],w:[75,20,1,1],fee:730,hours:"毎日 05:00〜24:00",off:"第3木曜日",hp:"http://www.yu-tori.jp/"},
+  {id:"gunma7",pref:"gunma",rank:7,name:"花湯スカイテルメリゾート",city:"渋川市",ikitai:1361,sakatsu:2646,lat:36.4701052,lng:139.0220834,sid:4368,m:[96,20,1,0],w:[85,18,1,0],fee:700,hours:"毎日 07:00〜23:00",off:"なし",hp:"https://skyterme.com/"},
+  {id:"gunma8",pref:"gunma",rank:8,name:"ニノサ",city:"桐生市",ikitai:1309,sakatsu:1320,lat:36.4118875,lng:139.3338512,sid:80659,m:[85,18,1,1],fee:1000,hours:"月 17:00〜23:00／火水 休／木金 17:00〜23:00／土日 15:00〜23:00",off:"火曜日, 水曜日",hp:"https://ninosa.jp/",note:"男性専用"},
+  {id:"gunma9",pref:"gunma",rank:9,name:"温窟サウナかま蔵 伊勢崎店",city:"伊勢崎市",ikitai:1226,sakatsu:1773,lat:36.3382687,lng:139.153973,sid:87998,m:[98,8,1,1],fee:1200,hours:"月〜木 12:00〜24:00／金 12:00〜翌02:00／土日 10:00〜翌02:00",off:"なし",hp:"https://onkutsusauna-kamakura.com/",note:"男性専用"},
+  {id:"gunma10",pref:"gunma",rank:10,name:"万座亭",city:"嬬恋村",ikitai:1150,sakatsu:411,lat:36.640193,lng:138.507239,sid:78969,m:[84,15,0,0],w:[85,14,0,0],fee:1400,off:"なし",hp:"http://www.manzatei.com/"},
   {id:"g1",pref:"gifu",rank:1,name:"大垣サウナ",city:"大垣市",ikitai:8685,lat:35.363156,lng:136.633431,note:"男性専用"},
   {id:"g2",pref:"gifu",rank:2,name:"岐阜各務原 恵みの湯",city:"各務原市",ikitai:5829,lat:35.399955,lng:136.896571},
   {id:"g3",pref:"gifu",rank:3,name:"SAUNA RESORT 天光の湯",city:"多治見市",ikitai:5675,lat:35.315542,lng:137.135484},
@@ -294,7 +421,9 @@ let state = { userFacilities: [], visits: [], wants: [], tags: {}, customTags: [
 })();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ notify("保存に失敗しました。","err"); } };
 
-let tab="map", seg="frame", prefFilter="all", lastPos=null;
+let tab="map", seg="frame", prefFilter="all", regFilter="all", lastPos=null;
+const REG_OF={}; for(const [rn,ks] of REGIONS) for(const k of ks) REG_OF[k]=rn;
+const regKeys=n=>(REGIONS.find(r=>r[0]===n)||[null,[]])[1];
 const allFacilities = () => FRAME.concat(state.userFacilities);
 const byId = id => allFacilities().find(f=>f.id===id);
 const stamped = () => new Set(state.visits.map(v=>v.facilityId));
@@ -391,22 +520,52 @@ function stampFx(name, date){
 }
 
 /* ---------- ヘッダ ---------- */
+let openReg=null;
 function renderHeader(){
   document.getElementById("edition").textContent=EDITION;
   document.getElementById("editionNote").textContent=
-    "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。更新時は新しい版として発行し、押したスタンプは消えません。台帳は枠外の施設を自由に記録する層です。現在の県パックは岐阜・愛知・滋賀の30枠。他県の枠は新しい版で追加していきます。";
+    "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。更新時は新しい版として発行し、押したスタンプは消えません。台帳は枠外の施設を自由に記録する層です。現在の県パックは全国47都道府県の"+FRAME.length+"枠。営業時間・料金・スペックはこの版の時点でサウナイキタイに掲載されていた参考値です。";
   const st=stamped();
-  document.getElementById("prefgrid").innerHTML=Object.entries(PREF).map(([k,p])=>{
-    const n=FRAME.filter(f=>f.pref===k&&st.has(f.id)).length;
-    return `<div class="prefcell"><div class="row"><span>${p.label}</span><span class="num">${n}<small>/10</small></span></div>
-      <div class="bar"><div style="width:${n*10}%;background:${p.color}"></div></div></div>`;
+  const cnt=k=>FRAME.filter(f=>f.pref===k&&st.has(f.id)).length;
+  document.getElementById("prefgrid").innerHTML=REGIONS.map(([name,keys])=>{
+    const tot=keys.length*10, n=keys.reduce((a,k)=>a+cnt(k),0), open=openReg===name;
+    const cells=keys.map(k=>{
+      const p=PREF[k], m=cnt(k);
+      return `<div class="prefcell"><div class="row"><span>${p.label}</span><span class="num">${m}<small>/10</small></span></div>
+        <div class="bar"><div style="width:${m*10}%;background:${p.color}"></div></div></div>`;
+    }).join("");
+    return `<div class="regbox">
+      <button class="reghead" data-r="${esc(name)}" aria-expanded="${open}">
+        <span>${name}</span>
+        <span class="bar"><div style="width:${(n/tot*100).toFixed(1)}%;background:${PREF[keys[0]].color}"></div></span>
+        <span class="num">${n}<small>/${tot}</small></span>
+        <span class="cv">${open?"−":"＋"}</span>
+      </button>
+      ${open?`<div class="prefgrid">${cells}</div>`:""}</div>`;
   }).join("");
+  document.querySelectorAll(".reghead").forEach(b=>b.addEventListener("click",()=>{
+    openReg = openReg===b.dataset.r ? null : b.dataset.r; renderHeader();
+  }));
   const frameN = FRAME.filter(f=>st.has(f.id)).length;
-  document.getElementById("total").innerHTML=`計 ${frameN}<span style="font-size:10px">/30</span>`;
+  document.getElementById("total").innerHTML=`計 ${frameN}<span style="font-size:10px">/${FRAME.length}</span>`;
 }
 
 /* ---------- 地図（全国・ズーム対応） ---------- */
 let view=null, mapMoved=false, renderedW=0;
+/* 県名ラベルの置き位置＝最大サブパスの重心（SHAPESは投影済みpx、沖縄インセットもそのまま） */
+const _anchor={};
+function prefAnchor(key){
+  if(_anchor[key]) return _anchor[key];
+  let best=null;
+  for(const sub of SHAPES.prefs[key].split("M").slice(1)){
+    const pts=[...sub.matchAll(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g)].map(m=>[+m[1],+m[2]]);
+    if(pts.length<3) continue;
+    const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+    const area=(Math.max(...xs)-Math.min(...xs))*(Math.max(...ys)-Math.min(...ys));
+    if(!best||area>best.area) best={area,x:xs.reduce((a,b)=>a+b,0)/xs.length,y:ys.reduce((a,b)=>a+b,0)/ys.length};
+  }
+  return _anchor[key]=best||{x:-999,y:-999};
+}
 function renderMap(){
   const st=stamped();
   const {minLng,maxLng,minLat,maxLat,W,H,pad,okiS,okiAx,okiAy,okiBox,okiMaxLng,okiMaxLat}=SHAPES.meta;
@@ -437,11 +596,18 @@ function renderMap(){
   }
   s+=`<path d="${SHAPES.biwa}" fill="#C6DCDF" stroke="#8FB0B6" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;
   s+=`<line x1="${(okiBox[2]+18).toFixed(1)}" y1="${pad}" x2="${pad}" y2="${(okiBox[3]+16).toFixed(1)}" stroke="#C9B58F" stroke-width="0.8" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>`;
-  const fs=Math.min(5, view.w*0.068);
-  const lbl=(lng,lat,t)=>`<text x="${px({lng}).toFixed(1)}" y="${py({lat}).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(2)}" letter-spacing="${(fs*0.3).toFixed(2)}" fill="#A08C72">${t}</text>`;
-  s+=lbl(136.85,36.35,"岐阜")+lbl(137.55,34.85,"愛知")+lbl(135.95,35.45,"滋賀");
-  s+=`<text x="${(okiBox[0]+4).toFixed(1)}" y="${(okiBox[1]-5).toFixed(1)}" font-size="5" letter-spacing="1.5" fill="#A08C72">沖縄</text>`;
+  /* 県名は拡大時のみ（全国表示で47枚並べると潰れるため） */
+  if(zf<=0.55){
+    const fs=8*zf, inView=c=>c.x>=view.x&&c.x<=view.x+view.w&&c.y>=view.y&&c.y<=view.y+view.h;
+    for(const key in SHAPES.prefs){
+      const c=prefAnchor(key); if(!inView(c)) continue;
+      s+=`<text x="${c.x.toFixed(1)}" y="${c.y.toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(2)}" letter-spacing="${(fs*0.24).toFixed(2)}" fill="#A08C72">${PREF[key].label}</text>`;
+    }
+  }
+  s+=`<text x="${(okiBox[0]+4).toFixed(1)}" y="${(okiBox[1]-5).toFixed(1)}" font-size="${(5*Math.min(1,zf)).toFixed(2)}" letter-spacing="1.5" fill="#A08C72">沖縄</text>`;
   const z=v=>+(v*zf).toFixed(2);
+  /* 470枠あるので全国表示ではタップ判定を絞る（重なり誤爆対策。拡大すれば元の広さ） */
+  const hitR=z(zf>0.6?6.5:11);
   if(lastPos && onMap(lastPos)){
     s+=`<circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="${z(3)}" fill="none" stroke="#6F9A63" stroke-width="${z(1)}"/><circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="${z(1.2)}" fill="#6F9A63"/>`;
   }
@@ -461,7 +627,7 @@ function renderMap(){
   // 枠施設（丸＝朱印）
   for(const f of FRAME){
     const col=PREF[f.pref].color, on=st.has(f.id), x=px(f), y=py(f);
-    s+=`<g data-id="${f.id}" style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(11)}" fill="transparent"/>`;
+    s+=`<g data-id="${f.id}" style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${hitR}" fill="transparent"/>`;
     s+= on
       ? `<g filter="url(#mrough)" opacity="0.92">
            <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(4.6)}" fill="#D9483B"/>
@@ -551,15 +717,23 @@ document.getElementById("mapReset").addEventListener("click",()=>{ view=null; re
 function renderList(){
   const st=stamped();
   document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.s===seg));
+  document.getElementById("segFrame").textContent="枠 "+FRAME.length;
   document.getElementById("addFreeBtn").style.display = seg==="free" ? "block" : "none";
   const showFilters = seg==="frame";
   document.getElementById("filters").innerHTML = showFilters
-    ? [["all","全て"],["gifu","岐阜"],["aichi","愛知"],["shiga","滋賀"]].map(([k,l])=>`<button data-f="${k}" class="${prefFilter===k?"on":""}">${l}</button>`).join("")
+    ? `<div class="frow">`+[["all","全て"]].concat(REGIONS.map(([n])=>[n,n]))
+        .map(([k,l])=>`<button data-r="${esc(k)}" class="${regFilter===k?"on":""}">${l}</button>`).join("")+`</div>`
+      +(regFilter==="all" ? "" : `<div class="frow sub">`+[["all","全県"]]
+        .concat(regKeys(regFilter).map(k=>[k,PREF[k].label]))
+        .map(([k,l])=>`<button data-f="${k}" class="${prefFilter===k?"on":""}">${l}</button>`).join("")+`</div>`)
     : "";
-  document.querySelectorAll("#filters button").forEach(b=>b.addEventListener("click",()=>{prefFilter=b.dataset.f;renderList();}));
+  document.querySelectorAll("#filters button[data-r]").forEach(b=>b.addEventListener("click",()=>{
+    regFilter=b.dataset.r; prefFilter="all"; renderList();
+  }));
+  document.querySelectorAll("#filters button[data-f]").forEach(b=>b.addEventListener("click",()=>{prefFilter=b.dataset.f;renderList();}));
 
   let items=[];
-  if(seg==="frame") items=FRAME.filter(f=>prefFilter==="all"||f.pref===prefFilter);
+  if(seg==="frame") items=FRAME.filter(f=>(regFilter==="all"||REG_OF[f.pref]===regFilter)&&(prefFilter==="all"||f.pref===prefFilter));
   else if(seg==="free") items=state.userFacilities;
   else items=allFacilities().filter(f=>state.wants.includes(f.id));
 
@@ -571,7 +745,7 @@ function renderList(){
   box.innerHTML=items.map(f=>{
     const on=st.has(f.id), sc=fScore(f.id), isFree=!f.pref;
     const col=isFree?"#A69374":PREF[f.pref].color;
-    const tag=isFree?"台帳":`${PREF[f.pref].label[0]}-${f.rank}`;
+    const tag=isFree?"台帳":`${PREF[f.pref].short}${f.rank}`;
     const mark=on?`<span class="hanko ${isFree?"sq":""}">済</span>`:`<span class="dot ${isFree?"sq":""}" style="border-color:${col}"></span>`;
     return `<button class="card" data-id="${f.id}">
       <span class="rank" style="color:${col}">${tag}</span>
@@ -598,7 +772,7 @@ function renderLog(){
     const t=vTotal(v);
     const stars=v.totonoi?`<span style="color:#C7973F">★${v.totonoi}</span>`:"";
     return `<div class="logitem">
-      <div class="top"><span style="font-size:14px"><span class="mono" style="color:${col};font-size:10px;margin-right:8px">${isFree?"台帳":PREF[f.pref].label[0]+"-"+f.rank}</span>${esc(f.name)}</span>
+      <div class="top"><span style="font-size:14px"><span class="mono" style="color:${col};font-size:10px;margin-right:8px">${isFree?"台帳":PREF[f.pref].short+f.rank}</span>${esc(f.name)}</span>
       <span class="mono" style="font-size:10px;color:var(--muted)">${esc(v.date)}</span></div>
       <div class="meta"><span>${nthOf(v)}回目</span>${t!=null?`<span>${t}点${v.axes?"":"（旧）"}</span>`:""}${stars}
         ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>→<span style="color:var(--cold)">${v.cold}°</span></span>`:""}
@@ -634,6 +808,30 @@ function openDetail(id){
       }).join("")+
       (sc.v.adj?`<div class="ab"><span class="n">特別加減点</span><span class="mono" style="font-size:11px;color:var(--mid)">${sc.v.adj>0?"+":""}${sc.v.adj} ${esc(sc.v.adjReason)}</span></div>`:"")+`</div>`
     : "";
+  /* 枠施設のスペック・営業情報（サウナイキタイ由来。版の時点のスナップショット） */
+  const sp=[["m","男"],["w","女"],["u","共用"]].filter(([k])=>f[k]);
+  const yn=v=>v==null?"—":(v?"有":"無");
+  const specTbl = sp.length
+    ? `<table class="spectbl"><tr><th></th><th>サウナ室</th><th>水風呂</th><th>外気浴</th><th>ロウリュ</th></tr>`
+      +sp.map(([k,l])=>{const a=f[k];
+        return `<tr><td class="k">${l}</td>
+          <td style="color:var(--hot)">${a[0]==null?"—":a[0]+"°"}</td>
+          <td style="color:var(--cold)">${a[1]==null?"—":a[1]+"°"}</td>
+          <td>${yn(a[2])}</td><td>${yn(a[3])}</td></tr>`;}).join("")
+      +`</table>`
+    : "";
+  const info=[f.hours?["営業時間",f.hours]:null,f.off?["定休日",f.off]:null,
+              f.fee?["料金",f.fee.toLocaleString()+"円〜"]:null]
+    .filter(Boolean).map(([k,v])=>`<div><b>${k}</b><span>${esc(v)}</span></div>`).join("");
+  const facBlock = (specTbl||info||f.sid)
+    ? `<div style="margin:14px 0"><div class="eyebrow" style="margin-bottom:2px">施設情報</div>
+        ${specTbl}${info?`<div class="infolist">${info}</div>`:""}
+        ${info?`<p style="font-size:10px;color:var(--muted);margin:7px 0 0;line-height:1.6">営業情報は${esc(EDITION)}時点の参考値です。おでかけ前に公式で確認を。</p>`:""}
+        ${f.sid?`<div class="linkrow">
+          <a href="https://sauna-ikitai.com/saunas/${f.sid}" target="_blank" rel="noopener">サウナイキタイ ↗</a>
+          ${f.hp?`<a href="${esc(f.hp)}" target="_blank" rel="noopener">公式サイト ↗</a>`:""}</div>`:""}
+      </div>`
+    : "";
   const recs = vs.length
     ? vs.map(v=>{
         const t=vTotal(v);
@@ -652,8 +850,9 @@ function openDetail(id){
       ${sc?`<div class="mono" style="font-size:20px">${sc.t}<small style="font-size:10px;color:var(--muted)">${sc.legacy?" 旧":""}</small></div>`:""}
     </div>
     <div class="mono" style="font-size:11px;color:var(--muted);margin:4px 0 12px">
-      ${esc(f.city||"")}${f.ikitai?` · イキタイ ${f.ikitai.toLocaleString()}`:""}${f.note?" · "+esc(f.note):""}${vs.length?` · ${vs.length}回訪問`:""}</div>
+      ${esc(f.city||"")}${f.ikitai?` · イキタイ ${f.ikitai.toLocaleString()}`:""}${f.sakatsu?` · サ活 ${f.sakatsu.toLocaleString()}`:""}${f.note?" · "+esc(f.note):""}${vs.length?` · ${vs.length}回訪問`:""}</div>
     ${axisBars}
+    ${facBlock}
     <div style="margin:14px 0"><div class="eyebrow" style="margin-bottom:8px">タグ</div>
       <div class="chips">${TAGSET.concat(state.customTags||[]).map(t=>`<button class="chip ${tags.includes(t)?"on":""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}<button class="chip" id="tagAdd">＋追加</button></div>
     </div>
