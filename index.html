@@ -2,17 +2,19 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#121517">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <title>SAUNA 30</title>
 <style>
   :root{
     --ground:#121517; --panel:#1A1E21; --line:#2B3135;
     --text:#E6E9E7; --mid:#9BA3A8; --muted:#6B7378;
     --ok:#8FB88A; --hot:#E2603C; --cold:#4A8FB8;
-    --gifu:#D9A441; --aichi:#E2603C; --shiga:#4A8FB8;
+    --gifu:#D9A441; --aichi:#E2603C; --shiga:#4A8FB8; --free:#B8AD8F;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--ground);color:var(--text);
@@ -22,7 +24,7 @@
   .wrap{max-width:520px;margin:0 auto;padding:0 18px}
   header{padding:calc(24px + env(safe-area-inset-top)) 0 14px;border-bottom:1px solid var(--line)}
   .hrow{display:flex;justify-content:space-between;align-items:baseline}
-  h1{font-family:ui-monospace,"SF Mono","Roboto Mono",monospace;font-size:15px;font-weight:500;letter-spacing:.3em;margin:0}
+  h1{font-family:ui-monospace,monospace;font-size:15px;font-weight:500;letter-spacing:.3em;margin:0}
   .edition{font-size:9.5px;color:var(--muted);letter-spacing:.1em}
   .sub{margin:8px 0 0;font-size:12px;color:var(--muted);line-height:1.7}
   .prefgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:16px}
@@ -47,11 +49,16 @@
   nav button.on{color:var(--text);border-bottom-color:var(--text)}
   .pane{margin-top:16px;display:none}
   .pane.on{display:block}
-  svg{width:100%;display:block}
-  .legend{display:flex;gap:16px;justify-content:center;margin-top:4px;font-family:ui-monospace,monospace;font-size:10px;color:var(--muted)}
+  #mapbox svg{width:100%;display:block;touch-action:none}
+  .maptools{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+  .legend{display:flex;gap:14px;font-family:ui-monospace,monospace;font-size:10px;color:var(--muted);flex-wrap:wrap}
   .legend span{display:flex;align-items:center;gap:5px}
   .dotchip{width:7px;height:7px;border-radius:4px;display:inline-block}
-  .maphint{font-size:11.5px;color:var(--muted);line-height:1.8;margin-top:14px}
+  .sqchip{width:7px;height:7px;display:inline-block}
+  .maphint{font-size:11.5px;color:var(--muted);line-height:1.8;margin-top:12px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:12px}
+  .seg button{flex:1;background:transparent;border:none;color:var(--muted);font-size:12px;padding:9px 0}
+  .seg button.on{background:var(--panel);color:var(--text)}
   .filters{display:flex;gap:8px;margin-bottom:14px}
   .filters button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:3px;font-size:12px;padding:6px 12px}
   .filters button.on{background:var(--text);color:var(--ground);border-color:var(--text)}
@@ -59,21 +66,25 @@
     border:1px solid var(--line);border-radius:3px;padding:12px 14px;margin-bottom:8px;color:var(--text)}
   .rank{font-family:ui-monospace,monospace;font-size:11px;width:34px;flex-shrink:0}
   .dot{width:9px;height:9px;border-radius:5px;flex-shrink:0}
+  .dot.sq{border-radius:1px}
   .card .body{flex:1;min-width:0}
   .card .name{font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .card .meta{font-family:ui-monospace,monospace;font-size:10px;color:var(--muted)}
-  .card .best{font-family:ui-monospace,monospace;font-size:12px;color:var(--mid);flex-shrink:0}
+  .card .best{font-family:ui-monospace,monospace;font-size:13px;color:var(--mid);flex-shrink:0}
+  .card .best small{font-size:9px;color:var(--muted)}
   .logitem{border-bottom:1px solid var(--line);padding:13px 2px}
   .logitem .top{display:flex;justify-content:space-between;align-items:baseline}
-  .logitem .meta{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--muted);display:flex;gap:14px;margin-top:7px}
+  .logitem .meta{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--muted);display:flex;gap:12px;margin-top:7px;flex-wrap:wrap}
   .logitem .memo{margin:8px 0 0;font-size:13px;color:var(--mid);line-height:1.75}
+  .photorow{display:flex;gap:6px;margin-top:9px;overflow-x:auto}
+  .photorow img{height:64px;border-radius:3px;border:1px solid var(--line);flex-shrink:0}
   .empty{border:1px dashed var(--line);border-radius:3px;padding:24px 18px;font-size:13px;color:var(--muted);line-height:1.85}
   .eyebrow{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.18em;color:var(--muted)}
   .settext{font-size:12px;color:var(--muted);line-height:1.85;margin:8px 0 0}
   input[type=range]{width:100%;accent-color:var(--hot)}
   .overlay{position:fixed;inset:0;background:rgba(8,10,11,.74);display:none;align-items:flex-end;justify-content:center;z-index:50}
   .overlay.on{display:flex}
-  .sheet{background:var(--panel);border-top:1px solid var(--line);width:100%;max-width:520px;max-height:88vh;
+  .sheet{background:var(--panel);border-top:1px solid var(--line);width:100%;max-width:520px;max-height:90vh;
     overflow-y:auto;padding:20px 18px calc(28px + env(safe-area-inset-bottom));border-radius:10px 10px 0 0}
   .sheet .shead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
   .xbtn{background:none;border:none;color:var(--muted);font-size:20px;line-height:1}
@@ -81,22 +92,36 @@
   .field .eyebrow{margin-bottom:6px}
   .input{width:100%;background:var(--ground);border:1px solid var(--line);border-radius:3px;color:var(--text);
     font-family:inherit;font-size:15px;padding:10px 12px;outline:none}
-  textarea.input{min-height:80px;resize:vertical;line-height:1.7}
-  .slidelabel{font-family:ui-monospace,monospace;font-size:11px;margin-bottom:6px}
-  .tempsrow{display:flex;gap:14px;margin-bottom:16px}
+  textarea.input{min-height:72px;resize:vertical;line-height:1.7}
+  .slidelabel{font-family:ui-monospace,monospace;font-size:11px;margin-bottom:5px;display:flex;justify-content:space-between}
+  .axis{margin-bottom:13px}
+  .scoretotal{font-family:ui-monospace,monospace;font-size:22px;text-align:right;margin:4px 0 14px}
+  .scoretotal small{font-size:10px;color:var(--muted)}
+  .tempsrow{display:flex;gap:14px;margin-bottom:14px}
   .tempsrow>div{flex:1}
+  .stars{display:flex;gap:6px;margin-bottom:14px}
+  .stars button{background:none;border:none;font-size:22px;color:var(--line);padding:2px}
+  .stars button.on{color:#D9A441}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:20px;font-size:11.5px;padding:6px 12px}
+  .chip.on{border-color:var(--mid);color:var(--text);background:var(--ground)}
   .choosebtn{display:flex;justify-content:space-between;width:100%;background:var(--ground);border:1px solid var(--line);
     border-radius:3px;padding:13px 14px;margin-bottom:8px;color:var(--text);font-size:14px}
   .choosebtn .d{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted)}
+  .axisbars{margin:12px 0 4px}
+  .axisbars .ab{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  .axisbars .ab .n{font-size:11px;color:var(--mid);width:84px;flex-shrink:0}
+  .axisbars .ab .t{font-family:ui-monospace,monospace;font-size:11px;width:22px;text-align:right}
+  .axisbars .ab .bar{flex:1;margin-top:0}
+  .rowbtns{display:flex;gap:10px}
+  .wantbtn{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:3px;font-size:12px;padding:8px 12px}
+  .wantbtn.on{color:#D9A441;border-color:#D9A441}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="hrow">
-      <h1>SAUNA&nbsp;30</h1>
-      <span class="mono edition" id="edition"></span>
-    </div>
+    <div class="hrow"><h1>SAUNA&nbsp;30</h1><span class="mono edition" id="edition"></span></div>
     <p class="sub">愛知・岐阜・滋賀 — イキタイTOP10を踏破する</p>
   </header>
 
@@ -118,18 +143,28 @@
 
   <div class="pane on" id="pane-map">
     <div id="mapbox"></div>
-    <div class="legend">
-      <span><i class="dotchip" style="background:var(--gifu)"></i>岐阜</span>
-      <span><i class="dotchip" style="background:var(--aichi)"></i>愛知</span>
-      <span><i class="dotchip" style="background:var(--shiga)"></i>滋賀</span>
-      <span><i class="dotchip" style="border:1px solid var(--muted)"></i>未踏</span>
+    <div class="maptools">
+      <div class="legend">
+        <span><i class="dotchip" style="background:var(--gifu)"></i>岐阜</span>
+        <span><i class="dotchip" style="background:var(--aichi)"></i>愛知</span>
+        <span><i class="dotchip" style="background:var(--shiga)"></i>滋賀</span>
+        <span><i class="sqchip" style="background:var(--free)"></i>台帳</span>
+        <span><i class="dotchip" style="border:1px solid var(--muted)"></i>未踏</span>
+      </div>
+      <button class="btn" id="mapReset" style="padding:5px 10px;font-size:11px">全体</button>
     </div>
-    <p class="maphint">点をタップすると施設詳細。灯りが増えるほど地図が埋まっていきます。</p>
+    <p class="maphint">ピンチで拡大、ドラッグで移動。点をタップすると施設詳細。</p>
   </div>
 
   <div class="pane" id="pane-list">
+    <div class="seg" id="seg">
+      <button data-s="frame" class="on">枠 30</button>
+      <button data-s="free">台帳</button>
+      <button data-s="want">行きたい</button>
+    </div>
     <div class="filters" id="filters"></div>
     <div id="listbox"></div>
+    <button class="btn" id="addFreeBtn" style="width:100%;margin-top:6px;display:none">＋ 台帳に施設を登録</button>
   </div>
 
   <div class="pane" id="pane-log"><div id="logbox"></div></div>
@@ -137,16 +172,20 @@
   <div class="pane" id="pane-set">
     <div class="eyebrow" id="radlabel"></div>
     <input type="range" min="100" max="1000" step="50" id="radius">
-    <p class="settext">名古屋・栄はTOP10のうち3施設が徒歩圏に密集しています。複数が半径内に入った場合は候補から選択する方式です。</p>
+    <p class="settext">複数施設が半径内に入った場合は候補から選択します。</p>
+    <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
+      <div class="eyebrow">採点の物差し</div>
+      <p class="settext">サウナ室・水風呂・外気浴/休憩・清潔/雰囲気 各25点＋特別加減点±10（理由必須）。基準：竜泉寺の湯 ≒ 82。整いは訪問ごとの☆で別記録。</p>
+    </div>
     <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
       <div class="eyebrow">この版について</div>
       <p class="settext" id="editionNote"></p>
     </div>
     <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
       <div class="eyebrow">データ</div>
-      <p class="settext">記録はこの端末のブラウザに保存されます。バックアップはここから：</p>
-      <div style="display:flex;gap:10px;margin-top:10px">
-        <button class="btn" id="exportBtn" style="flex:1">書き出し (JSON)</button>
+      <p class="settext">記録と写真はこの端末のブラウザに保存されます。バックアップ：</p>
+      <div class="rowbtns" style="margin-top:10px">
+        <button class="btn" id="exportBtn" style="flex:1">書き出し</button>
         <button class="btn" id="importBtn" style="flex:1">読み込み</button>
         <input type="file" id="importFile" accept="application/json" style="display:none">
       </div>
@@ -158,13 +197,14 @@
 
 <script>
 "use strict";
-/* ============ 定数・データ ============ */
 const EDITION = "2026.08.05版";
 const PREF = {
   gifu:{label:"岐阜", color:"#D9A441"},
   aichi:{label:"愛知", color:"#E2603C"},
   shiga:{label:"滋賀", color:"#4A8FB8"},
 };
+const AXES = [["sauna","サウナ室"],["water","水風呂"],["rest","外気浴・休憩"],["clean","清潔・雰囲気"]];
+const TAGSET = ["セルフロウリュ","オートロウリュ","アウフグース/熱波","薪ストーブ","湖・川水風呂","女性側同等","24時間","宿泊可","飯うまい"];
 const FRAME = [
   {id:"g1",pref:"gifu",rank:1,name:"大垣サウナ",city:"大垣市",ikitai:8685,lat:35.363156,lng:136.633431,note:"男性専用"},
   {id:"g2",pref:"gifu",rank:2,name:"岐阜各務原 恵みの湯",city:"各務原市",ikitai:5829,lat:35.399955,lng:136.896571},
@@ -197,25 +237,49 @@ const FRAME = [
   {id:"s9",pref:"shiga",rank:9,name:"守山湯元水春 ピエリ守山",city:"守山市",ikitai:689,lat:35.12293,lng:135.944614},
   {id:"s10",pref:"shiga",rank:10,name:"SHIGARAKI SAUNA",city:"甲賀市信楽",ikitai:688,lat:34.857337,lng:135.973943,note:"宿泊者限定"},
 ];
-const KEY = "sauna30-tokai:v1";
+const SHAPES = {"meta": {"minLng": 135.763702392578, "maxLng": 137.837997436523, "minLat": 34.57826614379879, "maxLat": 36.46513366699217, "W": 400, "H": 443.8, "pad": 14}, "gifu": "M246.2,34.5 L249.8,31.8 L252.7,31.9 L252.2,29.0 L254.0,28.5 L255.6,25.0 L257.6,24.5 L259.7,20.7 L264.5,15.9 L267.2,17.2 L270.1,16.2 L272.7,22.2 L280.0,14.7 L281.8,17.0 L285.7,14.0 L289.4,15.4 L291.0,14.3 L292.6,15.2 L291.8,19.2 L290.4,20.5 L291.9,22.8 L298.8,20.9 L300.7,17.3 L305.7,15.2 L306.8,20.4 L308.5,22.5 L318.4,25.6 L320.9,22.8 L327.5,23.2 L328.5,26.3 L332.5,30.0 L341.0,30.6 L341.2,34.6 L346.6,36.0 L349.8,41.0 L351.5,41.3 L352.8,49.4 L351.7,52.8 L346.0,58.1 L340.3,67.8 L338.6,68.0 L339.9,73.4 L342.4,74.4 L342.4,78.6 L335.2,85.6 L336.1,88.0 L334.5,92.3 L338.7,97.3 L342.9,99.8 L345.8,99.7 L345.8,103.0 L342.9,107.2 L342.4,113.5 L338.9,117.3 L333.1,120.3 L332.9,123.6 L329.7,128.9 L325.5,130.6 L322.3,135.5 L321.1,139.8 L317.9,140.8 L313.2,137.4 L303.9,140.3 L301.1,143.3 L300.7,149.8 L299.5,151.2 L295.9,150.9 L294.1,157.1 L296.3,161.0 L304.0,160.3 L306.4,161.2 L306.8,163.8 L305.8,165.0 L307.2,165.9 L313.6,167.0 L314.7,169.7 L318.0,169.1 L319.3,173.2 L322.8,177.4 L322.7,180.8 L324.8,182.9 L325.1,185.4 L329.1,187.8 L333.5,193.6 L330.1,197.2 L328.0,203.1 L332.1,208.1 L338.1,208.3 L337.0,212.1 L338.3,213.2 L338.7,216.9 L344.7,219.3 L349.0,224.7 L347.7,226.7 L348.9,233.3 L346.5,233.8 L342.1,238.4 L346.5,242.9 L347.2,246.1 L349.0,246.4 L349.3,248.9 L345.6,250.5 L338.8,248.7 L339.4,250.9 L343.0,253.5 L344.0,263.1 L341.6,264.1 L340.0,266.7 L335.6,268.5 L336.4,274.3 L328.9,274.4 L329.1,276.5 L326.4,278.8 L321.1,281.0 L312.8,287.7 L310.5,283.9 L309.0,285.1 L307.6,283.6 L305.5,284.0 L304.4,282.5 L304.4,279.5 L297.5,280.0 L296.7,278.7 L297.6,276.8 L290.9,272.7 L285.1,272.8 L282.8,274.0 L281.9,276.8 L275.6,280.5 L274.0,279.6 L272.9,281.0 L269.0,281.0 L265.3,274.6 L261.8,275.2 L259.3,272.2 L254.0,270.4 L252.9,272.8 L250.4,272.5 L250.0,269.3 L247.8,268.9 L247.0,266.6 L248.7,265.1 L247.9,263.0 L244.2,262.7 L244.2,256.4 L238.4,252.8 L236.4,252.9 L233.7,248.5 L231.8,247.8 L234.1,243.3 L229.1,244.3 L228.7,248.8 L221.6,253.3 L211.4,254.8 L205.9,258.4 L194.5,255.6 L186.4,271.7 L177.9,283.7 L178.9,292.7 L176.9,295.5 L176.4,307.4 L174.0,301.6 L172.2,300.3 L172.1,305.0 L166.9,303.9 L164.3,297.7 L161.9,296.2 L159.5,292.4 L156.9,291.3 L156.2,288.4 L154.7,288.4 L154.9,285.3 L153.3,284.2 L152.1,280.2 L148.8,281.0 L147.4,284.8 L143.0,284.0 L140.7,285.5 L140.0,284.5 L135.7,289.0 L133.8,286.3 L130.2,288.7 L124.2,283.4 L127.5,280.1 L126.5,273.4 L130.0,267.7 L131.8,260.5 L131.9,259.0 L129.8,258.5 L130.5,255.0 L134.5,253.4 L136.0,251.0 L130.2,244.6 L132.7,238.2 L131.6,234.0 L128.7,233.4 L125.8,229.3 L126.6,226.0 L129.1,223.7 L128.1,220.1 L125.4,219.4 L123.1,213.5 L121.5,213.7 L120.3,217.9 L118.4,218.7 L116.9,215.8 L113.4,216.3 L114.3,207.6 L112.9,203.4 L114.4,201.0 L112.9,199.5 L108.2,200.1 L105.9,192.9 L109.9,187.5 L108.7,184.6 L114.4,178.9 L114.1,168.1 L115.3,166.0 L118.6,165.7 L124.1,161.6 L134.0,166.1 L143.4,165.8 L147.1,171.5 L150.2,163.1 L158.8,165.5 L163.9,160.9 L167.9,163.5 L168.7,161.2 L170.8,160.9 L172.0,159.0 L174.7,164.2 L177.8,162.1 L183.7,162.1 L186.1,158.8 L189.3,160.3 L193.5,158.3 L195.4,160.7 L197.9,160.7 L200.3,150.9 L204.6,150.3 L205.6,147.8 L203.3,142.5 L203.8,139.4 L201.9,135.8 L197.0,133.1 L198.3,128.2 L190.8,125.0 L191.0,118.6 L186.6,117.4 L188.0,111.7 L187.8,105.6 L193.4,101.6 L191.6,97.5 L196.2,85.1 L193.7,81.0 L199.6,78.4 L200.2,75.1 L203.8,72.2 L203.4,70.6 L209.1,61.8 L205.7,57.9 L202.4,57.8 L198.4,50.6 L199.8,49.2 L205.5,48.9 L207.4,42.9 L206.5,39.9 L211.5,39.4 L212.6,35.5 L213.3,40.9 L214.7,41.1 L219.1,36.9 L226.2,40.2 L230.6,47.1 L228.1,55.0 L231.2,56.0 L233.3,53.4 L237.7,51.9 L239.4,46.3 L242.2,46.5 L245.0,43.7 L246.2,41.0 L244.5,40.3 L246.7,35.6 L246.2,34.5Z", "aichi": "M228.7,245.5 L229.1,244.3 L234.5,243.4 L231.8,247.8 L233.7,248.5 L236.4,252.9 L238.4,252.8 L244.2,256.4 L244.2,262.7 L247.9,263.0 L248.7,265.1 L247.0,266.6 L247.8,268.9 L250.0,269.3 L250.4,272.5 L252.9,272.8 L254.0,270.4 L259.3,272.2 L261.8,275.2 L265.3,274.6 L269.0,281.0 L272.9,281.0 L274.0,279.6 L275.6,280.5 L281.9,276.8 L282.8,274.0 L285.1,272.8 L290.9,272.7 L297.6,276.8 L296.7,278.7 L297.5,280.0 L304.4,279.5 L304.4,282.5 L305.5,284.0 L307.6,283.6 L309.0,285.1 L310.5,283.9 L312.8,287.7 L321.1,281.0 L326.4,278.8 L329.1,276.5 L328.9,274.4 L333.4,274.9 L337.5,273.0 L338.0,274.7 L335.4,276.5 L335.6,278.6 L333.6,281.0 L339.2,288.3 L339.5,293.1 L346.9,290.4 L351.2,290.8 L353.4,286.6 L358.1,285.1 L365.1,286.0 L365.1,287.8 L372.0,288.0 L375.1,292.0 L383.3,289.3 L386.0,290.0 L384.2,290.3 L384.7,291.7 L383.1,291.9 L381.8,295.7 L379.7,296.5 L383.3,299.4 L383.0,301.9 L384.3,303.0 L383.0,304.2 L381.8,303.2 L381.8,305.9 L379.9,308.1 L377.8,307.2 L379.2,313.6 L377.7,315.8 L375.3,314.9 L374.6,319.8 L364.3,329.1 L361.4,336.1 L362.6,337.9 L361.3,340.4 L362.5,342.9 L360.6,343.1 L356.8,348.9 L354.3,348.8 L352.4,351.9 L350.5,360.6 L345.9,364.4 L342.8,365.0 L341.0,369.9 L334.5,369.5 L333.2,371.4 L325.7,373.7 L325.6,376.0 L323.0,378.4 L324.1,383.8 L321.2,386.7 L320.9,391.2 L323.8,402.9 L322.5,408.7 L296.9,414.5 L261.6,427.1 L252.8,426.9 L238.9,429.8 L245.9,414.2 L249.0,411.3 L251.7,412.5 L250.8,414.7 L254.8,415.6 L254.1,417.8 L257.0,417.3 L260.8,415.0 L259.2,412.6 L263.9,413.0 L272.6,408.0 L275.9,408.3 L277.7,405.6 L279.4,405.4 L278.4,404.5 L280.2,404.1 L279.8,401.6 L282.5,403.9 L283.6,401.1 L282.6,399.5 L286.8,396.1 L289.7,396.8 L289.7,404.3 L287.8,404.3 L286.8,407.6 L288.5,406.5 L290.8,407.7 L292.3,405.5 L291.0,404.7 L291.6,403.8 L293.3,404.2 L294.0,402.5 L291.2,402.8 L291.0,397.5 L294.9,397.5 L295.4,398.8 L298.8,396.9 L293.2,395.8 L293.3,387.3 L295.0,385.2 L289.1,378.6 L288.2,379.9 L286.0,379.8 L285.7,378.7 L284.3,379.9 L280.7,379.7 L280.0,377.9 L274.5,375.9 L275.6,377.2 L274.2,377.4 L275.0,378.1 L273.3,380.3 L270.6,378.9 L269.2,382.6 L269.7,386.1 L266.3,388.6 L267.5,385.2 L265.9,383.6 L262.7,384.8 L260.1,383.4 L259.5,384.8 L254.6,382.9 L251.4,386.3 L249.4,383.9 L243.3,386.2 L240.6,385.9 L235.9,380.2 L235.1,377.3 L229.3,375.9 L228.6,374.6 L226.9,375.8 L227.4,374.4 L228.5,374.6 L227.6,368.8 L229.9,364.4 L231.4,364.4 L230.4,363.9 L231.5,360.4 L232.8,360.4 L231.6,359.5 L232.6,345.8 L231.2,349.0 L230.7,357.0 L228.0,363.0 L229.0,364.6 L228.3,365.3 L225.7,363.1 L223.9,364.5 L226.0,364.6 L224.9,367.4 L222.8,366.5 L222.8,368.0 L224.4,368.9 L224.0,370.2 L222.6,369.4 L223.1,374.4 L221.7,374.7 L222.6,374.9 L222.3,377.8 L221.4,378.0 L220.3,387.3 L226.4,393.9 L229.1,395.3 L230.2,397.3 L229.1,399.0 L230.7,399.1 L229.9,400.9 L231.4,401.6 L230.7,403.9 L224.2,401.2 L223.1,402.3 L215.1,397.9 L207.0,388.9 L210.3,380.3 L211.7,372.9 L210.1,367.2 L206.5,364.2 L206.6,362.3 L205.7,364.5 L203.6,362.5 L204.6,360.4 L204.0,351.6 L204.9,345.4 L203.5,344.3 L205.4,341.5 L206.3,342.1 L205.9,340.8 L209.6,336.1 L208.0,335.1 L212.3,335.0 L212.5,334.1 L209.1,333.3 L212.2,327.7 L212.0,322.9 L213.0,321.0 L215.9,321.3 L217.0,319.8 L216.0,318.7 L217.1,318.3 L215.7,316.1 L215.0,317.3 L211.9,316.3 L211.0,321.4 L209.8,320.2 L210.2,323.8 L209.2,327.1 L208.1,326.8 L208.7,328.0 L207.7,327.7 L208.1,329.3 L206.6,325.5 L208.3,324.5 L207.7,323.8 L208.7,319.7 L208.3,318.5 L204.9,318.6 L203.1,322.9 L204.0,321.8 L205.5,322.6 L205.2,325.4 L206.7,330.0 L202.0,331.2 L201.6,326.0 L202.9,325.5 L199.3,325.5 L199.9,330.3 L196.3,329.4 L199.1,331.9 L198.7,333.5 L194.5,332.1 L191.4,325.1 L190.3,318.7 L181.2,309.6 L177.0,307.1 L176.9,295.5 L178.9,292.7 L177.9,283.7 L186.4,271.7 L194.5,255.6 L205.9,258.4 L211.4,254.8 L221.6,253.3 L228.7,248.8 L228.7,245.5ZM202.0,337.7 L199.9,336.0 L203.7,332.9 L202.0,337.7ZM203.5,347.9 L201.8,346.8 L203.2,344.7 L204.5,345.5 L203.5,347.9ZM201.4,372.2 L199.9,363.9 L202.2,364.6 L203.8,367.2 L203.1,368.1 L204.2,370.2 L202.1,370.6 L202.4,372.1 L201.4,372.2ZM290.6,384.3 L290.1,382.5 L292.3,381.7 L293.9,383.8 L291.0,385.5 L290.6,384.3ZM292.9,395.7 L290.9,395.3 L292.1,392.3 L292.9,392.3 L292.9,395.7ZM244.5,399.5 L243.6,397.1 L242.4,398.4 L241.1,396.9 L242.6,395.6 L245.5,397.1 L244.5,399.5ZM297.0,398.4 L296.4,397.5 L298.2,397.1 L297.0,398.4ZM235.6,402.8 L235.6,401.4 L237.9,401.3 L235.6,402.8ZM236.7,410.2 L235.4,409.5 L237.1,406.2 L236.7,410.2Z", "shiga": "M83.3,183.1 L89.6,181.8 L94.5,186.5 L98.0,186.4 L106.7,191.2 L105.9,192.9 L107.1,195.1 L106.4,196.5 L108.2,200.1 L112.9,199.5 L114.4,201.0 L112.9,203.4 L114.3,207.6 L113.4,216.3 L116.9,215.8 L118.4,218.7 L120.3,217.9 L121.5,213.7 L123.1,213.5 L125.4,219.4 L128.1,220.1 L129.1,223.7 L126.6,226.0 L125.8,229.3 L128.7,233.4 L131.6,234.0 L132.7,238.2 L130.2,244.6 L136.0,251.0 L134.5,253.4 L130.5,255.0 L129.8,258.5 L131.9,259.0 L131.8,260.5 L130.0,267.7 L126.5,273.4 L127.5,280.1 L124.2,283.4 L130.8,288.9 L131.1,292.2 L129.6,295.6 L132.5,296.3 L137.5,300.3 L137.8,303.3 L136.2,303.9 L134.6,308.2 L136.7,309.6 L135.4,311.1 L135.6,317.8 L134.5,318.6 L135.5,322.5 L131.4,326.2 L131.5,330.2 L132.4,330.4 L131.2,332.7 L131.9,336.9 L130.4,337.9 L130.7,341.3 L127.3,347.5 L125.6,347.3 L123.3,349.7 L123.6,353.5 L122.1,354.4 L121.9,357.8 L113.9,361.1 L108.6,365.4 L106.1,364.6 L101.3,368.2 L90.8,364.9 L88.5,363.1 L88.5,361.9 L82.8,362.8 L80.9,361.4 L79.8,362.6 L76.2,358.5 L73.5,361.3 L72.0,361.0 L71.7,363.8 L74.5,365.4 L78.2,364.9 L79.1,367.3 L75.6,369.5 L74.9,372.0 L71.7,372.6 L73.2,376.7 L72.6,377.8 L61.1,382.9 L58.2,380.7 L61.2,377.6 L61.3,376.1 L57.2,374.7 L57.3,371.5 L51.1,372.4 L51.3,370.8 L49.5,369.1 L46.6,369.5 L45.7,360.4 L38.1,365.2 L32.4,360.6 L31.7,358.2 L33.2,356.5 L32.8,354.5 L34.6,351.3 L34.5,348.4 L29.9,343.3 L30.4,340.4 L29.4,338.8 L25.3,338.8 L26.8,336.1 L24.1,334.0 L26.7,334.0 L26.5,331.9 L25.3,331.9 L23.2,326.7 L26.9,323.8 L26.2,321.1 L27.6,317.8 L26.8,316.8 L30.5,303.0 L28.4,299.4 L25.7,288.2 L27.1,287.1 L26.6,283.7 L31.3,274.5 L30.9,273.1 L27.7,276.0 L26.1,276.0 L22.1,267.2 L19.2,265.7 L16.9,261.9 L14.0,260.9 L16.7,254.7 L18.8,253.3 L18.8,251.6 L21.8,251.9 L23.2,245.8 L30.0,246.2 L31.6,249.8 L36.7,247.9 L37.1,244.3 L40.8,241.8 L40.3,238.2 L41.4,233.4 L45.6,222.2 L46.8,222.1 L48.0,225.4 L50.7,226.1 L53.1,229.6 L57.4,228.5 L61.4,221.3 L61.1,220.1 L65.2,219.0 L68.9,220.8 L71.3,217.8 L75.2,220.3 L76.7,208.4 L86.6,212.2 L86.3,208.3 L88.1,205.5 L82.9,190.8 L80.4,189.2 L83.3,183.1Z", "biwa": "M96.0,252.0 L106.4,256.5 L106.0,262.6 L101.7,274.2 L99.4,277.2 L85.7,287.1 L75.2,291.6 L70.4,294.9 L67.2,300.6 L70.5,301.9 L69.6,303.9 L66.5,305.9 L56.4,307.8 L53.4,309.2 L51.1,311.3 L50.0,309.7 L46.5,324.3 L43.2,326.3 L41.9,328.3 L41.9,337.9 L40.2,341.5 L38.1,341.2 L35.7,339.0 L33.7,335.5 L32.8,331.6 L33.7,328.3 L42.3,313.7 L43.5,310.6 L44.2,299.1 L45.1,295.8 L48.7,288.6 L59.3,278.1 L62.5,272.4 L68.6,269.1 L69.7,266.0 L64.1,251.7 L64.1,249.2 L65.6,246.3 L66.9,240.6 L69.1,236.8 L73.4,239.0 L78.3,229.6 L79.4,236.4 L80.5,239.2 L83.8,240.3 L84.6,238.7 L85.1,234.9 L85.7,226.8 L88.2,227.7 L90.4,229.6 L91.7,232.2 L92.0,241.0 L93.2,247.3 L96.0,252.0Z"};
+const KEY = "sauna30:v2";
+const OLDKEY = "sauna30-tokai:v1";
 
-/* ============ 状態 ============ */
-let state = { visits: [], radius: 300 };
-try {
-  const raw = localStorage.getItem(KEY);
-  if (raw) { const d = JSON.parse(raw); state.visits = d.visits||[]; state.radius = d.radius||300; }
-} catch(e) {}
-let tab = "map", prefFilter = "all", lastPos = null;
-
+/* ---------- 状態・移行 ---------- */
+let state = { userFacilities: [], visits: [], wants: [], tags: {}, customTags: [], radius: 300 };
+(function load(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { Object.assign(state, JSON.parse(raw)); return; }
+    const old = localStorage.getItem(OLDKEY);
+    if (old) {
+      const d = JSON.parse(old);
+      state.radius = d.radius || 300;
+      state.visits = (d.visits||[]).map(v => ({
+        id:v.id, facilityId:v.facilityId, date:v.date, method:v.method,
+        hot:v.hot, cold:v.cold, memo:v.memo||"",
+        axes:null, adj:0, adjReason:"", totonoi:null, photos:[],
+        legacyScore: typeof v.score==="number" ? v.score : null
+      }));
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }
+  } catch(e){}
+})();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ notify("保存に失敗しました。","err"); } };
+
+let tab="map", seg="frame", prefFilter="all", lastPos=null;
+const allFacilities = () => FRAME.concat(state.userFacilities);
+const byId = id => allFacilities().find(f=>f.id===id);
 const stamped = () => new Set(state.visits.map(v=>v.facilityId));
 const visitsOf = id => state.visits.filter(v=>v.facilityId===id);
-const byId = id => FRAME.find(f=>f.id===id);
-const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nthOf = v => { const vs=visitsOf(v.facilityId); const i=vs.findIndex(x=>x.id===v.id); return vs.length-i; };
+const vTotal = v => v.axes ? AXES.reduce((s,[k])=>s+(v.axes[k]||0),0) + (v.adj||0) : v.legacyScore;
+const fScore = id => {
+  const vs = visitsOf(id);
+  for (const v of vs) { const t = vTotal(v); if (t != null) return { t, legacy: !v.axes, v }; }
+  return null;
+};
+const esc = s => String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today = () => new Date().toISOString().slice(0,10);
 const uid = () => Math.random().toString(36).slice(2,10);
 
-/* ============ geo ============ */
+/* ---------- geo ---------- */
 const R=6371000, rad=d=>d*Math.PI/180;
 function distance(a,b){
   const dLat=rad(b.lat-a.lat), dLng=rad(b.lng-a.lng);
@@ -225,224 +289,465 @@ function distance(a,b){
 const fmtDist = m => m<1000 ? Math.round(m)+"m" : (m/1000).toFixed(1)+"km";
 function getPosition(){
   return new Promise((res,rej)=>{
-    if(!navigator.geolocation){ rej(new Error("この端末では位置情報を取得できません。施設一覧から手動スタンプが使えます。")); return; }
+    if(!navigator.geolocation){ rej(new Error("この端末では位置情報を取得できません。")); return; }
     navigator.geolocation.getCurrentPosition(
       p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),
-      e=>rej(new Error(e.code===1
-        ? "位置情報が許可されていません。ブラウザ設定で許可するか、施設一覧から手動スタンプを。"
-        : "現在地を取得できませんでした。施設一覧から手動スタンプが使えます。")),
+      e=>rej(new Error(e.code===1?"位置情報が許可されていません。施設詳細から手動スタンプが使えます。":"現在地を取得できませんでした。")),
       {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
   });
 }
 
-/* ============ 通知 ============ */
+/* ---------- 写真 (IndexedDB) ---------- */
+const dbp = new Promise((res,rej)=>{
+  const rq = indexedDB.open("sauna30",1);
+  rq.onupgradeneeded = () => rq.result.createObjectStore("photos");
+  rq.onsuccess = () => res(rq.result);
+  rq.onerror = () => rej(rq.error);
+});
+async function photoPut(id, blob){ const db=await dbp; return new Promise((res,rej)=>{ const tx=db.transaction("photos","readwrite"); tx.objectStore("photos").put(blob,id); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+async function photoGet(id){ const db=await dbp; return new Promise((res,rej)=>{ const rq=db.transaction("photos").objectStore("photos").get(id); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>rej(rq.error); }); }
+async function photoAllKeys(){ const db=await dbp; return new Promise((res,rej)=>{ const rq=db.transaction("photos").objectStore("photos").getAllKeys(); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }
+async function compress(file){
+  const url = URL.createObjectURL(file);
+  const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+  const max = 1280, sc = Math.min(1, max/Math.max(img.width,img.height));
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(img.width*sc); cv.height = Math.round(img.height*sc);
+  cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+  URL.revokeObjectURL(url);
+  return new Promise(res=>cv.toBlob(res,"image/jpeg",0.82));
+}
+async function fillPhotos(container){
+  const imgs = container.querySelectorAll("img[data-photo]");
+  for (const el of imgs) {
+    try { const b = await photoGet(el.dataset.photo); if (b) el.src = URL.createObjectURL(b); } catch(e){}
+  }
+}
+
+/* ---------- 通知 ---------- */
 let noticeTimer=null;
 function notify(msg,type){
   const el=document.getElementById("notice");
   el.className="notice"+(type==="err"?" err":"");
   el.textContent=msg; el.style.display="block";
   clearTimeout(noticeTimer);
-  noticeTimer=setTimeout(()=>{el.style.display="none";},4800);
+  noticeTimer=setTimeout(()=>{el.style.display="none";},5000);
 }
 
-/* ============ 描画 ============ */
+/* ---------- ヘッダ ---------- */
 function renderHeader(){
   document.getElementById("edition").textContent=EDITION;
   document.getElementById("editionNote").textContent=
-    "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。ランキングが変動しても枠は動かさず、更新時は新しい版として発行します。押したスタンプが消えることはありません。";
+    "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。更新時は新しい版として発行し、押したスタンプは消えません。台帳は枠外の施設を自由に記録する層です。";
   const st=stamped();
-  const grid=document.getElementById("prefgrid");
-  grid.innerHTML=Object.entries(PREF).map(([k,p])=>{
+  document.getElementById("prefgrid").innerHTML=Object.entries(PREF).map(([k,p])=>{
     const n=FRAME.filter(f=>f.pref===k&&st.has(f.id)).length;
-    return `<div class="prefcell">
-      <div class="row"><span>${p.label}</span><span class="num">${n}<small>/10</small></span></div>
+    return `<div class="prefcell"><div class="row"><span>${p.label}</span><span class="num">${n}<small>/10</small></span></div>
       <div class="bar"><div style="width:${n*10}%;background:${p.color}"></div></div></div>`;
   }).join("");
-  document.getElementById("total").innerHTML=`計 ${st.size}<span style="font-size:10px">/30</span>`;
+  const frameN = FRAME.filter(f=>st.has(f.id)).length;
+  document.getElementById("total").innerHTML=`計 ${frameN}<span style="font-size:10px">/30</span>`;
 }
 
+/* ---------- 地図（ズーム対応） ---------- */
+let view=null, mapMoved=false;
 function renderMap(){
-  const st=stamped(), pad=26, W=400;
-  const lats=FRAME.map(f=>f.lat), lngs=FRAME.map(f=>f.lng);
-  const minLat=Math.min(...lats), maxLat=Math.max(...lats);
-  const minLng=Math.min(...lngs), maxLng=Math.max(...lngs);
+  const st=stamped();
+  const {minLng,maxLng,minLat,maxLat,W,H,pad}=SHAPES.meta;
+  if(!view) view={x:0,y:0,w:W,h:H};
   const k=Math.cos(rad((minLat+maxLat)/2));
   const spanX=(maxLng-minLng)*k, spanY=maxLat-minLat;
-  const H=pad*2+(W-pad*2)*spanY/spanX;
   const px=f=>pad+((f.lng-minLng)*k)/spanX*(W-pad*2);
   const py=f=>pad+(maxLat-f.lat)/spanY*(H-pad*2);
-  let s=`<svg viewBox="0 0 ${W} ${H.toFixed(1)}">`;
-  for(const t of [0.25,0.5,0.75]){
-    s+=`<line x1="${pad+t*(W-pad*2)}" y1="${pad}" x2="${pad+t*(W-pad*2)}" y2="${(H-pad).toFixed(1)}" stroke="#2B3135" stroke-width="0.5"/>`;
-    s+=`<line x1="${pad}" y1="${(pad+t*(H-pad*2)).toFixed(1)}" x2="${W-pad}" y2="${(pad+t*(H-pad*2)).toFixed(1)}" stroke="#2B3135" stroke-width="0.5"/>`;
+  let s=`<svg id="mapsvg" viewBox="${view.x} ${view.y} ${view.w} ${view.h}">`;
+  for(const key of ["gifu","aichi","shiga"]){
+    const n=FRAME.filter(f=>f.pref===key&&st.has(f.id)).length;
+    s+=`<path d="${SHAPES[key]}" fill="${PREF[key].color}" fill-opacity="${(0.03+n*0.012).toFixed(3)}" stroke="#3A4145" stroke-width="0.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   }
-  s+=`<rect x="${pad}" y="${pad}" width="${W-pad*2}" height="${(H-pad*2).toFixed(1)}" fill="none" stroke="#2B3135" stroke-width="0.8"/>`;
-  if(lastPos && lastPos.lat<=maxLat+0.2 && lastPos.lat>=minLat-0.2 && lastPos.lng>=minLng-0.2 && lastPos.lng<=maxLng+0.2){
-    s+=`<circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="3" fill="none" stroke="#8FB88A" stroke-width="1"/>`;
-    s+=`<circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="1.2" fill="#8FB88A"/>`;
+  s+=`<path d="${SHAPES.biwa}" fill="#1E2A33" stroke="#33505F" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;
+  const lbl=(lng,lat,t)=>`<text x="${px({lng}).toFixed(1)}" y="${py({lat}).toFixed(1)}" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" letter-spacing="2" fill="#6B7378">${t}</text>`;
+  s+=lbl(136.85,36.05,"岐阜")+lbl(137.42,34.93,"愛知")+lbl(136.02,35.52,"滋賀");
+  if(lastPos && lastPos.lat<=maxLat && lastPos.lat>=minLat && lastPos.lng>=minLng && lastPos.lng<=maxLng){
+    s+=`<circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="3" fill="none" stroke="#8FB88A" stroke-width="1"/><circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="1.2" fill="#8FB88A"/>`;
   }
-  for(const f of FRAME){
-    const col=PREF[f.pref].color, on=st.has(f.id);
-    s+=`<g data-id="${f.id}" style="cursor:pointer">`;
-    s+=`<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="11" fill="transparent"/>`;
-    if(on){
-      s+=`<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="7" fill="${col}" opacity="0.16"/>`;
-      s+=`<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="3.4" fill="${col}"/>`;
-    } else {
-      s+=`<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="3" fill="none" stroke="#6B7378" stroke-width="1.1"/>`;
-    }
+  // 台帳施設（四角）
+  for(const f of state.userFacilities){
+    if(f.lat>maxLat||f.lat<minLat||f.lng<minLng||f.lng>maxLng) continue;
+    const on=st.has(f.id);
+    s+=`<g data-id="${f.id}" style="cursor:pointer"><rect x="${(px(f)-6).toFixed(1)}" y="${(py(f)-6).toFixed(1)}" width="12" height="12" fill="transparent"/>`;
+    s+= on
+      ? `<rect x="${(px(f)-2.8).toFixed(1)}" y="${(py(f)-2.8).toFixed(1)}" width="5.6" height="5.6" fill="#B8AD8F"/>`
+      : `<rect x="${(px(f)-2.5).toFixed(1)}" y="${(py(f)-2.5).toFixed(1)}" width="5" height="5" fill="#121517" stroke="#7A838A" stroke-width="1"/>`;
     s+=`</g>`;
   }
-  const biwa={lng:135.9,lat:35.09}, ngo={lng:136.906,lat:35.167};
-  s+=`<text x="${(px(biwa)-4).toFixed(1)}" y="${py(biwa).toFixed(1)}" text-anchor="end" font-family="ui-monospace,monospace" font-size="8.5" fill="#6B7378">琵琶湖</text>`;
-  s+=`<text x="${(px(ngo)+9).toFixed(1)}" y="${(py(ngo)+3).toFixed(1)}" font-family="ui-monospace,monospace" font-size="8.5" fill="#6B7378">名古屋</text>`;
+  // 枠施設（丸）
+  for(const f of FRAME){
+    const col=PREF[f.pref].color, on=st.has(f.id);
+    s+=`<g data-id="${f.id}" style="cursor:pointer"><circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="11" fill="transparent"/>`;
+    s+= on
+      ? `<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="7" fill="${col}" opacity="0.18"/><circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="3.4" fill="${col}"/>`
+      : `<circle cx="${px(f).toFixed(1)}" cy="${py(f).toFixed(1)}" r="3" fill="#121517" stroke="#7A838A" stroke-width="1.1"/>`;
+    s+=`</g>`;
+  }
   s+=`</svg>`;
   const box=document.getElementById("mapbox");
   box.innerHTML=s;
-  box.querySelectorAll("g[data-id]").forEach(g=>g.addEventListener("click",()=>openDetail(g.dataset.id)));
+  bindMapGestures(document.getElementById("mapsvg"));
 }
+function bindMapGestures(svg){
+  const {W,H}=SHAPES.meta;
+  const ptrs=new Map();
+  let start=null;
+  const apply=()=>svg.setAttribute("viewBox",`${view.x} ${view.y} ${view.w} ${view.h}`);
+  const clamp=()=>{
+    view.w=Math.min(Math.max(view.w,W/8),W); view.h=view.w*H/W;
+    view.x=Math.min(Math.max(view.x,-view.w*0.2),W-view.w*0.8);
+    view.y=Math.min(Math.max(view.y,-view.h*0.2),H-view.h*0.8);
+  };
+  const toLocal=e=>{
+    const r=svg.getBoundingClientRect();
+    return { x:view.x+(e.clientX-r.left)/r.width*view.w, y:view.y+(e.clientY-r.top)/r.height*view.h, cx:e.clientX, cy:e.clientY };
+  };
+  svg.addEventListener("pointerdown",e=>{
+    svg.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId,toLocal(e));
+    start={...view}; mapMoved=false;
+  });
+  svg.addEventListener("pointermove",e=>{
+    if(!ptrs.has(e.pointerId)) return;
+    const cur=toLocal(e);
+    if(ptrs.size===1){
+      const p0=[...ptrs.values()][0];
+      const dx=(cur.cx-p0.cx), dy=(cur.cy-p0.cy);
+      if(Math.abs(dx)+Math.abs(dy)>6) mapMoved=true;
+      const r=svg.getBoundingClientRect();
+      view.x=start.x-dx/r.width*view.w; view.y=start.y-dy/r.height*view.h;
+      clamp(); apply();
+    } else if(ptrs.size===2){
+      mapMoved=true;
+      const ids=[...ptrs.keys()];
+      const other=ptrs.get(ids[0]===e.pointerId?ids[1]:ids[0]);
+      const d0=Math.hypot(other.cx-[...ptrs.values()].find(p=>p!==other).cx||1,1); // placeholder, recompute below
+      // 2点ピンチ：保存座標と現座標で単純スケール
+      const prev=ptrs.get(e.pointerId);
+      const dPrev=Math.hypot(prev.cx-other.cx, prev.cy-other.cy)||1;
+      const dCur=Math.hypot(cur.cx-other.cx, cur.cy-other.cy)||1;
+      const sc=dPrev/dCur;
+      const midx=(cur.x+other.x)/2, midy=(cur.y+other.y)/2;
+      view.w*=sc; view.h*=sc;
+      view.x=midx-(midx-view.x)*sc; view.y=midy-(midy-view.y)*sc;
+      clamp(); apply();
+      ptrs.set(e.pointerId,cur);
+      return;
+    }
+  });
+  const up=e=>{
+    const wasSingle = ptrs.size===1;
+    ptrs.delete(e.pointerId);
+    if(wasSingle && !mapMoved){
+      const el=document.elementFromPoint(e.clientX,e.clientY);
+      const g=el && el.closest ? el.closest("g[data-id]") : null;
+      if(g) openDetail(g.dataset.id);
+    }
+    setTimeout(()=>{mapMoved=false;},50);
+  };
+  svg.addEventListener("pointerup",up); svg.addEventListener("pointercancel",up);
+  svg.addEventListener("wheel",e=>{
+    e.preventDefault();
+    const cur=toLocal(e); const sc=e.deltaY>0?1.15:0.87;
+    view.w*=sc; view.h*=sc;
+    view.x=cur.x-(cur.x-view.x)*sc; view.y=cur.y-(cur.y-view.y)*sc;
+    clamp(); apply();
+  },{passive:false});
+}
+document.getElementById("mapReset").addEventListener("click",()=>{ view=null; renderMap(); });
 
+/* ---------- 施設リスト ---------- */
 function renderList(){
   const st=stamped();
-  document.getElementById("filters").innerHTML=
-    [["all","全て"],["gifu","岐阜"],["aichi","愛知"],["shiga","滋賀"]]
-    .map(([k,l])=>`<button data-f="${k}" class="${prefFilter===k?"on":""}">${l}</button>`).join("");
+  document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.s===seg));
+  document.getElementById("addFreeBtn").style.display = seg==="free" ? "block" : "none";
+  const showFilters = seg==="frame";
+  document.getElementById("filters").innerHTML = showFilters
+    ? [["all","全て"],["gifu","岐阜"],["aichi","愛知"],["shiga","滋賀"]].map(([k,l])=>`<button data-f="${k}" class="${prefFilter===k?"on":""}">${l}</button>`).join("")
+    : "";
   document.querySelectorAll("#filters button").forEach(b=>b.addEventListener("click",()=>{prefFilter=b.dataset.f;renderList();}));
-  const rows=FRAME.filter(f=>prefFilter==="all"||f.pref===prefFilter).map(f=>{
-    const vs=visitsOf(f.id), on=vs.length>0;
-    const best=vs.reduce((m,v)=>typeof v.score==="number"&&(m==null||v.score>m)?v.score:m,null);
-    const col=PREF[f.pref].color;
-    return `<button class="card" data-id="${f.id}">
-      <span class="rank" style="color:${col}">${PREF[f.pref].label[0]}-${f.rank}</span>
-      <span class="dot" style="${on?`background:${col}`:`border:1px solid var(--muted)`}"></span>
-      <span class="body">
-        <span class="name" style="opacity:${on?1:0.6}">${esc(f.name)}</span>
-        <span class="meta">${esc(f.city)} · イキタイ ${f.ikitai.toLocaleString()}${f.note?" · "+esc(f.note):""}</span>
-      </span>${best!=null?`<span class="best">${best}</span>`:""}</button>`;
-  }).join("");
-  document.getElementById("listbox").innerHTML=rows;
-  document.querySelectorAll("#listbox .card").forEach(b=>b.addEventListener("click",()=>openDetail(b.dataset.id)));
-}
 
+  let items=[];
+  if(seg==="frame") items=FRAME.filter(f=>prefFilter==="all"||f.pref===prefFilter);
+  else if(seg==="free") items=state.userFacilities;
+  else items=allFacilities().filter(f=>state.wants.includes(f.id));
+
+  const box=document.getElementById("listbox");
+  if(!items.length){
+    box.innerHTML=`<div class="empty">${seg==="free"?"枠外で良かった施設をここに登録して記録できます。":seg==="want"?"施設詳細の「行きたい」でここに溜まります。":"該当なし。"}</div>`;
+    return;
+  }
+  box.innerHTML=items.map(f=>{
+    const on=st.has(f.id), sc=fScore(f.id), isFree=!f.pref;
+    const col=isFree?"#B8AD8F":PREF[f.pref].color;
+    const tag=isFree?"台帳":`${PREF[f.pref].label[0]}-${f.rank}`;
+    return `<button class="card" data-id="${f.id}">
+      <span class="rank" style="color:${col}">${tag}</span>
+      <span class="dot ${isFree?"sq":""}" style="${on?`background:${col}`:`border:1px solid var(--muted)`}"></span>
+      <span class="body">
+        <span class="name" style="opacity:${on?1:0.6}">${esc(f.name)}${state.wants.includes(f.id)?' <span style="color:#D9A441">◇</span>':""}</span>
+        <span class="meta">${esc(f.city||"")}${f.ikitai?` · イキタイ ${f.ikitai.toLocaleString()}`:""}${f.note?" · "+esc(f.note):""}</span>
+      </span>
+      ${sc?`<span class="best">${sc.t}${sc.legacy?'<small>旧</small>':""}</span>`:""}
+    </button>`;
+  }).join("");
+  box.querySelectorAll(".card").forEach(b=>b.addEventListener("click",()=>openDetail(b.dataset.id)));
+}
+document.querySelectorAll("#seg button").forEach(b=>b.addEventListener("click",()=>{seg=b.dataset.s;renderList();}));
+document.getElementById("addFreeBtn").addEventListener("click",()=>openAddFree());
+
+/* ---------- 履歴 ---------- */
 function renderLog(){
   const box=document.getElementById("logbox");
   if(!state.visits.length){ box.innerHTML=`<div class="empty">スタンプの記録がここに並びます。</div>`; return; }
   box.innerHTML=state.visits.map(v=>{
     const f=byId(v.facilityId); if(!f) return "";
-    const col=PREF[f.pref].color;
+    const isFree=!f.pref, col=isFree?"#B8AD8F":PREF[f.pref].color;
+    const t=vTotal(v);
+    const stars=v.totonoi?`<span style="color:#D9A441">★${v.totonoi}</span>`:"";
     return `<div class="logitem">
-      <div class="top"><span style="font-size:14px"><span class="mono" style="color:${col};font-size:10px;margin-right:8px">${PREF[f.pref].label[0]}-${f.rank}</span>${esc(f.name)}</span>
+      <div class="top"><span style="font-size:14px"><span class="mono" style="color:${col};font-size:10px;margin-right:8px">${isFree?"台帳":PREF[f.pref].label[0]+"-"+f.rank}</span>${esc(f.name)}</span>
       <span class="mono" style="font-size:10px;color:var(--muted)">${esc(v.date)}</span></div>
-      <div class="meta">${typeof v.score==="number"?`<span>${v.score}点</span>`:""}
-        ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>→<span style="color:var(--cold)">${v.cold}°</span> Δ${v.hot-v.cold}</span>`:""}
+      <div class="meta"><span>${nthOf(v)}回目</span>${t!=null?`<span>${t}点${v.axes?"":"（旧）"}</span>`:""}${stars}
+        ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>→<span style="color:var(--cold)">${v.cold}°</span></span>`:""}
+        ${v.adj?`<span>${v.adj>0?"+":""}${v.adj} ${esc(v.adjReason)}</span>`:""}
         <span>${v.method==="gps"?"GPS":"手動"}</span></div>
-      ${v.memo?`<p class="memo">${esc(v.memo)}</p>`:""}</div>`;
+      ${v.memo?`<p class="memo">${esc(v.memo)}</p>`:""}
+      ${v.photos&&v.photos.length?`<div class="photorow">${v.photos.map(p=>`<img data-photo="${p}" alt="">`).join("")}</div>`:""}
+    </div>`;
   }).join("");
+  fillPhotos(box);
 }
 
 function renderAll(){ renderHeader(); renderMap(); renderList(); renderLog(); }
 
-/* ============ シート ============ */
+/* ---------- シート ---------- */
 const overlay=document.getElementById("overlay"), sheetEl=document.getElementById("sheet");
-function openSheet(html){ sheetEl.innerHTML=html; overlay.classList.add("on"); }
+function openSheet(html){ sheetEl.innerHTML=html; overlay.classList.add("on"); sheetEl.scrollTop=0; }
 function closeSheet(){ overlay.classList.remove("on"); }
 overlay.addEventListener("click",e=>{ if(e.target===overlay) closeSheet(); });
-
-function sheetHead(title){
-  return `<div class="shead"><span class="eyebrow">${esc(title)}</span><button class="xbtn" onclick="window.__close()">×</button></div>`;
-}
+const sheetHead=t=>`<div class="shead"><span class="eyebrow">${esc(t)}</span><button class="xbtn" onclick="window.__close()">×</button></div>`;
 window.__close=closeSheet;
 
+/* ---------- 施設詳細 ---------- */
 function openDetail(id){
-  const f=byId(id), vs=visitsOf(id);
-  const recs=vs.length
-    ? `<div style="margin-bottom:18px"><div class="eyebrow">記録</div>`+vs.map(v=>
-        `<div class="mono" style="font-size:11.5px;color:var(--mid);margin-top:8px;display:flex;gap:14px">
-        <span>${esc(v.date)}</span>${typeof v.score==="number"?`<span>${v.score}点</span>`:""}
-        ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>/<span style="color:var(--cold)">${v.cold}°</span></span>`:""}</div>`).join("")+`</div>`
-    : `<p style="font-size:13px;color:var(--muted);margin-bottom:18px">未踏破。</p>`;
-  openSheet(sheetHead(`${PREF[f.pref].label} ${f.rank}位`)+`
-    <div style="font-size:17px;margin-bottom:4px">${esc(f.name)}</div>
-    <div class="mono" style="font-size:11px;color:var(--muted);margin-bottom:16px">
-      ${esc(f.city)} · イキタイ ${f.ikitai.toLocaleString()}${f.note?" · "+esc(f.note):""}</div>
-    ${recs}
-    <div style="display:flex;gap:10px">
+  const f=byId(id); if(!f) return;
+  const isFree=!f.pref;
+  const vs=visitsOf(id), sc=fScore(id);
+  const tags=state.tags[id]||[];
+  const axisBars = sc && sc.v.axes
+    ? `<div class="axisbars">`+AXES.map(([k,label])=>{
+        const val=sc.v.axes[k]||0;
+        return `<div class="ab"><span class="n">${label}</span><div class="bar"><div style="width:${val*4}%;background:${isFree?"#B8AD8F":PREF[f.pref].color}"></div></div><span class="t mono">${val}</span></div>`;
+      }).join("")+
+      (sc.v.adj?`<div class="ab"><span class="n">特別加減点</span><span class="mono" style="font-size:11px;color:var(--mid)">${sc.v.adj>0?"+":""}${sc.v.adj} ${esc(sc.v.adjReason)}</span></div>`:"")+`</div>`
+    : "";
+  const recs = vs.length
+    ? vs.map(v=>{
+        const t=vTotal(v);
+        return `<div style="margin-top:9px">
+          <div class="mono" style="font-size:11.5px;color:var(--mid);display:flex;gap:12px;flex-wrap:wrap">
+          <span>${esc(v.date)}</span><span>${nthOf(v)}回目</span>${t!=null?`<span>${t}点${v.axes?"":"（旧）"}</span>`:""}
+          ${v.totonoi?`<span style="color:#D9A441">★${v.totonoi}</span>`:""}
+          ${v.hot!=null?`<span><span style="color:var(--hot)">${v.hot}°</span>/<span style="color:var(--cold)">${v.cold}°</span></span>`:""}</div>
+          ${v.photos&&v.photos.length?`<div class="photorow">${v.photos.map(p=>`<img data-photo="${p}" alt="">`).join("")}</div>`:""}
+        </div>`;
+      }).join("")
+    : `<p style="font-size:13px;color:var(--muted);margin:8px 0 0">未踏破。</p>`;
+  openSheet(sheetHead(isFree?"台帳":`${PREF[f.pref].label} ${f.rank}位`)+`
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div style="font-size:17px">${esc(f.name)}</div>
+      ${sc?`<div class="mono" style="font-size:20px">${sc.t}<small style="font-size:10px;color:var(--muted)">${sc.legacy?" 旧":""}</small></div>`:""}
+    </div>
+    <div class="mono" style="font-size:11px;color:var(--muted);margin:4px 0 12px">
+      ${esc(f.city||"")}${f.ikitai?` · イキタイ ${f.ikitai.toLocaleString()}`:""}${f.note?" · "+esc(f.note):""}${vs.length?` · ${vs.length}回訪問`:""}</div>
+    ${axisBars}
+    <div style="margin:14px 0"><div class="eyebrow" style="margin-bottom:8px">タグ</div>
+      <div class="chips">${TAGSET.concat(state.customTags||[]).map(t=>`<button class="chip ${tags.includes(t)?"on":""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}<button class="chip" id="tagAdd">＋追加</button></div>
+    </div>
+    <div style="margin:16px 0 6px"><div class="eyebrow">記録</div>${recs}</div>
+    <div class="rowbtns" style="margin-top:16px">
       <button class="btn primary" style="flex:1" onclick="window.__checkin('${f.id}','manual')">手動でスタンプ</button>
+      <button class="wantbtn ${state.wants.includes(f.id)?"on":""}" id="wantT">◇ 行きたい</button>
       <button class="btn" onclick="window.__maps(${f.lat},${f.lng})">地図</button>
-    </div>`);
+    </div>
+    ${isFree?`<button class="btn" style="width:100%;margin-top:10px;color:var(--hot)" onclick="window.__delFree('${f.id}')">この施設を台帳から削除</button>`:""}
+  `);
+  const addBtn=document.getElementById("tagAdd");
+  if(addBtn) addBtn.addEventListener("click",()=>{
+    const t=(prompt("新しいタグ名")||"").trim();
+    if(!t) return;
+    if(!TAGSET.includes(t) && !(state.customTags||[]).includes(t)){
+      state.customTags=[...(state.customTags||[]),t];
+    }
+    const arr=state.tags[id]||[];
+    if(!arr.includes(t)) state.tags[id]=[...arr,t];
+    save(); openDetail(id);
+  });
+  sheetEl.querySelectorAll(".chip[data-tag]").forEach(c=>c.addEventListener("click",()=>{
+    const t=c.dataset.tag, arr=state.tags[id]||[];
+    state.tags[id]=arr.includes(t)?arr.filter(x=>x!==t):[...arr,t];
+    save(); c.classList.toggle("on");
+  }));
+  document.getElementById("wantT").addEventListener("click",e=>{
+    state.wants=state.wants.includes(id)?state.wants.filter(x=>x!==id):[...state.wants,id];
+    save(); e.target.classList.toggle("on"); renderList();
+  });
+  fillPhotos(sheetEl);
 }
-window.__maps=(lat,lng)=>{ window.open(`https://www.google.com/maps?q=${lat},${lng}`,"_blank"); };
+window.__maps=(lat,lng)=>window.open(`https://www.google.com/maps?q=${lat},${lng}`,"_blank");
+window.__delFree=id=>{
+  state.userFacilities=state.userFacilities.filter(f=>f.id!==id);
+  state.visits=state.visits.filter(v=>v.facilityId!==id);
+  state.wants=state.wants.filter(x=>x!==id);
+  delete state.tags[id];
+  save(); closeSheet(); renderAll(); notify("削除しました");
+};
 
-function openChooser(cands){
-  openSheet(sheetHead("どの施設にいますか？")+cands.map(c=>
-    `<button class="choosebtn" onclick="window.__checkin('${c.id}','gps',${c.d})">
-     <span>${esc(c.name)}</span><span class="d">${c.d}m</span></button>`).join(""));
+/* ---------- 台帳登録 ---------- */
+function openAddFree(){
+  openSheet(sheetHead("台帳に施設を登録")+`
+    <label class="field"><div class="eyebrow">施設名</div><input class="input" id="af-name" placeholder="例：○○温泉"></label>
+    <label class="field"><div class="eyebrow">場所・メモ（任意）</div><input class="input" id="af-city" placeholder="市町村、特徴など"></label>
+    <div class="field"><div class="eyebrow">位置</div>
+      <button class="btn" id="af-gps" style="width:100%">現在地を使う</button>
+      <div class="mono" id="af-coord" style="font-size:11px;color:var(--ok);margin-top:8px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input class="input mono" id="af-lat" placeholder="緯度" inputmode="decimal" style="font-size:13px">
+        <input class="input mono" id="af-lng" placeholder="経度" inputmode="decimal" style="font-size:13px">
+      </div>
+      <p class="settext" style="font-size:11.5px">現地でなければ地図アプリの座標を貼り付け。</p>
+    </div>
+    <button class="btn primary" style="width:100%" id="af-save">登録する</button>`);
+  let coord=null;
+  document.getElementById("af-gps").addEventListener("click",async e=>{
+    e.target.disabled=true; e.target.textContent="測位中…";
+    try{ const p=await getPosition(); coord={lat:p.lat,lng:p.lng}; lastPos=p;
+      document.getElementById("af-coord").textContent=`${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+    }catch(err){ notify(err.message,"err"); }
+    e.target.disabled=false; e.target.textContent="現在地を使う";
+  });
+  document.getElementById("af-save").addEventListener("click",()=>{
+    const name=document.getElementById("af-name").value.trim();
+    const la=parseFloat(document.getElementById("af-lat").value), ln=parseFloat(document.getElementById("af-lng").value);
+    const c=coord||( !isNaN(la)&&!isNaN(ln) ? {lat:la,lng:ln} : null);
+    if(!name||!c){ notify("施設名と位置が必要です。","err"); return; }
+    const f={id:"u"+uid(), name, city:document.getElementById("af-city").value.trim(), lat:c.lat, lng:c.lng};
+    state.userFacilities.push(f); save(); closeSheet(); renderAll();
+    notify(`${name} を台帳に登録しました`);
+  });
 }
 
+/* ---------- チェックイン（4軸スライダー） ---------- */
 window.__checkin=(id,method,dist)=>{
-  const f=byId(id);
+  const f=byId(id); if(!f) return;
+  const prev=fScore(id);
+  const init = prev && prev.v.axes ? {...prev.v.axes} : {sauna:20,water:20,rest:20,clean:20};
   openSheet(sheetHead("スタンプ — "+f.name)+`
-    <div class="mono" style="font-size:10.5px;color:var(--muted);margin-bottom:18px">
+    <div class="mono" style="font-size:10.5px;color:var(--muted);margin-bottom:14px">
       ${method==="gps"?`GPS判定 · ${dist}m`:"手動チェックイン"}</div>
     <label class="field"><div class="eyebrow">日付</div>
       <input class="input mono" type="date" id="ci-date" value="${today()}"></label>
+    <div class="eyebrow" style="margin-bottom:10px">採点（各25点）</div>
+    ${AXES.map(([k,label])=>`
+      <div class="axis"><div class="slidelabel"><span style="color:var(--mid)">${label}</span><span id="ci-${k}-v">${init[k]}</span></div>
+      <input type="range" min="0" max="25" value="${init[k]}" id="ci-${k}" style="accent-color:var(--text)"></div>`).join("")}
+    <div class="axis"><div class="slidelabel"><span style="color:var(--mid)">特別加減点</span><span id="ci-adj-v">0</span></div>
+      <input type="range" min="-10" max="10" value="0" id="ci-adj"></div>
+    <input class="input" id="ci-adjr" placeholder="加減点の理由（例：混雑 −2）" style="font-size:13px;display:none;margin-bottom:6px">
+    <div class="scoretotal" id="ci-total">80<small> /100±</small></div>
+    <div class="axis"><div class="slidelabel"><span style="color:#D9A441">今日の整い</span><span id="ci-ttn-v">—</span></div>
+      <input type="range" min="0" max="5" step="0.5" value="0" id="ci-ttn" style="accent-color:#D9A441"></div>
     <div class="tempsrow">
-      <div><div class="slidelabel" style="color:var(--hot)">サウナ室 <span id="ci-hot-v">90</span>°C</div>
+      <div><div class="slidelabel"><span style="color:var(--hot)">サウナ室</span><span id="ci-hot-v">90°C</span></div>
         <input type="range" min="50" max="130" value="90" id="ci-hot" style="accent-color:var(--hot)"></div>
-      <div><div class="slidelabel" style="color:var(--cold)">水風呂 <span id="ci-cold-v">16</span>°C</div>
+      <div><div class="slidelabel"><span style="color:var(--cold)">水風呂</span><span id="ci-cold-v">16°C</span></div>
         <input type="range" min="2" max="30" value="16" id="ci-cold" style="accent-color:var(--cold)"></div>
-    </div>
-    <div style="margin-bottom:16px">
-      <div class="slidelabel" style="color:var(--mid)">点数 <span id="ci-score-v">80</span></div>
-      <input type="range" min="0" max="100" value="80" id="ci-score" style="accent-color:var(--text)">
     </div>
     <label class="field"><div class="eyebrow">メモ</div>
       <textarea class="input" id="ci-memo" placeholder="ととのい方、導線、音、匂い"></textarea></label>
+    <div class="field"><div class="eyebrow">写真</div>
+      <input type="file" id="ci-photos" accept="image/*" multiple style="margin-top:6px;font-size:12px;color:var(--muted)">
+    </div>
     <button class="btn primary" style="width:100%" id="ci-save">スタンプを押す</button>`);
-  for(const key of ["hot","cold","score"]){
-    const el=document.getElementById("ci-"+key);
-    el.addEventListener("input",()=>{document.getElementById("ci-"+key+"-v").textContent=el.value;});
-  }
-  document.getElementById("ci-save").addEventListener("click",()=>{
-    const st=stamped(), first=!st.has(id);
+
+  const upd=()=>{
+    let t=0;
+    for(const [k] of AXES){ const v=+document.getElementById("ci-"+k).value; t+=v; document.getElementById("ci-"+k+"-v").textContent=v; }
+    const adj=+document.getElementById("ci-adj").value;
+    document.getElementById("ci-adj-v").textContent=(adj>0?"+":"")+adj;
+    document.getElementById("ci-adjr").style.display = adj!==0 ? "block" : "none";
+    document.getElementById("ci-total").innerHTML=(t+adj)+`<small> /100±</small>`;
+  };
+  for(const [k] of AXES) document.getElementById("ci-"+k).addEventListener("input",upd);
+  document.getElementById("ci-adj").addEventListener("input",upd);
+  upd();
+  document.getElementById("ci-hot").addEventListener("input",e=>document.getElementById("ci-hot-v").textContent=e.target.value+"°C");
+  document.getElementById("ci-cold").addEventListener("input",e=>document.getElementById("ci-cold-v").textContent=e.target.value+"°C");
+  document.getElementById("ci-ttn").addEventListener("input",e=>{
+    const v=+e.target.value;
+    document.getElementById("ci-ttn-v").textContent = v>0 ? "★"+v : "—";
+  });
+  document.getElementById("ci-save").addEventListener("click",async e=>{
+    e.target.disabled=true; e.target.textContent="保存中…";
+    const adj=+document.getElementById("ci-adj").value;
+    const adjReason=document.getElementById("ci-adjr").value.trim();
+    if(adj!==0 && !adjReason){ notify("加減点には理由を一言。","err"); e.target.disabled=false; e.target.textContent="スタンプを押す"; return; }
+    const photoIds=[];
+    const files=document.getElementById("ci-photos").files;
+    try{
+      for(const file of files){
+        const blob=await compress(file);
+        const pid="p"+uid();
+        await photoPut(pid,blob); photoIds.push(pid);
+      }
+    }catch(err){ notify("写真の保存に失敗しました（記録は保存します）。","err"); }
+    const axes={}; for(const [k] of AXES) axes[k]=+document.getElementById("ci-"+k).value;
+    const first=!stamped().has(id);
     state.visits.unshift({
-      id:uid(), facilityId:id,
-      date:document.getElementById("ci-date").value||today(),
-      hot:Number(document.getElementById("ci-hot").value),
-      cold:Number(document.getElementById("ci-cold").value),
-      score:Number(document.getElementById("ci-score").value),
-      memo:document.getElementById("ci-memo").value.trim(),
-      method:method
+      id:uid(), facilityId:id, date:document.getElementById("ci-date").value||today(), method,
+      axes, adj, adjReason, totonoi:(+document.getElementById("ci-ttn").value)||null,
+      hot:+document.getElementById("ci-hot").value, cold:+document.getElementById("ci-cold").value,
+      memo:document.getElementById("ci-memo").value.trim(), photos:photoIds
     });
     save(); closeSheet(); renderAll();
-    if(first){
+    if(first && f.pref){
       const n=FRAME.filter(x=>x.pref===f.pref&&stamped().has(x.id)).length;
       notify(n===10?`${PREF[f.pref].label} 県制覇！ 10/10`:`初スタンプ。${PREF[f.pref].label} ${n}/10`);
-    } else notify("再訪を記録しました");
+    } else notify(first?"台帳に初スタンプ。":"再訪を記録しました");
   });
 };
 
-/* ============ GPSスタンプ ============ */
+/* ---------- GPSスタンプ ---------- */
 document.getElementById("stampBtn").addEventListener("click",async()=>{
   const btn=document.getElementById("stampBtn");
   btn.disabled=true; btn.textContent="測位中…";
   try{
     const p=await getPosition();
     lastPos=p; renderMap();
-    const near=FRAME.map(f=>({f,d:distance(p,f)})).filter(x=>x.d<=state.radius).sort((a,b)=>a.d-b.d);
+    const pool=allFacilities();
+    const near=pool.map(f=>({f,d:distance(p,f)})).filter(x=>x.d<=state.radius).sort((a,b)=>a.d-b.d);
     if(!near.length){
-      const c=FRAME.map(f=>({f,d:distance(p,f)})).sort((a,b)=>a.d-b.d)[0];
-      notify(`半径${state.radius}m以内に対象施設なし。最寄りは ${c.f.name}（${fmtDist(c.d)}）。`,"err");
+      const c=pool.map(f=>({f,d:distance(p,f)})).sort((a,b)=>a.d-b.d)[0];
+      notify(`半径${state.radius}m以内に登録施設なし。最寄りは ${c.f.name}（${fmtDist(c.d)}）。枠外なら施設タブ→台帳に登録を。`,"err");
     } else if(near.length===1){
       window.__checkin(near[0].f.id,"gps",Math.round(near[0].d));
     } else {
-      openChooser(near.map(x=>({...x.f,d:Math.round(x.d)})));
+      openSheet(sheetHead("どの施設にいますか？")+near.map(x=>
+        `<button class="choosebtn" onclick="window.__checkin('${x.f.id}','gps',${Math.round(x.d)})">
+         <span>${esc(x.f.name)}</span><span class="d">${Math.round(x.d)}m</span></button>`).join(""));
     }
   }catch(e){ notify(e.message,"err"); }
   btn.disabled=false; btn.textContent="現在地でスタンプ";
 });
 
-/* ============ タブ・設定 ============ */
+/* ---------- タブ・設定 ---------- */
 document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
   tab=b.dataset.tab;
   document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
@@ -450,36 +755,54 @@ document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",
 }));
 const radEl=document.getElementById("radius");
 radEl.value=state.radius;
-const radLabel=()=>{document.getElementById("radlabel").textContent=`GPS判定半径 — ${state.radius}m`;};
+const radLabel=()=>document.getElementById("radlabel").textContent=`GPS判定半径 — ${state.radius}m`;
 radLabel();
-radEl.addEventListener("input",()=>{state.radius=Number(radEl.value);radLabel();save();});
+radEl.addEventListener("input",()=>{state.radius=+radEl.value;radLabel();save();});
 
-/* ============ バックアップ ============ */
-document.getElementById("exportBtn").addEventListener("click",()=>{
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+/* ---------- バックアップ（写真込み） ---------- */
+document.getElementById("exportBtn").addEventListener("click",async()=>{
+  notify("書き出し中…");
+  const photos=[];
+  try{
+    const keys=await photoAllKeys();
+    for(const k of keys){
+      const b=await photoGet(k);
+      if(!b) continue;
+      const dataUrl=await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(b); });
+      photos.push({id:k,dataUrl});
+    }
+  }catch(e){}
+  const blob=new Blob([JSON.stringify({state,photos})],{type:"application/json"});
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=`sauna30-backup-${today()}.json`;
+  a.href=URL.createObjectURL(blob); a.download=`sauna30-backup-${today()}.json`;
   a.click(); URL.revokeObjectURL(a.href);
+  notify(`書き出しました（写真${photos.length}枚込み）`);
 });
 document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
 document.getElementById("importFile").addEventListener("change",e=>{
   const file=e.target.files[0]; if(!file) return;
   const r=new FileReader();
-  r.onload=()=>{
+  r.onload=async()=>{
     try{
       const d=JSON.parse(r.result);
-      if(!Array.isArray(d.visits)) throw new Error();
-      state.visits=d.visits; if(d.radius) state.radius=d.radius;
-      radEl.value=state.radius; radLabel(); save(); renderAll();
+      if(!d.state||!Array.isArray(d.state.visits)) throw new Error();
+      state=Object.assign({userFacilities:[],visits:[],wants:[],tags:{},customTags:[],radius:300}, d.state);
+      save();
+      if(Array.isArray(d.photos)){
+        for(const p of d.photos){
+          const res=await fetch(p.dataUrl); const b=await res.blob();
+          await photoPut(p.id,b);
+        }
+      }
+      radEl.value=state.radius; radLabel(); renderAll();
       notify(`読み込み完了。${state.visits.length}件の記録を復元しました`);
-    }catch{ notify("読み込めませんでした。書き出したJSONファイルを選んでください。","err"); }
+    }catch{ notify("読み込めませんでした。書き出したファイルを選んでください。","err"); }
   };
-  r.readAsText(file);
-  e.target.value="";
+  r.readAsText(file); e.target.value="";
 });
 
 renderAll();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
 </body>
 </html>
