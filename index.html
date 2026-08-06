@@ -524,7 +524,7 @@ let openReg=null;
 function renderHeader(){
   document.getElementById("edition").textContent=EDITION;
   document.getElementById("editionNote").textContent=
-    "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。更新時は新しい版として発行し、押したスタンプは消えません。台帳は枠外の施設を自由に記録する層です。現在の県パックは全国47都道府県の"+FRAME.length+"枠。営業時間・料金・スペックはこの版の時点でサウナイキタイに掲載されていた参考値です。";
+    "枠はサウナイキタイの都道府県別イキタイ数TOP10（"+EDITION+"）を固定したもの。更新時は新しい版として発行し、押したスタンプは消えません。台帳は枠外の施設を自由に記録する層です。現在の県パックは"+Object.keys(PREF).length+"都道府県の"+FRAME.length+"枠。営業時間・料金・スペックはこの版の時点でサウナイキタイに掲載されていた参考値です。";
   const st=stamped();
   const cnt=k=>FRAME.filter(f=>f.pref===k&&st.has(f.id)).length;
   document.getElementById("prefgrid").innerHTML=REGIONS.map(([name,keys])=>{
