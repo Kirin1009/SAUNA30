@@ -1,4 +1,4 @@
-/* SAUNA 30 service worker
+/* Sauna470s service worker
    キャッシュ名は登録URLの ?v=（index.html の APP_VERSION）から決まる。
    このファイルを手で書き換える必要はない。 */
 const VERSION = new URL(self.location).searchParams.get("v") || "0";
