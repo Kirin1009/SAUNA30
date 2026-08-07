@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<title>SAUNA 30</title>
+<title>Sauna470s</title>
 <style>
   :root{
     --ground:#FEF6E6; --panel:#FFFFF8; --line:#EADCC2; --line2:#D9C6A4;
@@ -206,8 +206,8 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="hrow"><h1>SAUNA&nbsp;30</h1><span class="mono edition" id="edition"></span></div>
-    <p class="sub">県ごとのイキタイTOP10を踏破する — 全国版</p>
+    <div class="hrow"><h1>SAUNA&nbsp;470s</h1><span class="mono edition" id="edition"></span></div>
+    <p class="sub">県ごとのイキタイTOP10、全国470湯を踏破する</p>
   </header>
 
   <div class="reglist" id="prefgrid"></div>
@@ -297,7 +297,7 @@
 /* アプリのバージョン。ここだけ上げればService Workerのキャッシュ名も追従する
    （登録URLに ?v= を付けて渡すので、sw.js側を手で書き換える必要はない）。
    MAJOR=データ構造やlocalStorageの互換が変わる / MINOR=機能追加 / PATCH=修正 */
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 /* 枠データの版。アプリのバージョンとは別物で、サウナイキタイのランキングを固定した日付を指す */
 const EDITION = "2026.08.06版";
 const REGIONS = [
@@ -1068,8 +1068,13 @@ function renderMap(){
   }
   s+=`<text x="${(okiBox[0]+4).toFixed(1)}" y="${(okiBox[1]-5).toFixed(1)}" font-size="${(5*Math.min(1,zf)).toFixed(2)}" letter-spacing="1.5" fill="#A08C72">沖縄</text>`;
   const z=v=>+(v*zf).toFixed(2);
+  /* 判子の倍率。従来は画面サイズ一定（＝拡大しても極小のまま）だったが、
+     全国表示でも一回り大きく、ズームするほど育って「岐2」の字が読める大きさにする */
+  const zoom=W/view.w;
+  const mk=Math.min(3.3, 1.45*Math.pow(zoom,0.4));
+  const zm=v=>+(v*zf*mk).toFixed(2);
   /* 470枠あるので全国表示ではタップ判定を絞る（重なり誤爆対策。拡大すれば元の広さ） */
-  const hitR=z(zf>0.6?6.5:11);
+  const hitR=zm(zf>0.6?5:9);
   if(lastPos && onMap(lastPos)){
     s+=`<circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="${z(3)}" fill="none" stroke="#6F9A63" stroke-width="${z(1)}"/><circle cx="${px(lastPos).toFixed(1)}" cy="${py(lastPos).toFixed(1)}" r="${z(1.2)}" fill="#6F9A63"/>`;
   }
@@ -1077,28 +1082,28 @@ function renderMap(){
   for(const f of state.userFacilities){
     if(!onMap(f)) continue;
     const on=st.has(f.id), x=px(f), y=py(f);
-    s+=`<g data-id="${f.id}" style="cursor:pointer"><rect x="${(x-z(6)).toFixed(1)}" y="${(y-z(6)).toFixed(1)}" width="${z(12)}" height="${z(12)}" fill="transparent"/>`;
+    s+=`<g data-id="${f.id}" style="cursor:pointer"><rect x="${(x-zm(6)).toFixed(1)}" y="${(y-zm(6)).toFixed(1)}" width="${zm(12)}" height="${zm(12)}" fill="transparent"/>`;
     s+= on
       ? `<g filter="url(#mrough)" opacity="0.92" transform="rotate(-8 ${x.toFixed(1)} ${y.toFixed(1)})">
-           <rect x="${(x-z(3.1)).toFixed(1)}" y="${(y-z(3.1)).toFixed(1)}" width="${z(6.2)}" height="${z(6.2)}" rx="${z(0.8)}" fill="#D9483B"/>
-           <rect x="${(x-z(1.9)).toFixed(1)}" y="${(y-z(1.9)).toFixed(1)}" width="${z(3.8)}" height="${z(3.8)}" fill="none" stroke="#FEF6E6" stroke-width="${z(0.5)}"/>
+           <rect x="${(x-zm(3.1)).toFixed(1)}" y="${(y-zm(3.1)).toFixed(1)}" width="${zm(6.2)}" height="${zm(6.2)}" rx="${zm(0.8)}" fill="#D9483B"/>
+           <rect x="${(x-zm(1.9)).toFixed(1)}" y="${(y-zm(1.9)).toFixed(1)}" width="${zm(3.8)}" height="${zm(3.8)}" fill="none" stroke="#FEF6E6" stroke-width="${zm(0.5)}"/>
          </g>`
-      : `<rect x="${(x-z(2.5)).toFixed(1)}" y="${(y-z(2.5)).toFixed(1)}" width="${z(5)}" height="${z(5)}" fill="#FFFDF4" stroke="#A08C72" stroke-width="${z(1.1)}"/>`;
+      : `<rect x="${(x-zm(2.5)).toFixed(1)}" y="${(y-zm(2.5)).toFixed(1)}" width="${zm(5)}" height="${zm(5)}" fill="#FFFDF4" stroke="#A08C72" stroke-width="${zm(1.1)}"/>`;
     s+=`</g>`;
   }
-  // 枠施設（丸＝朱印）。判子の字は拡大時のみ（全国表示だと潰れて読めない）
-  const showSeal = zf<=0.55;
+  // 枠施設（丸＝朱印）。少しズームすれば「岐2」の字が読める大きさまで判子が育つ
+  const showSeal = zoom>=1.8;
   for(const f of FRAME){
     const col=PREF[f.pref].color, on=st.has(f.id), x=px(f), y=py(f), ok=bathOK(f);
     s+=`<g data-id="${f.id}" style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${hitR}" fill="transparent"/>`;
     s+= on
       ? `<g filter="url(#mrough)" opacity="0.92">
-           <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(4.6)}" fill="#D9483B"/>
+           <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(4.6)}" fill="#D9483B"/>
            ${showSeal
-             ? `<text x="${x.toFixed(1)}" y="${(y+z(1.9)).toFixed(1)}" text-anchor="middle" font-size="${z(4.4)}" font-weight="800" fill="#FEF6E6" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${sealText(f)}</text>`
-             : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(2.9)}" fill="none" stroke="#FEF6E6" stroke-width="${z(0.55)}"/>`}
+             ? `<text x="${x.toFixed(1)}" y="${(y+zm(1.7)).toFixed(1)}" text-anchor="middle" font-size="${zm(4)}" font-weight="800" fill="#FEF6E6" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${sealText(f)}</text>`
+             : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(2.9)}" fill="none" stroke="#FEF6E6" stroke-width="${zm(0.55)}"/>`}
          </g>`
-      : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(3)}" fill="#FFFDF4" stroke="${col}" stroke-width="${z(1.3)}" ${ok?"":`stroke-dasharray="${z(1.2)} ${z(1)}" opacity="0.5"`}/>`;
+      : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(3)}" fill="#FFFDF4" stroke="${col}" stroke-width="${zm(1.2)}" ${ok?"":`stroke-dasharray="${zm(1.2)} ${zm(1)}" opacity="0.5"`}/>`;
     s+=`</g>`;
   }
   // 県制覇の金判（その県の重心に重ねる）
@@ -1406,7 +1411,7 @@ function certSVG(kind,key){
   });
   s+=`<g transform="rotate(-9 ${W-96} ${H-92})"><circle cx="${W-96}" cy="${H-92}" r="42" fill="none" stroke="#C7973F" stroke-width="5"/>
     <text x="${W-96}" y="${H-78}" text-anchor="middle" font-size="40" font-weight="800" fill="#C7973F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">制</text></g>
-    <text x="50" y="${H-64}" font-size="12" fill="#8A7358">SAUNA 30 — ${esc(EDITION)}</text></svg>`;
+    <text x="50" y="${H-64}" font-size="12" fill="#8A7358">Sauna470s — ${esc(EDITION)}</text></svg>`;
   return s;
 }
 window.__cert=(kind,key)=>{
@@ -1426,7 +1431,7 @@ window.__cert=(kind,key)=>{
       URL.revokeObjectURL(url);
       const a=document.createElement("a");
       a.href=c.toDataURL("image/png");
-      a.download=`sauna30-制覇之証-${kind==="pref"?PREF[key].label:key==="全国"?"全国":key}.png`;
+      a.download=`sauna470s-制覇之証-${kind==="pref"?PREF[key].label:key==="全国"?"全国":key}.png`;
       a.click();
       notify("証明書を保存しました");
     };
