@@ -55,12 +55,13 @@
   input[type=range]{width:100%;accent-color:var(--hot)}
   .overlay{position:fixed;inset:0;background:rgba(74,59,46,.38);display:none;align-items:flex-end;justify-content:center;z-index:50}
   .overlay.on{display:flex}
-  .sheet{background:var(--panel);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+  .sheet{background:var(--panel);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;
     padding:20px 18px calc(28px + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;
     box-shadow:0 -6px 24px rgba(74,59,46,.18)}
   .shead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
   .xbtn{background:none;border:none;color:var(--muted);font-size:20px;line-height:1}
   .frow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;
     border-bottom:1.5px dashed var(--line);padding:10px 2px;color:var(--text)}
   .frow .dot{width:11px;height:11px;border-radius:6px;border:1.5px solid var(--muted);flex-shrink:0}
   .frow .hanko{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--stamp);color:var(--stamp);
@@ -120,7 +121,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.0.1";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -793,8 +794,8 @@ function render(){
 
 /* ---------- シート ---------- */
 const overlay=document.getElementById("overlay"), sheetEl=document.getElementById("sheet");
-const openSheet=h=>{ sheetEl.innerHTML=h; overlay.classList.add("on"); sheetEl.scrollTop=0; };
-const closeSheet=()=>overlay.classList.remove("on");
+const openSheet=h=>{ sheetEl.innerHTML=h; overlay.classList.add("on"); sheetEl.scrollTop=0; document.body.style.overflow="hidden"; };
+const closeSheet=()=>{ overlay.classList.remove("on"); document.body.style.overflow=""; };
 overlay.addEventListener("click",e=>{ if(e.target===overlay) closeSheet(); });
 window.__close=closeSheet;
 const sheetHead=t=>`<div class="shead"><span class="eyebrow">${esc(t)}</span><button class="xbtn" onclick="window.__close()">×</button></div>`;
@@ -817,13 +818,22 @@ function openQuest(qid){
     <p style="font-size:10.5px;color:var(--muted);margin:4px 0 8px">押印は「現在地で押印」から。GPSが届かない場所では施設名を長押し（2秒）で手動押印できます。</p>
     <div>${rows}</div>`);
   /* 手動押印（長押し） */
-  let timer=null;
+  /* 長押し＝押印。スクロール(pointercancel)や指の移動では絶対に発火させない */
+  let timer=null, sx=0, sy=0;
+  const ordered=q.targets.map(id=>byId[id]).sort((a,b)=>(stamped(b.id)?1:0)-(stamped(a.id)?1:0));
   sheetEl.querySelectorAll(".frow").forEach((row,i)=>{
-    const f=byId[q.targets.map(id=>byId[id]).sort((a,b)=>(stamped(b.id)?1:0)-(stamped(a.id)?1:0))[i].id];
-    const start=()=>{ timer=setTimeout(()=>{ toggleStamp(f); openQuest(qid); },1600); };
-    const stop=()=>clearTimeout(timer);
-    row.addEventListener("pointerdown",start);
-    row.addEventListener("pointerup",stop); row.addEventListener("pointerleave",stop);
+    const f=ordered[i];
+    const stop=()=>{ clearTimeout(timer); timer=null; };
+    row.addEventListener("pointerdown",e=>{
+      sx=e.clientX; sy=e.clientY;
+      timer=setTimeout(()=>{ timer=null; toggleStamp(f); openQuest(qid); },1600);
+    });
+    row.addEventListener("pointermove",e=>{
+      if(timer && Math.hypot(e.clientX-sx,e.clientY-sy)>12) stop();   // スクロールの初動で解除
+    });
+    row.addEventListener("pointerup",stop);
+    row.addEventListener("pointercancel",stop);                      // ブラウザがスクロールを取った時
+    row.addEventListener("pointerleave",stop);
   });
 }
 window.__maps=(lat,lng)=>window.open(`https://www.google.com/maps?q=${lat},${lng}`,"_blank");
