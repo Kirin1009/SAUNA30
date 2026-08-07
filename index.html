@@ -272,6 +272,10 @@
       <p class="settext">サウナ室・水風呂・外気浴/休憩・清潔/雰囲気 各25点＋特別加減点±10（理由必須）。基準：竜泉寺の湯 ≒ 82。整いは訪問ごとの☆で別記録。</p>
     </div>
     <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
+      <div class="eyebrow">姉妹帳</div>
+      <p class="settext">お題別のチャレンジ帳 <a href="challenges/" style="color:var(--cold)">サ道場</a> — シングル水風呂・灼熱番付などのお題に挑戦できます。Sauna470sのバックアップを読み込めば押印が反映されます。</p>
+    </div>
+    <div style="border-top:1px solid var(--line);padding-top:16px;margin-top:22px">
       <div class="eyebrow">この版について</div>
       <div class="verrow"><span>アプリ</span><span class="mono" id="appVer"></span></div>
       <div class="verrow"><span>枠データ</span><span class="mono" id="dataVer"></span></div>
@@ -297,7 +301,7 @@
 /* アプリのバージョン。ここだけ上げればService Workerのキャッシュ名も追従する
    （登録URLに ?v= を付けて渡すので、sw.js側を手で書き換える必要はない）。
    MAJOR=データ構造やlocalStorageの互換が変わる / MINOR=機能追加 / PATCH=修正 */
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.4.1";
 /* 枠データの版。アプリのバージョンとは別物で、サウナイキタイのランキングを固定した日付を指す */
 const EDITION = "2026.08.06版";
 const REGIONS = [
