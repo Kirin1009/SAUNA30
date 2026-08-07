@@ -121,7 +121,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.1.0";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -283,10 +283,23 @@ const PREF_LABEL = {hokkaido:"北海道",aomori:"青森",iwate:"岩手",miyagi:"
 
 /* ---------- お題 ---------- */
 const byId = Object.fromEntries(FAC.map(f=>[f.id,f]));
+const rad=d=>d*Math.PI/180;
+function distance(a,b){
+  const R=6371000, dLat=rad(b.lat-a.lat), dLng=rad(b.lng-a.lng);
+  const x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+const today=()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 /* 地方版の設定。関東版などを出すときはここと FAC を差し替える */
 const REGION={id:"tokai", label:"東海", prefs:["gifu","aichi","mie","shizuoka","shiga"]};
+/* 470s由来の枠（=各県TOP10）はidが t+数字 ではない */
+const IS_TOP10=f=>!/^t\d+$/.test(f.id);
+/* 近所のお題の基準点＝JR岐阜駅 */
+const HOME={lat:35.4095,lng:136.7565,label:"岐阜駅"};
 const QUESTS = [
-  {id:"sento", seal:"湯", name:"銭湯サウナめぐり", desc:"番台のある町の湯でサ活",
+  {sec:"まずはここから", id:"kinjo", seal:"近", name:"近所のサウナ", desc:"岐阜駅から近い順TOP10",
+   pick:fac=>[...fac].sort((a,b)=>distance(HOME,a)-distance(HOME,b)).slice(0,10), goal:"all"},
+  {sec:"特性で極める", id:"sento", seal:"湯", name:"銭湯サウナめぐり", desc:"番台のある町の湯でサ活",
    test:f=>f.k==="sento", goal:"all"},
   {id:"private", seal:"貸", name:"プライベートサウナ", desc:"貸切の一室でととのう",
    test:f=>f.k==="private", goal:"all"},
@@ -300,13 +313,23 @@ const QUESTS = [
    test:f=>f.smax!=null&&f.smax>=100, goal:"tiers", tiers:[[10,"十両"],[20,"幕内"],[30,"大関"],[999,"横綱"]]},
   {id:"yoyaku", seal:"約", name:"予約の名店", desc:"事前予約制の名店から10湯",
    test:f=>f.tag.includes("y"), goal:"count", need:10},
-  /* 総仕上げ。この道場のライフタイムゴール */
-  {id:"kiwame", seal:"道", name:"東海のサウナを極める", desc:"東海5県TOP30・全湯踏破",
+  {sec:"県で極める — 各県TOP10", id:"p_gifu", seal:"岐", name:"岐阜TOP10", desc:"岐阜県のイキタイTOP10",
+   test:f=>f.pref==="gifu"&&IS_TOP10(f), goal:"all"},
+  {id:"p_aichi", seal:"愛", name:"愛知TOP10", desc:"愛知県のイキタイTOP10",
+   test:f=>f.pref==="aichi"&&IS_TOP10(f), goal:"all"},
+  {id:"p_mie", seal:"三", name:"三重TOP10", desc:"三重県のイキタイTOP10",
+   test:f=>f.pref==="mie"&&IS_TOP10(f), goal:"all"},
+  {id:"p_shizuoka", seal:"静", name:"静岡TOP10", desc:"静岡県のイキタイTOP10",
+   test:f=>f.pref==="shizuoka"&&IS_TOP10(f), goal:"all"},
+  {id:"p_shiga", seal:"滋", name:"滋賀TOP10", desc:"滋賀県のイキタイTOP10",
+   test:f=>f.pref==="shiga"&&IS_TOP10(f), goal:"all"},
+  {sec:"総仕上げ", id:"kiwame", seal:"道", name:"東海のサウナを極める", desc:"東海5県TOP30・全湯踏破",
    test:f=>true, goal:"all"},
 ];
 
 
-QUESTS.forEach(q=>q.targets=FAC.filter(q.test).map(f=>f.id));
+
+QUESTS.forEach(q=>q.targets=(q.pick?q.pick(FAC):FAC.filter(q.test)).map(f=>f.id));
 
 /* ---------- 状態 ---------- */
 const KEY="sadojo:v1";
@@ -475,13 +498,6 @@ window.__cert=qid=>{
 };
 
 /* ---------- GPS押印 ---------- */
-const rad=d=>d*Math.PI/180;
-function distance(a,b){
-  const R=6371000, dLat=rad(b.lat-a.lat), dLng=rad(b.lng-a.lng);
-  const x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
-  return 2*R*Math.asin(Math.sqrt(x));
-}
-const today=()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const questTargets=new Set(QUESTS.flatMap(q=>q.targets));
 document.getElementById("stampBtn").addEventListener("click",()=>{
   const btn=document.getElementById("stampBtn");
