@@ -241,6 +241,8 @@
   </div>
 
   <div class="pane" id="pane-list">
+    <input class="input" id="q" type="search" placeholder="施設名・市区町村・県名で検索"
+      style="margin-bottom:10px;font-size:14px;padding:9px 12px" autocomplete="off">
     <div class="seg" id="seg">
       <button data-s="frame" class="on" id="segFrame">枠</button>
       <button data-s="free">台帳</button>
@@ -295,7 +297,7 @@
 /* アプリのバージョン。ここだけ上げればService Workerのキャッシュ名も追従する
    （登録URLに ?v= を付けて渡すので、sw.js側を手で書き換える必要はない）。
    MAJOR=データ構造やlocalStorageの互換が変わる / MINOR=機能追加 / PATCH=修正 */
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 /* 枠データの版。アプリのバージョンとは別物で、サウナイキタイのランキングを固定した日付を指す */
 const EDITION = "2026.08.06版";
 const REGIONS = [
@@ -856,7 +858,9 @@ let state = { userFacilities: [], visits: [], wants: [], tags: {}, customTags: [
 })();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ notify("保存に失敗しました。","err"); } };
 
-let tab="map", seg="frame", prefFilter="all", regFilter="all", lastPos=null;
+let tab="map", seg="frame", prefFilter="all", regFilter="all", lastPos=null, listQ="";
+/* 検索用の正規化：小文字化＋カタカナ→ひらがな（「らかん」で「ラカン」に当たるように） */
+const kana=s=>s.toLowerCase().replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
 const REG_OF={}; for(const [rn,ks] of REGIONS) for(const k of ks) REG_OF[k]=rn;
 const regKeys=n=>(REGIONS.find(r=>r[0]===n)||[null,[]])[1];
 /* 利用する浴室（男/女）。男性専用53枠・女性専用2枠があるため、分母と県制覇の判定を各自に合わせる。
@@ -1190,7 +1194,7 @@ function renderList(){
   document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.s===seg));
   document.getElementById("segFrame").textContent="枠 "+FRAME.length;
   document.getElementById("addFreeBtn").style.display = seg==="free" ? "block" : "none";
-  const showFilters = seg==="frame";
+  const showFilters = seg==="frame" && !listQ;   // 検索中は地方/県フィルタを外して全体から探す
   document.getElementById("filters").innerHTML = showFilters
     ? `<div class="frow">`+[["all","全て"]].concat(REGIONS.map(([n])=>[n,n]))
         .map(([k,l])=>`<button data-r="${esc(k)}" class="${regFilter===k?"on":""}">${l}</button>`).join("")+`</div>`
@@ -1204,15 +1208,20 @@ function renderList(){
   document.querySelectorAll("#filters button[data-f]").forEach(b=>b.addEventListener("click",()=>{prefFilter=b.dataset.f;renderList();}));
 
   let items=[];
-  if(seg==="frame") items=FRAME.filter(f=>(regFilter==="all"||REG_OF[f.pref]===regFilter)&&(prefFilter==="all"||f.pref===prefFilter));
+  if(seg==="frame") items=listQ?FRAME:FRAME.filter(f=>(regFilter==="all"||REG_OF[f.pref]===regFilter)&&(prefFilter==="all"||f.pref===prefFilter));
   else if(seg==="free") items=state.userFacilities;
   else items=allFacilities().filter(f=>state.wants.includes(f.id));
+  if(listQ){
+    const nq=kana(listQ);
+    items=items.filter(f=>kana(f.name+"　"+(f.city||"")+"　"+(f.pref?PREF[f.pref].label:"台帳")).includes(nq));
+  }
 
   const box=document.getElementById("listbox");
   if(!items.length){
-    box.innerHTML=`<div class="empty">${seg==="free"?"枠外で良かった施設をここに登録して記録できます。":seg==="want"?"施設詳細の「行きたい」でここに溜まります。":"該当なし。"}</div>`;
+    box.innerHTML=`<div class="empty">${listQ?`「${esc(listQ)}」に当たる施設はありません。`:seg==="free"?"枠外で良かった施設をここに登録して記録できます。":seg==="want"?"施設詳細の「行きたい」でここに溜まります。":"該当なし。"}</div>`;
     return;
   }
+  if(listQ && seg==="frame") box.dataset.hits=items.length;
   box.innerHTML=items.map(f=>{
     const on=st.has(f.id), sc=fScore(f.id), isFree=!f.pref;
     const col=isFree?"#A69374":PREF[f.pref].color;
@@ -1235,6 +1244,7 @@ function renderList(){
 }
 document.querySelectorAll("#seg button").forEach(b=>b.addEventListener("click",()=>{seg=b.dataset.s;renderList();}));
 document.getElementById("addFreeBtn").addEventListener("click",()=>openAddFree());
+document.getElementById("q").addEventListener("input",e=>{ listQ=e.target.value.trim(); renderList(); });
 
 /* ---------- 履歴 ---------- */
 function renderLog(){
