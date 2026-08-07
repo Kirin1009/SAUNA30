@@ -2,8 +2,9 @@
 const VERSION = new URL(self.location).searchParams.get("v") || "0";
 const CACHE = "sadojo-" + VERSION;
 const QIDS = ["st-kinjo","st-sento","st-private","st-luxe","st-night","st-single","st-shaku","st-yoyaku","st-p_gifu","st-p_aichi","st-p_mie","st-p_shizuoka","st-p_shiga","st-kiwame"];
-/* お題の隠し絵14枚もプリキャッシュ（圏外でもめくれるように。計約0.9MB） */
-const ASSETS = ["./", "./index.html", "./manifest.json"].concat(QIDS.map(id => "./art/" + id + ".webp"));
+const CHIDS = ["ch-dosan","ch-nohime","ch-nobunaga","ch-hideyoshi","ch-ieyasu","ch-kuki","ch-mitsuhide","ch-yoshimoto","ch-nagamasa","ch-oichi"];
+/* お題の隠し絵14枚＋武将キャラ10枚もプリキャッシュ（圏外対応。計約1MB） */
+const ASSETS = ["./", "./index.html", "./manifest.json"].concat(QIDS.concat(CHIDS).map(id => "./art/" + id + ".webp"));
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

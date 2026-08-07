@@ -51,6 +51,24 @@
   .qcard.done .bar>div{background:var(--gold)}
   .eyebrow{font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--muted)}
   .settext{font-size:12px;color:var(--mid);line-height:1.85;margin:8px 0 0}
+  .tabs{display:flex;gap:8px;margin-top:14px}
+  .tab{flex:1;padding:9px;border-radius:999px;border:1.5px solid var(--line2);background:var(--panel);
+    font-size:13px;font-weight:700;color:var(--mid);letter-spacing:.1em}
+  .tab.on{background:var(--indigo);border-color:var(--indigo);color:#FEF6E6}
+  #mapbox{border:1.5px solid var(--line2);border-radius:14px;overflow:hidden;background:#FBF1DC;margin-top:14px}
+  #mapbox svg{width:100%;display:block;touch-action:none}
+  .maplegend{font-size:10px;color:var(--muted);margin-top:8px;line-height:1.9}
+  .badge{display:inline-block;font-size:10px;font-weight:700;color:var(--mid);border:1px solid var(--line2);
+    border-radius:6px;padding:1px 6px;margin-right:4px;vertical-align:1px}
+  .wantstar{color:var(--gold);font-size:12px;margin-left:4px}
+  .fbtnrow{display:flex;gap:8px;margin-top:12px}
+  .fbtnrow .btn{flex:1;padding:11px 4px;font-size:12.5px}
+  .backbtn{font-size:12px;color:var(--indigo);background:none;border:none;font-weight:700;padding:4px 0}
+  .shihan{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line2);flex-shrink:0;background:#FBF1DC}
+  .chgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px;margin-top:12px}
+  .chgrid figure{text-align:center;margin:0}
+  .chgrid img{width:100%;aspect-ratio:1;border-radius:50%;border:1.5px solid var(--line2);background:#FBF1DC;display:block}
+  .chgrid figcaption{font-size:9px;color:var(--mid);margin-top:3px;white-space:nowrap}
   .sect{border-top:1.5px dashed var(--line2);margin-top:26px;padding-top:18px}
   input[type=range]{width:100%;accent-color:var(--hot)}
   .overlay{position:fixed;inset:0;background:rgba(74,59,46,.38);display:none;align-items:flex-end;justify-content:center;z-index:50}
@@ -96,6 +114,21 @@
   </div>
   <div id="notice" style="display:none"></div>
 
+  <div class="tabs">
+    <button class="tab on" data-v="dojo">道場</button>
+    <button class="tab" data-v="map">地図</button>
+  </div>
+
+  <div id="mapView" style="display:none">
+    <div id="mapbox"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" id="mapReset" style="padding:7px 14px;font-size:12px">全体</button>
+      <button class="btn" id="regBtn" style="flex:1;font-size:12px">現在地で施設を登録（枠外）</button>
+    </div>
+    <p class="maplegend">●赤=押印済み ○県色=未踏 ○金=行きたい ▢=自分で登録した施設。タップで施設カードが開きます。ピンチ・ホイールで拡大。</p>
+  </div>
+
+  <div id="dojoView">
   <div id="quests"></div>
 
   <div class="sect">
@@ -111,9 +144,16 @@
   </div>
 
   <div class="sect">
+    <div class="eyebrow">道場の面々</div>
+    <div class="chgrid" id="chgrid"></div>
+    <p class="settext" style="font-size:10.5px">東海ゆかりの武将たち。お題の師範と隠し絵に登場します。</p>
+  </div>
+
+  <div class="sect">
     <div class="eyebrow">この帳について</div>
     <p class="settext" id="verNote"></p>
   </div>
+  </div><!-- /dojoView -->
 </div>
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
@@ -121,7 +161,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.2.0";
+const APP_VERSION = "2.4.0";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -281,8 +321,16 @@ const FAC = [
 
 const PREF_LABEL = {hokkaido:"北海道",aomori:"青森",iwate:"岩手",miyagi:"宮城",akita:"秋田",yamagata:"山形",fukushima:"福島",ibaraki:"茨城",tochigi:"栃木",gunma:"群馬",saitama:"埼玉",chiba:"千葉",tokyo:"東京",kanagawa:"神奈川",niigata:"新潟",toyama:"富山",ishikawa:"石川",fukui:"福井",yamanashi:"山梨",nagano:"長野",gifu:"岐阜",shizuoka:"静岡",aichi:"愛知",mie:"三重",shiga:"滋賀",kyoto:"京都",osaka:"大阪",hyogo:"兵庫",nara:"奈良",wakayama:"和歌山",tottori:"鳥取",shimane:"島根",okayama:"岡山",hiroshima:"広島",yamaguchi:"山口",tokushima:"徳島",kagawa:"香川",ehime:"愛媛",kochi:"高知",fukuoka:"福岡",saga:"佐賀",nagasaki:"長崎",kumamoto:"熊本",oita:"大分",miyazaki:"宮崎",kagoshima:"鹿児島",okinawa:"沖縄"};
 
+/* ---------- 地図（東海5県。SHAPESはSauna470sの全国版から5県ぶんを抜粋した同じ投影座標） ---------- */
+const SHAPES = {"meta":{"minLng":128.588592529297,"maxLng":146.02220153808602,"minLat":30.994199752807564,"maxLat":45.52648029074888,"W":400,"H":422.9,"pad":14,"okiS":1.7,"okiAx":63.5,"okiAy":-813.4,"okiBox":[19.1,61.9,77.8,108.7],"okiMaxLng":128.5,"okiMaxLat":27.5},"biwa":"M176.9,289.6 L178.1,290.1 L178.0,290.9 L177.5,292.3 L177.3,292.7 L175.6,293.9 L174.4,294.5 L173.8,294.9 L173.4,295.6 L173.8,295.7 L173.7,296.0 L173.3,296.2 L172.1,296.5 L171.8,296.6 L171.5,296.9 L171.4,296.7 L171.0,298.5 L170.6,298.7 L170.4,299.0 L170.4,300.2 L170.2,300.6 L170.0,300.6 L169.7,300.3 L169.4,299.9 L169.3,299.4 L169.4,299.0 L170.5,297.2 L170.6,296.8 L170.7,295.4 L170.8,295.0 L171.2,294.1 L172.5,292.8 L172.9,292.1 L173.6,291.7 L173.7,291.3 L173.1,289.5 L173.1,289.2 L173.2,288.9 L173.4,288.2 L173.7,287.7 L174.2,288.0 L174.8,286.8 L174.9,287.7 L175.0,288.0 L175.4,288.1 L175.5,287.9 L175.6,287.5 L175.6,286.5 L175.9,286.6 L176.2,286.8 L176.3,287.1 L176.4,288.2 L176.5,289.0 L176.9,289.6Z","prefs":{"gifu":"M194.7,262.8 L196.9,260.5 L197.9,261.2 L200.1,260.3 L200.2,261.3 L201.8,260.4 L202.1,261.3 L204.4,261.4 L207.3,263.6 L205.3,269.1 L206.6,270.8 L206.2,272.5 L203.6,275.8 L201.6,275.8 L200.4,277.9 L203.3,279.4 L204.9,282.0 L204.5,283.5 L207.0,286.2 L206.1,287.9 L207.0,289.1 L205.8,289.2 L206.4,290.9 L205.5,292.3 L202.7,294.0 L200.1,292.1 L197.8,293.2 L195.2,292.1 L193.3,288.5 L189.9,290.4 L188.6,290.0 L186.6,293.5 L186.4,296.4 L185.9,295.5 L185.3,296.0 L183.5,293.1 L181.6,294.1 L180.2,293.5 L181.6,289.5 L180.7,285.6 L180.1,284.8 L178.9,285.2 L179.0,283.3 L178.0,282.3 L179.2,279.0 L180.2,278.4 L182.9,279.7 L183.3,278.6 L189.0,278.3 L189.7,275.7 L187.6,273.0 L188.5,268.5 L190.3,266.1 L189.0,264.7 L190.7,262.9 L190.8,263.6 L192.3,263.5 L193.0,265.4 L194.7,262.8Z","aichi":"M192.6,288.8 L193.3,288.5 L195.2,292.1 L197.4,293.2 L200.1,292.1 L202.7,294.0 L205.6,292.2 L205.8,294.7 L208.0,293.7 L211.4,294.3 L207.1,303.0 L203.9,305.2 L203.8,308.9 L193.9,311.5 L195.1,309.2 L196.0,310.0 L199.6,307.4 L200.0,308.8 L200.1,307.5 L201.0,307.5 L199.8,305.2 L198.1,304.9 L197.1,306.4 L197.1,305.8 L194.1,306.1 L192.4,304.8 L193.1,301.2 L191.7,306.3 L192.9,308.3 L190.1,306.5 L190.6,304.5 L189.7,303.2 L189.6,301.0 L191.3,297.8 L190.6,297.5 L190.2,299.1 L189.8,297.8 L190.0,299.2 L189.1,298.6 L188.6,299.5 L186.5,296.4 L186.6,293.5 L188.6,290.0 L189.9,290.4 L192.6,288.8Z","mie":"M183.4,293.0 L185.3,296.0 L185.9,295.5 L188.1,297.8 L188.6,299.4 L186.0,300.2 L185.7,301.4 L186.4,301.8 L183.5,306.8 L183.3,308.8 L184.0,309.0 L183.4,310.6 L185.9,311.2 L189.6,314.0 L189.9,313.5 L190.8,315.6 L191.8,315.1 L191.6,317.0 L189.5,317.2 L190.6,317.9 L191.5,317.3 L190.9,318.1 L191.3,319.7 L190.2,320.5 L188.5,320.1 L190.5,320.0 L189.9,319.7 L190.6,319.4 L190.2,318.7 L189.3,318.3 L189.0,319.4 L188.4,318.6 L188.4,319.3 L186.9,319.5 L187.7,317.9 L186.7,318.4 L186.2,317.8 L185.8,318.8 L186.6,318.6 L185.1,320.2 L184.7,319.2 L183.8,320.4 L182.9,319.7 L183.0,321.0 L182.4,321.2 L182.1,320.2 L181.8,321.3 L179.0,321.9 L178.1,322.8 L178.5,324.9 L177.5,324.6 L177.9,323.7 L176.5,325.1 L178.2,326.7 L177.3,326.8 L177.9,328.0 L176.6,327.2 L176.2,328.0 L177.1,328.7 L176.0,329.6 L175.3,329.2 L172.4,334.7 L171.4,334.7 L169.1,332.2 L169.0,331.0 L169.9,330.8 L169.9,329.4 L172.4,328.1 L172.5,326.2 L174.3,326.5 L174.1,321.9 L174.9,320.4 L174.2,319.0 L174.9,318.6 L173.6,316.5 L174.2,315.4 L176.5,315.0 L177.0,313.8 L175.5,312.0 L174.6,312.4 L173.2,311.5 L173.7,309.9 L173.0,309.2 L174.0,308.8 L172.6,305.8 L174.1,305.1 L174.5,302.7 L177.5,303.9 L179.9,302.6 L181.6,298.3 L181.8,295.7 L181.0,294.1 L183.4,293.0Z","shizuoka":"M219.5,282.5 L220.5,286.0 L220.1,291.0 L220.9,291.8 L222.5,291.4 L223.3,294.6 L224.2,295.2 L225.3,295.5 L226.2,294.6 L225.8,291.5 L226.2,288.9 L227.2,287.9 L229.3,290.3 L236.2,289.2 L236.6,291.1 L235.6,293.6 L236.8,296.0 L238.5,296.2 L237.6,298.5 L239.3,301.8 L237.2,306.4 L236.1,307.0 L235.9,309.3 L235.0,308.9 L232.8,310.9 L230.6,308.5 L231.4,306.8 L231.5,299.6 L233.8,299.6 L234.2,298.7 L232.5,297.1 L229.4,296.1 L226.7,297.3 L225.4,299.2 L225.6,300.4 L226.2,299.7 L225.8,300.5 L222.4,302.4 L221.2,306.3 L219.0,309.0 L219.7,311.1 L216.2,309.3 L210.5,309.7 L203.8,308.9 L203.9,305.2 L207.1,303.0 L208.8,299.1 L210.6,297.2 L211.1,294.3 L217.8,290.0 L217.9,285.0 L219.5,282.5Z","shiga":"M175.3,281.1 L178.1,282.1 L179.0,283.3 L178.9,285.2 L180.1,284.8 L180.7,285.6 L181.6,289.5 L180.2,293.5 L181.8,295.9 L179.9,302.6 L177.5,303.9 L174.5,302.7 L174.1,305.1 L172.7,305.7 L170.9,302.9 L170.0,303.5 L169.3,303.0 L169.5,301.5 L168.2,298.8 L169.2,292.4 L167.1,290.7 L168.2,288.8 L169.8,289.1 L170.9,285.9 L172.3,286.7 L172.7,285.7 L174.4,285.7 L174.6,284.2 L175.7,284.7 L175.3,281.1Z"}};
+const PREFC={gifu:"#C7973F",aichi:"#C75B47",mie:"#4E8B8B",shizuoka:"#C08A55",shiga:"#5E88A0"};
+/* 東海5県のバウンディングボックス（投影座標）＝地図の全体表示 */
+const TBOX={x:163.1,y:256.3,w:80.2,h:82.4};
+
 /* ---------- お題 ---------- */
-const byId = Object.fromEntries(FAC.map(f=>[f.id,f]));
+/* byId は枠149件＋自分で登録した施設（state.ufacs）。登録・削除のたびに reindex() で作り直す */
+let byId = {};
+function reindex(){ byId = Object.fromEntries(FAC.concat(state.ufacs||[]).map(f=>[f.id,f])); }
 const rad=d=>d*Math.PI/180;
 function distance(a,b){
   const R=6371000, dLat=rad(b.lat-a.lat), dLng=rad(b.lng-a.lng);
@@ -296,34 +344,39 @@ const REGION={id:"tokai", label:"東海", prefs:["gifu","aichi","mie","shizuoka"
 const IS_TOP10=f=>!/^t\d+$/.test(f.id);
 /* 近所のお題の基準点＝JR岐阜駅 */
 const HOME={lat:35.4095,lng:136.7565,label:"岐阜駅"};
+/* 道場の面々（武将キャラ）。絵は art/ch-<名>.webp。お題側は chr で師範を指す */
+const CHARS={
+  dosan:"斎藤道三", nohime:"濃姫", nobunaga:"織田信長", hideyoshi:"豊臣秀吉", ieyasu:"徳川家康",
+  kuki:"九鬼嘉隆", mitsuhide:"明智光秀", yoshimoto:"今川義元", nagamasa:"浅井長政", oichi:"お市",
+};
 const QUESTS = [
-  {sec:"まずはここから", id:"kinjo", seal:"近", name:"近所のサウナ", desc:"岐阜駅から近い順TOP10",
+  {sec:"まずはここから", id:"kinjo", seal:"近", name:"近所のサウナ", desc:"岐阜駅から近い順TOP10", chr:"dosan",
    pick:fac=>[...fac].sort((a,b)=>distance(HOME,a)-distance(HOME,b)).slice(0,10), goal:"all"},
-  {sec:"特性で極める", id:"sento", seal:"湯", name:"銭湯サウナめぐり", desc:"番台のある町の湯でサ活",
+  {sec:"特性で極める", id:"sento", seal:"湯", name:"銭湯サウナめぐり", desc:"番台のある町の湯でサ活", chr:"hideyoshi",
    test:f=>f.k==="sento", goal:"all"},
-  {id:"private", seal:"貸", name:"プライベートサウナ", desc:"貸切の一室でととのう",
+  {id:"private", seal:"貸", name:"プライベートサウナ", desc:"貸切の一室でととのう", chr:"nohime",
    test:f=>f.k==="private", goal:"all"},
-  {id:"luxe", seal:"贅", name:"高級サウナの旅", desc:"入浴3,000円以上の贅沢湯",
+  {id:"luxe", seal:"贅", name:"高級サウナの旅", desc:"入浴3,000円以上の贅沢湯", chr:"yoshimoto",
    test:f=>f.fee!=null&&f.fee>=3000, goal:"all"},
-  {id:"night", seal:"夜", name:"深夜のサウナ", desc:"翌2時以降・24時間営業の夜行修行",
+  {id:"night", seal:"夜", name:"深夜のサウナ", desc:"翌2時以降・24時間営業の夜行修行", chr:"nobunaga",
    test:f=>f.tag.includes("n"), goal:"all"},
-  {id:"single", seal:"凍", name:"シングル水風呂", desc:"水風呂10°C未満",
+  {id:"single", seal:"凍", name:"シングル水風呂", desc:"水風呂10°C未満", chr:"ieyasu",
    test:f=>f.wmin!=null&&f.wmin<10, goal:"all"},
-  {id:"shaku", seal:"灼", name:"灼熱番付", desc:"サウナ室100°C以上で番付を上げる",
+  {id:"shaku", seal:"灼", name:"灼熱番付", desc:"サウナ室100°C以上で番付を上げる", chr:"hideyoshi",
    test:f=>f.smax!=null&&f.smax>=100, goal:"tiers", tiers:[[10,"十両"],[20,"幕内"],[30,"大関"],[999,"横綱"]]},
-  {id:"yoyaku", seal:"約", name:"予約の名店", desc:"事前予約制の名店から10湯",
+  {id:"yoyaku", seal:"約", name:"予約の名店", desc:"事前予約制の名店から10湯", chr:"mitsuhide",
    test:f=>f.tag.includes("y"), goal:"count", need:10},
-  {sec:"県で極める — 各県TOP10", id:"p_gifu", seal:"岐", name:"岐阜TOP10", desc:"岐阜県のイキタイTOP10",
+  {sec:"県で極める — 各県TOP10", id:"p_gifu", seal:"岐", name:"岐阜TOP10", desc:"岐阜県のイキタイTOP10", chr:"dosan",
    test:f=>f.pref==="gifu"&&IS_TOP10(f), goal:"all"},
-  {id:"p_aichi", seal:"愛", name:"愛知TOP10", desc:"愛知県のイキタイTOP10",
+  {id:"p_aichi", seal:"愛", name:"愛知TOP10", desc:"愛知県のイキタイTOP10", chr:"nobunaga",
    test:f=>f.pref==="aichi"&&IS_TOP10(f), goal:"all"},
-  {id:"p_mie", seal:"三", name:"三重TOP10", desc:"三重県のイキタイTOP10",
+  {id:"p_mie", seal:"三", name:"三重TOP10", desc:"三重県のイキタイTOP10", chr:"kuki",
    test:f=>f.pref==="mie"&&IS_TOP10(f), goal:"all"},
-  {id:"p_shizuoka", seal:"静", name:"静岡TOP10", desc:"静岡県のイキタイTOP10",
+  {id:"p_shizuoka", seal:"静", name:"静岡TOP10", desc:"静岡県のイキタイTOP10", chr:"ieyasu",
    test:f=>f.pref==="shizuoka"&&IS_TOP10(f), goal:"all"},
-  {id:"p_shiga", seal:"滋", name:"滋賀TOP10", desc:"滋賀県のイキタイTOP10",
+  {id:"p_shiga", seal:"滋", name:"滋賀TOP10", desc:"滋賀県のイキタイTOP10", chr:"nagamasa",
    test:f=>f.pref==="shiga"&&IS_TOP10(f), goal:"all"},
-  {sec:"総仕上げ", id:"kiwame", seal:"道", name:"東海のサウナを極める", desc:"東海5県TOP30・全湯踏破",
+  {sec:"総仕上げ", id:"kiwame", seal:"道", name:"東海のサウナを極める", desc:"東海5県TOP30・全湯踏破", chr:"dosan",
    test:f=>true, goal:"all"},
 ];
 
@@ -333,8 +386,12 @@ QUESTS.forEach(q=>q.targets=(q.pick?q.pick(FAC):FAC.filter(q.test)).map(f=>f.id)
 
 /* ---------- 状態 ---------- */
 const KEY="sadojo:v1";
-let state={stamps:{}, radius:300};
+/* wants=行きたい（ブックマーク）、ufacs=枠外の自由登録施設。旧ファイルに無くても既定値で埋まる */
+let state={stamps:{}, wants:{}, ufacs:[], radius:300};
 try{ const raw=localStorage.getItem(KEY); if(raw) state=Object.assign(state,JSON.parse(raw)); }catch(e){}
+if(!state.wants) state.wants={};
+if(!Array.isArray(state.ufacs)) state.ufacs=[];
+reindex();
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 const stamped=id=>!!state.stamps[id];
 
@@ -380,6 +437,7 @@ function render(){
     </button>`;
   }).join("");
   document.querySelectorAll(".qcard").forEach(b=>b.addEventListener("click",()=>openQuest(b.dataset.q)));
+  if(mapInit) renderMap();   // 地図を開いたことがあれば押印・行きたいを反映し直す
 }
 
 /* ---------- シート ---------- */
@@ -418,39 +476,77 @@ function openQuest(qid){
   const rows=q.targets
     .map(id=>byId[id])
     .sort((a,b)=>(stamped(b.id)?1:0)-(stamped(a.id)?1:0))
-    .map(f=>`<div class="frow">
+    .map(f=>`<button class="frow" onclick="window.__fac('${f.id}','${q.id}')">
       ${stamped(f.id)?`<span class="hanko">${q.seal}</span>`:`<span class="dot"></span>`}
-      <span class="nm">${esc(f.name)}</span>
+      <span class="nm">${esc(f.name)}${state.wants[f.id]?'<span class="wantstar">★</span>':""}</span>
       <span class="ct">${esc(PREF_LABEL[f.pref]||"")}${esc(f.city?"・"+f.city:"")}</span>
-      <button class="btn" style="padding:4px 10px;font-size:11px" onclick="window.__maps(${f.lat},${f.lng})">地図</button>
-    </div>`).join("");
+    </button>`).join("");
   openSheet(sheetHead(q.name)+`
     <div style="border:1.5px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px">${tileArt(q,p)}</div>
-    <p style="font-size:12.5px;color:var(--mid);line-height:1.8;margin:0 0 6px">${esc(q.desc)}。
-      進捗 <b class="mono">${p.n}/${p.t}</b>${p.label?`・現在の番付 <b style="color:var(--gold)">${esc(p.label)}</b>`:""}${p.full?'・<b style="color:var(--gold)">満願</b>':""}</p>
+    <div style="display:flex;gap:10px;align-items:center;margin:0 0 6px">
+      <img class="shihan" src="art/ch-${q.chr}.webp" alt="${esc(CHARS[q.chr])}">
+      <p style="font-size:12.5px;color:var(--mid);line-height:1.7;margin:0">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--muted)">師範 ${esc(CHARS[q.chr])}</span><br>
+        ${esc(q.desc)}。進捗 <b class="mono">${p.n}/${p.t}</b>${p.label?`・現在の番付 <b style="color:var(--gold)">${esc(p.label)}</b>`:""}${p.full?'・<b style="color:var(--gold)">満願</b>':""}</p>
+    </div>
     ${p.full?`<button class="btn" style="width:100%;margin:8px 0" onclick="window.__cert('${q.id}')">満願之証を保存</button>`:""}
-    <p style="font-size:10.5px;color:var(--muted);margin:4px 0 8px">押印は「現在地で押印」から。GPSが届かない場所では施設名を長押し（2秒）で手動押印できます。</p>
+    <p style="font-size:10.5px;color:var(--muted);margin:4px 0 8px">施設名をタップすると施設カード。押印は「現在地で押印」かカードの手動押印から。</p>
     <div>${rows}</div>`);
-  /* 手動押印（長押し） */
-  /* 長押し＝押印。スクロール(pointercancel)や指の移動では絶対に発火させない */
-  let timer=null, sx=0, sy=0;
-  const ordered=q.targets.map(id=>byId[id]).sort((a,b)=>(stamped(b.id)?1:0)-(stamped(a.id)?1:0));
-  sheetEl.querySelectorAll(".frow").forEach((row,i)=>{
-    const f=ordered[i];
-    const stop=()=>{ clearTimeout(timer); timer=null; };
-    row.addEventListener("pointerdown",e=>{
-      sx=e.clientX; sy=e.clientY;
-      timer=setTimeout(()=>{ timer=null; toggleStamp(f); openQuest(qid); },1600);
-    });
-    row.addEventListener("pointermove",e=>{
-      if(timer && Math.hypot(e.clientX-sx,e.clientY-sy)>12) stop();   // スクロールの初動で解除
-    });
-    row.addEventListener("pointerup",stop);
-    row.addEventListener("pointercancel",stop);                      // ブラウザがスクロールを取った時
-    row.addEventListener("pointerleave",stop);
-  });
 }
 window.__maps=(lat,lng)=>window.open(`https://www.google.com/maps?q=${lat},${lng}`,"_blank");
+
+/* ---------- 施設カード（スタンプ＝施設。押印・行きたい・地図をここに集約） ---------- */
+const K_LABEL={onsen:"温浴施設",sento:"銭湯",private:"プライベートサウナ",capsule:"カプセル・サウナ専門",hotel:"ホテル・旅館",camp:"キャンプ・アウトドア",other:"その他"};
+window.__fac=(fid,backQid)=>openFac(fid,backQid);
+function openFac(fid,backQid){
+  const f=byId[fid]; if(!f) return;
+  const on=stamped(fid), want=!!state.wants[fid], isU=!!f.u;
+  const tags=[["y","事前予約制"],["t","宿泊者限定"],["n","深夜営業"]]
+    .filter(([c])=>(f.tag||"").includes(c)).map(([,l])=>l);
+  const kind=isU?"自分で登録":(K_LABEL[f.k]||"");
+  const specs=[
+    f.smax!=null?`サ室 ${f.smax}°C`:null,
+    f.wmin!=null?`水風呂 ${f.wmin}°C`:null,
+    f.fee!=null?`¥${f.fee.toLocaleString()}〜`:null,
+  ].filter(Boolean);
+  const inQuests=QUESTS.filter(q=>q.targets.includes(fid));
+  const back=backQid?`<button class="backbtn" onclick="window.__quest('${backQid}')">‹ ${esc(QUESTS.find(q=>q.id===backQid).name)}</button>`:"";
+  openSheet(`<div class="shead">${back||'<span class="eyebrow">施設カード</span>'}<button class="xbtn" onclick="window.__close()">×</button></div>
+    <div style="display:flex;align-items:flex-start;gap:11px">
+      ${on?`<span class="hanko" style="width:34px;height:34px;font-size:15px">${isU?"湯":"済"}</span>`:`<span class="dot" style="width:15px;height:15px;border-radius:8px;border:1.5px solid var(--muted);flex-shrink:0;margin-top:5px"></span>`}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16.5px;font-weight:800;line-height:1.4">${esc(f.name)}${want?'<span class="wantstar">★</span>':""}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(PREF_LABEL[f.pref]||"")}${esc(f.city?"・"+f.city:"")}</div>
+      </div>
+    </div>
+    <div style="margin-top:9px">${kind?`<span class="badge">${esc(kind)}</span>`:""}${tags.map(t=>`<span class="badge" style="color:var(--stamp);border-color:var(--stamp)">${esc(t)}</span>`).join("")}</div>
+    ${specs.length?`<p style="font-size:12.5px;color:var(--mid);margin:8px 0 0" class="mono">${specs.join("　")}</p>`:""}
+    ${inQuests.length?`<p style="font-size:11px;color:var(--muted);margin:8px 0 0">対象のお題：${inQuests.map(q=>`<span class="hanko" style="display:inline-flex;width:20px;height:20px;font-size:9px;vertical-align:middle;margin-right:3px;${progress(q).full?"border-color:var(--gold);color:var(--gold);background:rgba(199,151,63,.08)":""}">${q.seal}</span>`).join("")}</p>`:""}
+    <p style="font-size:11.5px;color:var(--mid);margin:10px 0 0">${on?`<b style="color:var(--stamp)">押印済み</b>　<span class="mono">${esc(state.stamps[fid])}</span>`:"未踏"}</p>
+    <div class="fbtnrow">
+      ${on?`<button class="btn" onclick="window.__stamp('${fid}','${backQid||""}')">押印を取り消す</button>`
+          :`<button class="btn primary" onclick="window.__stamp('${fid}','${backQid||""}')">手動で押印する</button>`}
+      <button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}','${backQid||""}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>
+    </div>
+    <div class="fbtnrow">
+      <button class="btn" onclick="window.__maps(${f.lat},${f.lng})">Googleマップで開く</button>
+      ${isU?`<button class="btn" style="color:var(--stamp);border-color:var(--stamp)" onclick="window.__udel('${fid}')">登録を削除</button>`:""}
+    </div>
+    ${on?"":`<p style="font-size:10px;color:var(--muted);margin-top:8px">手動押印は現地で使う用。GPSが届く場所では「現在地で押印」が確実です。</p>`}`);
+}
+window.__quest=qid=>openQuest(qid);
+window.__stamp=(fid,backQid)=>{ toggleStamp(byId[fid]); openFac(fid,backQid||undefined); };
+window.__want=(fid,backQid)=>{
+  if(state.wants[fid]) delete state.wants[fid]; else state.wants[fid]=today();
+  save(); render(); openFac(fid,backQid||undefined);
+};
+window.__udel=fid=>{
+  const f=byId[fid]; if(!f||!f.u) return;
+  if(!confirm(`${f.name} の登録を削除しますか？（押印・行きたいも消えます）`)) return;
+  state.ufacs=state.ufacs.filter(x=>x.id!==fid);
+  delete state.stamps[fid]; delete state.wants[fid];
+  reindex(); save(); render(); closeSheet(); notify("登録を削除しました");
+};
 
 function toggleStamp(f){
   if(stamped(f.id)){
@@ -521,6 +617,190 @@ window.__cert=qid=>{
   });
 };
 
+/* ---------- 地図（東海。470sの方式：pointerupでelementFromPoint判定・ズーム後に再描画） ---------- */
+let view=null, mapMoved=false, renderedW=0, mapInit=false, lastPos=null;
+const _anchor={};
+function prefAnchor(key){
+  if(_anchor[key]) return _anchor[key];
+  let best=null;
+  for(const sub of SHAPES.prefs[key].split("M").slice(1)){
+    const pts=[...sub.matchAll(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g)].map(m=>[+m[1],+m[2]]);
+    if(pts.length<3) continue;
+    const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+    const area=(Math.max(...xs)-Math.min(...xs))*(Math.max(...ys)-Math.min(...ys));
+    if(!best||area>best.area) best={area,x:xs.reduce((a,b)=>a+b,0)/xs.length,y:ys.reduce((a,b)=>a+b,0)/ys.length};
+  }
+  return _anchor[key]=best||{x:-999,y:-999};
+}
+function renderMap(){
+  const {minLng,maxLng,minLat,maxLat,W,H,pad}=SHAPES.meta;
+  if(!view) view={x:TBOX.x,y:TBOX.y,w:TBOX.w,h:TBOX.h};
+  renderedW=view.w;
+  const zoom=TBOX.w/view.w;                 // 1=東海全体
+  const zf=view.w/W;                        // かすれフィルタは470sと同じ全国基準
+  const k=Math.cos(rad((minLat+maxLat)/2));
+  const spanX=(maxLng-minLng)*k, spanY=maxLat-minLat;
+  const px=f=>pad+((f.lng-minLng)*k)/spanX*(W-pad*2);
+  const py=f=>pad+(maxLat-f.lat)/spanY*(H-pad*2);
+  const u=view.w/100;                       // 画面幅1%ぶん（マーカーは画面基準）
+  const mk=Math.min(2.4,Math.pow(zoom,0.35));   // ズームするほど少し育つ
+  const z=v=>+(v*u).toFixed(2), zm=v=>+(v*u*mk).toFixed(2);
+  const st=state.stamps;
+  let s=`<svg id="mapsvg" viewBox="${view.x} ${view.y} ${view.w} ${view.h}">`;
+  s+=`<defs>
+    <pattern id="mgrid" width="9" height="9" patternUnits="userSpaceOnUse">
+      <path d="M9 0H0V9" fill="none" stroke="#EDDFC3" stroke-width="0.25"/>
+    </pattern>
+    <filter id="mrough" x="${TBOX.x-30}" y="${TBOX.y-30}" width="${TBOX.w+60}" height="${TBOX.h+60}" filterUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="${(0.55/Math.sqrt(zf)).toFixed(3)}" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="${(1.3*zf).toFixed(3)}"/>
+    </filter>
+  </defs>`;
+  s+=`<rect x="${TBOX.x-120}" y="${TBOX.y-120}" width="${TBOX.w+240}" height="${TBOX.h+240}" fill="#FBF1DC"/>`;
+  s+=`<rect x="${TBOX.x-120}" y="${TBOX.y-120}" width="${TBOX.w+240}" height="${TBOX.h+240}" fill="url(#mgrid)"/>`;
+  for(const key of REGION.prefs){
+    const n=FAC.filter(f=>f.pref===key&&st[f.id]).length;
+    s+=`<path d="${SHAPES.prefs[key]}" fill="${PREFC[key]}" fill-opacity="${(0.13+n*0.008).toFixed(3)}" stroke="#8A7358" stroke-width="0.7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  }
+  s+=`<path d="${SHAPES.biwa}" fill="#C6DCDF" stroke="#8FB0B6" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;
+  for(const key of REGION.prefs){
+    const c=prefAnchor(key);
+    s+=`<text x="${c.x.toFixed(1)}" y="${c.y.toFixed(1)}" text-anchor="middle" font-size="${z(4.2)}" letter-spacing="${z(1)}" fill="#A08C72" opacity="0.85">${PREF_LABEL[key]}</text>`;
+  }
+  if(lastPos){
+    const x=px(lastPos), y=py(lastPos);
+    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(2.2)}" fill="none" stroke="#6F9A63" stroke-width="${z(0.6)}"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(0.9)}" fill="#6F9A63"/>`;
+  }
+  const hitR=zm(zoom>2.5?3.4:2.3);          // 全体表示は誤爆しないよう絞る
+  /* 台帳（自分で登録）＝角印 */
+  for(const f of state.ufacs){
+    const on=!!st[f.id], x=px(f), y=py(f);
+    s+=`<g data-id="${f.id}" style="cursor:pointer"><rect x="${(x-hitR).toFixed(1)}" y="${(y-hitR).toFixed(1)}" width="${(hitR*2).toFixed(1)}" height="${(hitR*2).toFixed(1)}" fill="transparent"/>`;
+    s+= on
+      ? `<g filter="url(#mrough)" opacity="0.92" transform="rotate(-8 ${x.toFixed(1)} ${y.toFixed(1)})">
+           <rect x="${(x-zm(1.7)).toFixed(1)}" y="${(y-zm(1.7)).toFixed(1)}" width="${zm(3.4)}" height="${zm(3.4)}" rx="${zm(0.4)}" fill="#D9483B"/>
+           <rect x="${(x-zm(1)).toFixed(1)}" y="${(y-zm(1)).toFixed(1)}" width="${zm(2)}" height="${zm(2)}" fill="none" stroke="#FEF6E6" stroke-width="${zm(0.3)}"/>
+         </g>`
+      : `<rect x="${(x-zm(1.4)).toFixed(1)}" y="${(y-zm(1.4)).toFixed(1)}" width="${zm(2.8)}" height="${zm(2.8)}" fill="#FFFDF4" stroke="#A69374" stroke-width="${zm(0.55)}"/>`;
+    s+=`</g>`;
+  }
+  /* 枠149湯＝丸印。行きたいは金 */
+  for(const f of FAC){
+    const on=!!st[f.id], want=!!state.wants[f.id], x=px(f), y=py(f);
+    s+=`<g data-id="${f.id}" style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${hitR}" fill="transparent"/>`;
+    s+= on
+      ? `<g filter="url(#mrough)" opacity="0.92">
+           <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(1.9)}" fill="#D9483B"/>
+           <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(1.15)}" fill="none" stroke="#FEF6E6" stroke-width="${zm(0.28)}"/>
+         </g>`
+      : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(1.35)}" fill="${want?"#FFF6DF":"#FFFDF4"}" stroke="${want?"#C7973F":PREFC[f.pref]}" stroke-width="${zm(want?0.7:0.5)}"/>`;
+    s+=`</g>`;
+  }
+  s+=`</svg>`;
+  document.getElementById("mapbox").innerHTML=s;
+  bindMapGestures(document.getElementById("mapsvg"));
+}
+function bindMapGestures(svg){
+  const ptrs=new Map();
+  let start=null;
+  const apply=()=>svg.setAttribute("viewBox",`${view.x} ${view.y} ${view.w} ${view.h}`);
+  const clamp=()=>{
+    view.w=Math.min(Math.max(view.w,TBOX.w/32),TBOX.w); view.h=view.w*TBOX.h/TBOX.w;
+    view.x=Math.min(Math.max(view.x,TBOX.x-view.w*0.15),TBOX.x+TBOX.w-view.w*0.85);
+    view.y=Math.min(Math.max(view.y,TBOX.y-view.h*0.15),TBOX.y+TBOX.h-view.h*0.85);
+  };
+  const toLocal=e=>{
+    const r=svg.getBoundingClientRect();
+    return { x:view.x+(e.clientX-r.left)/r.width*view.w, y:view.y+(e.clientY-r.top)/r.height*view.h, cx:e.clientX, cy:e.clientY };
+  };
+  svg.addEventListener("pointerdown",e=>{
+    svg.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId,toLocal(e));
+    start={...view}; mapMoved=false;
+  });
+  svg.addEventListener("pointermove",e=>{
+    if(!ptrs.has(e.pointerId)) return;
+    const cur=toLocal(e);
+    if(ptrs.size===1){
+      const p0=[...ptrs.values()][0];
+      const dx=(cur.cx-p0.cx), dy=(cur.cy-p0.cy);
+      if(Math.abs(dx)+Math.abs(dy)>6) mapMoved=true;
+      const r=svg.getBoundingClientRect();
+      view.x=start.x-dx/r.width*view.w; view.y=start.y-dy/r.height*view.h;
+      clamp(); apply();
+    } else if(ptrs.size===2){
+      mapMoved=true;
+      const ids=[...ptrs.keys()];
+      const other=ptrs.get(ids[0]===e.pointerId?ids[1]:ids[0]);
+      const prev=ptrs.get(e.pointerId);
+      const dPrev=Math.hypot(prev.cx-other.cx, prev.cy-other.cy)||1;
+      const dCur=Math.hypot(cur.cx-other.cx, cur.cy-other.cy)||1;
+      const sc=dPrev/dCur;
+      const midx=(cur.x+other.x)/2, midy=(cur.y+other.y)/2;
+      view.w*=sc; view.h*=sc;
+      view.x=midx-(midx-view.x)*sc; view.y=midy-(midy-view.y)*sc;
+      clamp(); apply();
+      ptrs.set(e.pointerId,cur);
+    }
+  });
+  const up=e=>{
+    const wasSingle = ptrs.size===1;
+    ptrs.delete(e.pointerId);
+    if(wasSingle && !mapMoved){
+      const el=document.elementFromPoint(e.clientX,e.clientY);
+      const g=el && el.closest ? el.closest("g[data-id]") : null;
+      if(g) openFac(g.dataset.id);
+    }
+    if(ptrs.size===0 && Math.abs(view.w-renderedW)>0.5) setTimeout(()=>renderMap(),0);
+    setTimeout(()=>{mapMoved=false;},50);
+  };
+  svg.addEventListener("pointerup",up); svg.addEventListener("pointercancel",up);
+  let wheelT=null;
+  svg.addEventListener("wheel",e=>{
+    e.preventDefault();
+    const cur=toLocal(e); const sc=e.deltaY>0?1.15:0.87;
+    view.w*=sc; view.h*=sc;
+    view.x=cur.x-(cur.x-view.x)*sc; view.y=cur.y-(cur.y-view.y)*sc;
+    clamp(); apply();
+    clearTimeout(wheelT);
+    wheelT=setTimeout(()=>{ if(Math.abs(view.w-renderedW)>0.5) renderMap(); },160);
+  },{passive:false});
+}
+document.getElementById("mapReset").addEventListener("click",()=>{ view=null; renderMap(); });
+
+/* タブ切り替え。地図は初回に描く */
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
+  document.getElementById("dojoView").style.display = b.dataset.v==="dojo" ? "" : "none";
+  document.getElementById("mapView").style.display = b.dataset.v==="map" ? "" : "none";
+  if(b.dataset.v==="map" && !mapInit){ mapInit=true; renderMap(); }
+}));
+
+/* ---------- 枠外の施設を現在地で登録（台帳。お題には数えない） ---------- */
+document.getElementById("regBtn").addEventListener("click",()=>{
+  const btn=document.getElementById("regBtn");
+  btn.disabled=true; btn.textContent="測位中…";
+  navigator.geolocation.getCurrentPosition(pos=>{
+    btn.disabled=false; btn.textContent="現在地で施設を登録（枠外）";
+    const p={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    lastPos=p;
+    const near=FAC.concat(state.ufacs).map(f=>({f,d:distance(p,f)})).sort((a,b)=>a.d-b.d)[0];
+    openSheet(sheetHead("枠外の施設を登録")+`
+      <p style="font-size:12px;color:var(--mid);line-height:1.8;margin:0 0 10px">いまいる場所（<span class="mono">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span>）で登録し、そのまま押印します。お題には数えませんが、地図と押印数に残ります。</p>
+      ${near&&near.d<=250?`<p style="font-size:11px;color:var(--stamp);margin:0 0 10px">近くに <b>${esc(near.f.name)}</b>（約${Math.round(near.d)}m）が登録済みです。同じ施設なら<button class="backbtn" style="font-size:11px" onclick="window.__fac('${near.f.id}')">こちらのカード</button>から押してください。</p>`:""}
+      <input id="regName" placeholder="施設名" maxlength="40" style="width:100%;font-family:inherit;font-size:14px;padding:11px 13px;border:1.5px solid var(--line2);border-radius:11px;background:var(--panel);color:var(--text)">
+      <button class="btn primary" style="width:100%;margin-top:10px" id="regSave">登録して押印</button>`);
+    document.getElementById("regSave").addEventListener("click",()=>{
+      const name=document.getElementById("regName").value.trim();
+      if(!name){ notify("施設名を入れてください。","err"); return; }
+      const nf={id:"u"+Date.now(), name, lat:p.lat, lng:p.lng, u:1};
+      state.ufacs.push(nf); state.stamps[nf.id]=today();
+      reindex(); save(); render(); closeSheet(); stampFx(nf);
+    });
+  },err=>{ btn.disabled=false; btn.textContent="現在地で施設を登録（枠外）"; notify("現在地を取得できませんでした。","err"); },
+  {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+});
+
 /* ---------- GPS押印 ---------- */
 const questTargets=new Set(QUESTS.flatMap(q=>q.targets));
 document.getElementById("stampBtn").addEventListener("click",()=>{
@@ -529,11 +809,12 @@ document.getElementById("stampBtn").addEventListener("click",()=>{
   navigator.geolocation.getCurrentPosition(pos=>{
     btn.disabled=false; btn.textContent="現在地で押印";
     const p={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    lastPos=p;
     const near=FAC.filter(f=>questTargets.has(f.id))
       .map(f=>({f,d:distance(p,f)})).filter(x=>x.d<=state.radius).sort((a,b)=>a.d-b.d);
     if(!near.length){
       const alls=FAC.map(f=>({f,d:distance(p,f)})).sort((a,b)=>a.d-b.d)[0];
-      notify(`半径${state.radius}m以内にお題の施設なし。最寄りは ${alls.f.name}（約${Math.round(alls.d)}m）。お題対象外の施設はSauna470sで押してください。`,"err");
+      notify(`半径${state.radius}m以内に枠の施設なし。最寄りは ${alls.f.name}（約${Math.round(alls.d)}m）。枠外の湯は地図タブの「現在地で施設を登録」で残せます。`,"err");
     }else if(near.length===1){ toggleStampByGps(near[0].f); }
     else openSheet(sheetHead("どの施設にいますか？")+near.map(x=>
       `<button class="choosebtn" onclick="window.__gps('${x.f.id}')"><span>${esc(x.f.name)}</span><span class="d">${Math.round(x.d)}m</span></button>`).join(""));
@@ -577,6 +858,8 @@ radLabel();
 radEl.addEventListener("input",()=>{ state.radius=+radEl.value; radLabel(); save(); });
 
 render();
+document.getElementById("chgrid").innerHTML=Object.entries(CHARS).map(([k,n])=>
+  `<figure><img src="art/ch-${k}.webp" loading="lazy" alt="${esc(n)}"><figcaption>${esc(n)}</figcaption></figure>`).join("");
 if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v="+APP_VERSION).catch(()=>{});
 </script>
 </body>
