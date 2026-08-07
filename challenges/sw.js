@@ -1,7 +1,9 @@
 /* サ道場 service worker — キャッシュ名は登録URLの ?v= から決まる */
 const VERSION = new URL(self.location).searchParams.get("v") || "0";
 const CACHE = "sadojo-" + VERSION;
-const ASSETS = ["./", "./index.html", "./manifest.json"];
+const QIDS = ["st-kinjo","st-sento","st-private","st-luxe","st-night","st-single","st-shaku","st-yoyaku","st-p_gifu","st-p_aichi","st-p_mie","st-p_shizuoka","st-p_shiga","st-kiwame"];
+/* お題の隠し絵14枚もプリキャッシュ（圏外でもめくれるように。計約0.9MB） */
+const ASSETS = ["./", "./index.html", "./manifest.json"].concat(QIDS.map(id => "./art/" + id + ".webp"));
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
