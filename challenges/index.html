@@ -51,6 +51,11 @@
   .qcard.done .bar>div{background:var(--gold)}
   .eyebrow{font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--muted)}
   .settext{font-size:12px;color:var(--mid);line-height:1.85;margin:8px 0 0}
+  .shihan{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line2);flex-shrink:0;background:#FBF1DC}
+  .chgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px;margin-top:12px}
+  .chgrid figure{text-align:center;margin:0}
+  .chgrid img{width:100%;aspect-ratio:1;border-radius:50%;border:1.5px solid var(--line2);background:#FBF1DC;display:block}
+  .chgrid figcaption{font-size:9px;color:var(--mid);margin-top:3px;white-space:nowrap}
   .sect{border-top:1.5px dashed var(--line2);margin-top:26px;padding-top:18px}
   input[type=range]{width:100%;accent-color:var(--hot)}
   .overlay{position:fixed;inset:0;background:rgba(74,59,46,.38);display:none;align-items:flex-end;justify-content:center;z-index:50}
@@ -111,6 +116,12 @@
   </div>
 
   <div class="sect">
+    <div class="eyebrow">道場の面々</div>
+    <div class="chgrid" id="chgrid"></div>
+    <p class="settext" style="font-size:10.5px">東海ゆかりの武将たち。お題の師範と隠し絵に登場します。</p>
+  </div>
+
+  <div class="sect">
     <div class="eyebrow">この帳について</div>
     <p class="settext" id="verNote"></p>
   </div>
@@ -121,7 +132,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.2.0";
+const APP_VERSION = "2.3.0";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -296,34 +307,39 @@ const REGION={id:"tokai", label:"東海", prefs:["gifu","aichi","mie","shizuoka"
 const IS_TOP10=f=>!/^t\d+$/.test(f.id);
 /* 近所のお題の基準点＝JR岐阜駅 */
 const HOME={lat:35.4095,lng:136.7565,label:"岐阜駅"};
+/* 道場の面々（武将キャラ）。絵は art/ch-<名>.webp。お題側は chr で師範を指す */
+const CHARS={
+  dosan:"斎藤道三", nohime:"濃姫", nobunaga:"織田信長", hideyoshi:"豊臣秀吉", ieyasu:"徳川家康",
+  kuki:"九鬼嘉隆", mitsuhide:"明智光秀", yoshimoto:"今川義元", nagamasa:"浅井長政", oichi:"お市",
+};
 const QUESTS = [
-  {sec:"まずはここから", id:"kinjo", seal:"近", name:"近所のサウナ", desc:"岐阜駅から近い順TOP10",
+  {sec:"まずはここから", id:"kinjo", seal:"近", name:"近所のサウナ", desc:"岐阜駅から近い順TOP10", chr:"dosan",
    pick:fac=>[...fac].sort((a,b)=>distance(HOME,a)-distance(HOME,b)).slice(0,10), goal:"all"},
-  {sec:"特性で極める", id:"sento", seal:"湯", name:"銭湯サウナめぐり", desc:"番台のある町の湯でサ活",
+  {sec:"特性で極める", id:"sento", seal:"湯", name:"銭湯サウナめぐり", desc:"番台のある町の湯でサ活", chr:"hideyoshi",
    test:f=>f.k==="sento", goal:"all"},
-  {id:"private", seal:"貸", name:"プライベートサウナ", desc:"貸切の一室でととのう",
+  {id:"private", seal:"貸", name:"プライベートサウナ", desc:"貸切の一室でととのう", chr:"nohime",
    test:f=>f.k==="private", goal:"all"},
-  {id:"luxe", seal:"贅", name:"高級サウナの旅", desc:"入浴3,000円以上の贅沢湯",
+  {id:"luxe", seal:"贅", name:"高級サウナの旅", desc:"入浴3,000円以上の贅沢湯", chr:"yoshimoto",
    test:f=>f.fee!=null&&f.fee>=3000, goal:"all"},
-  {id:"night", seal:"夜", name:"深夜のサウナ", desc:"翌2時以降・24時間営業の夜行修行",
+  {id:"night", seal:"夜", name:"深夜のサウナ", desc:"翌2時以降・24時間営業の夜行修行", chr:"nobunaga",
    test:f=>f.tag.includes("n"), goal:"all"},
-  {id:"single", seal:"凍", name:"シングル水風呂", desc:"水風呂10°C未満",
+  {id:"single", seal:"凍", name:"シングル水風呂", desc:"水風呂10°C未満", chr:"ieyasu",
    test:f=>f.wmin!=null&&f.wmin<10, goal:"all"},
-  {id:"shaku", seal:"灼", name:"灼熱番付", desc:"サウナ室100°C以上で番付を上げる",
+  {id:"shaku", seal:"灼", name:"灼熱番付", desc:"サウナ室100°C以上で番付を上げる", chr:"hideyoshi",
    test:f=>f.smax!=null&&f.smax>=100, goal:"tiers", tiers:[[10,"十両"],[20,"幕内"],[30,"大関"],[999,"横綱"]]},
-  {id:"yoyaku", seal:"約", name:"予約の名店", desc:"事前予約制の名店から10湯",
+  {id:"yoyaku", seal:"約", name:"予約の名店", desc:"事前予約制の名店から10湯", chr:"mitsuhide",
    test:f=>f.tag.includes("y"), goal:"count", need:10},
-  {sec:"県で極める — 各県TOP10", id:"p_gifu", seal:"岐", name:"岐阜TOP10", desc:"岐阜県のイキタイTOP10",
+  {sec:"県で極める — 各県TOP10", id:"p_gifu", seal:"岐", name:"岐阜TOP10", desc:"岐阜県のイキタイTOP10", chr:"dosan",
    test:f=>f.pref==="gifu"&&IS_TOP10(f), goal:"all"},
-  {id:"p_aichi", seal:"愛", name:"愛知TOP10", desc:"愛知県のイキタイTOP10",
+  {id:"p_aichi", seal:"愛", name:"愛知TOP10", desc:"愛知県のイキタイTOP10", chr:"nobunaga",
    test:f=>f.pref==="aichi"&&IS_TOP10(f), goal:"all"},
-  {id:"p_mie", seal:"三", name:"三重TOP10", desc:"三重県のイキタイTOP10",
+  {id:"p_mie", seal:"三", name:"三重TOP10", desc:"三重県のイキタイTOP10", chr:"kuki",
    test:f=>f.pref==="mie"&&IS_TOP10(f), goal:"all"},
-  {id:"p_shizuoka", seal:"静", name:"静岡TOP10", desc:"静岡県のイキタイTOP10",
+  {id:"p_shizuoka", seal:"静", name:"静岡TOP10", desc:"静岡県のイキタイTOP10", chr:"ieyasu",
    test:f=>f.pref==="shizuoka"&&IS_TOP10(f), goal:"all"},
-  {id:"p_shiga", seal:"滋", name:"滋賀TOP10", desc:"滋賀県のイキタイTOP10",
+  {id:"p_shiga", seal:"滋", name:"滋賀TOP10", desc:"滋賀県のイキタイTOP10", chr:"nagamasa",
    test:f=>f.pref==="shiga"&&IS_TOP10(f), goal:"all"},
-  {sec:"総仕上げ", id:"kiwame", seal:"道", name:"東海のサウナを極める", desc:"東海5県TOP30・全湯踏破",
+  {sec:"総仕上げ", id:"kiwame", seal:"道", name:"東海のサウナを極める", desc:"東海5県TOP30・全湯踏破", chr:"dosan",
    test:f=>true, goal:"all"},
 ];
 
@@ -426,8 +442,12 @@ function openQuest(qid){
     </div>`).join("");
   openSheet(sheetHead(q.name)+`
     <div style="border:1.5px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px">${tileArt(q,p)}</div>
-    <p style="font-size:12.5px;color:var(--mid);line-height:1.8;margin:0 0 6px">${esc(q.desc)}。
-      進捗 <b class="mono">${p.n}/${p.t}</b>${p.label?`・現在の番付 <b style="color:var(--gold)">${esc(p.label)}</b>`:""}${p.full?'・<b style="color:var(--gold)">満願</b>':""}</p>
+    <div style="display:flex;gap:10px;align-items:center;margin:0 0 6px">
+      <img class="shihan" src="art/ch-${q.chr}.webp" alt="${esc(CHARS[q.chr])}">
+      <p style="font-size:12.5px;color:var(--mid);line-height:1.7;margin:0">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--muted)">師範 ${esc(CHARS[q.chr])}</span><br>
+        ${esc(q.desc)}。進捗 <b class="mono">${p.n}/${p.t}</b>${p.label?`・現在の番付 <b style="color:var(--gold)">${esc(p.label)}</b>`:""}${p.full?'・<b style="color:var(--gold)">満願</b>':""}</p>
+    </div>
     ${p.full?`<button class="btn" style="width:100%;margin:8px 0" onclick="window.__cert('${q.id}')">満願之証を保存</button>`:""}
     <p style="font-size:10.5px;color:var(--muted);margin:4px 0 8px">押印は「現在地で押印」から。GPSが届かない場所では施設名を長押し（2秒）で手動押印できます。</p>
     <div>${rows}</div>`);
@@ -577,6 +597,8 @@ radLabel();
 radEl.addEventListener("input",()=>{ state.radius=+radEl.value; radLabel(); save(); });
 
 render();
+document.getElementById("chgrid").innerHTML=Object.entries(CHARS).map(([k,n])=>
+  `<figure><img src="art/ch-${k}.webp" loading="lazy" alt="${esc(n)}"><figcaption>${esc(n)}</figcaption></figure>`).join("");
 if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v="+APP_VERSION).catch(()=>{});
 </script>
 </body>
