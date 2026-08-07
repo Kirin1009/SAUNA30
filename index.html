@@ -108,6 +108,20 @@
   .pchip.gone img{opacity:.25;filter:grayscale(1)}
   .pchip button{position:absolute;top:-5px;right:-5px;width:20px;height:20px;border-radius:50%;
     border:1.5px solid var(--line2);background:var(--panel);color:var(--mid);font-size:12px;line-height:1;padding:0}
+  .bookbanner{background:#FFFBEF;border:2px solid #C7973F;border-radius:12px;padding:13px 15px;margin-bottom:12px;
+    color:#C7973F;font-weight:800;font-size:14px;letter-spacing:.08em;display:flex;justify-content:space-between;align-items:center}
+  .bookregion{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:800;letter-spacing:.14em;
+    color:var(--muted);margin:20px 2px 8px;padding-bottom:6px;border-bottom:1.5px dashed var(--line2)}
+  .bookpref{background:var(--panel);border:1.5px solid var(--line);border-radius:13px;padding:10px 11px 11px;margin-bottom:10px;
+    box-shadow:0 1px 0 rgba(74,59,46,.05)}
+  .bookpref.done{border-color:#C7973F;background:#FFFDF6}
+  .bookhead{display:flex;align-items:baseline;gap:9px;margin-bottom:8px}
+  .bp-name{font-size:13.5px;font-weight:700}
+  .bp-n{font-size:12px;color:var(--mid)} .bp-n small{color:var(--muted);font-size:10px}
+  .bp-bird{font-size:11px;color:#C7973F;font-weight:700;margin-left:auto}
+  .certbtn{border:1.5px solid var(--line2);background:#FFFDF4;color:var(--mid);border-radius:999px;
+    font-size:10.5px;font-weight:700;padding:3px 10px;font-family:inherit}
+  .certbtn.gold{border-color:#C7973F;color:#C7973F;background:none}
   .card .body{flex:1;min-width:0}
   .card .name{font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .card .meta{font-family:ui-monospace,monospace;font-size:10px;color:var(--muted)}
@@ -209,6 +223,7 @@
     <button data-tab="map" class="on">地図</button>
     <button data-tab="list">施設</button>
     <button data-tab="log">履歴</button>
+    <button data-tab="book">帳</button>
     <button data-tab="set">設定</button>
   </nav>
 
@@ -237,6 +252,8 @@
   </div>
 
   <div class="pane" id="pane-log"><div id="logbox"></div></div>
+
+  <div class="pane" id="pane-book"><div id="bookbox"></div></div>
 
   <div class="pane" id="pane-set">
     <div class="eyebrow">利用する浴室</div>
@@ -278,7 +295,7 @@
 /* アプリのバージョン。ここだけ上げればService Workerのキャッシュ名も追従する
    （登録URLに ?v= を付けて渡すので、sw.js側を手で書き換える必要はない）。
    MAJOR=データ構造やlocalStorageの互換が変わる / MINOR=機能追加 / PATCH=修正 */
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.2.0";
 /* 枠データの版。アプリのバージョンとは別物で、サウナイキタイのランキングを固定した日付を指す */
 const EDITION = "2026.08.06版";
 const REGIONS = [
@@ -969,7 +986,7 @@ function renderHeader(){
     }).join("");
     return `<div class="regbox">
       <button class="reghead" data-r="${esc(name)}" aria-expanded="${open}">
-        <span>${name}</span>
+        <span>${name}${conqueredRegion(name)?'<span class="seihamark">制覇</span>':""}</span>
         <span class="bar"><div style="width:${(rtot?n/rtot*100:0).toFixed(1)}%;background:${PREF[keys[0]].color}"></div></span>
         <span class="num">${n}<small>/${rtot}</small></span>
         <span class="cv">${open?"−":"＋"}</span>
@@ -1247,7 +1264,167 @@ function renderLog(){
   fillPhotos(box);
 }
 
-function renderAll(){ renderHeader(); renderMap(); renderList(); renderLog(); }
+/* ---------- 判子帳（パズル式・県鳥の隠し絵） ---------- */
+/* 絵柄は各県の県鳥。実画像は art/<slug>.webp（840x480、ChatGPT生成をWebP圧縮したもの） */
+const BIRDS={
+  hokkaido:"タンチョウ",
+  aomori:"ハクチョウ",
+  iwate:"キジ",
+  miyagi:"マガン",
+  akita:"ヤマドリ",
+  yamagata:"オシドリ",
+  fukushima:"キビタキ",
+  ibaraki:"ヒバリ",
+  tochigi:"オオルリ",
+  gunma:"ヤマドリ",
+  saitama:"シラコバト",
+  chiba:"ホオジロ",
+  tokyo:"ユリカモメ",
+  kanagawa:"カモメ",
+  niigata:"トキ",
+  toyama:"ライチョウ",
+  ishikawa:"イヌワシ",
+  fukui:"ツグミ",
+  yamanashi:"ウグイス",
+  nagano:"ライチョウ",
+  gifu:"ライチョウ",
+  shizuoka:"サンコウチョウ",
+  aichi:"コノハズク",
+  mie:"シロチドリ",
+  shiga:"カイツブリ",
+  kyoto:"オオミズナギドリ",
+  osaka:"モズ",
+  hyogo:"コウノトリ",
+  nara:"コマドリ",
+  wakayama:"メジロ",
+  tottori:"オシドリ",
+  shimane:"ハクチョウ",
+  okayama:"キジ",
+  hiroshima:"アビ",
+  yamaguchi:"ナベヅル",
+  tokushima:"シラサギ",
+  kagawa:"ホトトギス",
+  ehime:"コマドリ",
+  kochi:"ヤイロチョウ",
+  fukuoka:"ウグイス",
+  saga:"カササギ",
+  nagasaki:"オシドリ",
+  kumamoto:"ヒバリ",
+  oita:"メジロ",
+  miyazaki:"コシジロヤマドリ",
+  kagoshima:"ルリカケス",
+  okinawa:"ノグチゲラ",
+};
+const PREF_KEYS=Object.keys(PREF);
+function puzzleSVG(pref){
+  const st=stamped(), frames=FRAME.filter(f=>f.pref===pref).sort((a,b)=>a.rank-b.rank);
+  const done=conquered(pref);
+  let s=`<svg viewBox="0 0 280 160" style="width:100%;display:block;border-radius:9px;background:#FBF1DC">`;
+  s+=`<image href="art/${pref}.webp" x="0" y="0" width="280" height="160" preserveAspectRatio="xMidYMid slice"/>`;
+  frames.forEach((f,i)=>{
+    const open=st.has(f.id)||!bathOK(f);
+    if(open) return;
+    const x=(i%5)*56, y=Math.floor(i/5)*80;
+    s+=`<g><rect x="${x}" y="${y}" width="56" height="80" fill="#F2E6CC"/>
+      <rect x="${x+1}" y="${y+1}" width="54" height="78" fill="none" stroke="#E0CFA8" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <text x="${x+28}" y="${y+45}" text-anchor="middle" font-size="12" fill="#C9B58F" font-weight="700">${sealText(f)}</text></g>`;
+  });
+  /* ピースの継ぎ目 */
+  s+=`<g stroke="#4A3B2E" stroke-width="0.5" opacity="0.18">`;
+  for(let i=1;i<5;i++) s+=`<line x1="${i*56}" y1="0" x2="${i*56}" y2="160"/>`;
+  s+=`<line x1="0" y1="80" x2="280" y2="80"/></g>`;
+  if(done) s+=`<g opacity="0.92" transform="rotate(-9 244 128)">
+    <circle cx="244" cy="128" r="21" fill="none" stroke="#C7973F" stroke-width="3"/>
+    <text x="244" y="136" text-anchor="middle" font-size="21" font-weight="800" fill="#C7973F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">制</text></g>`;
+  s+=`</svg>`;
+  return s;
+}
+const conqueredRegion=name=>{const ks=regKeys(name);return ks.length>0&&ks.every(conquered);};
+const conqueredAll=()=>PREF_KEYS.every(conquered);
+function renderBook(){
+  const st=stamped();
+  let h="";
+  if(conqueredAll()) h+=`<div class="bookbanner">全国制覇 — 四十七都道府県 満願
+    <button class="certbtn gold" onclick="window.__cert('nation','全国')">証明書</button></div>`;
+  else h+=`<p class="settext" style="margin:2px 0 10px">判子を押すとその県の絵が一枚ずつめくれます。全部集まると絵が開きます（何の絵かは開けてのお楽しみ）。</p>`;
+  for(const [name,keys] of REGIONS){
+    const rdone=conqueredRegion(name);
+    h+=`<div class="bookregion"><span>${name}</span>${rdone?'<span class="seihamark">地方制覇</span>':""}
+        ${rdone?`<button class="certbtn" onclick="window.__cert('region','${esc(name)}')">証明書</button>`:""}</div>`;
+    for(const k of keys){
+      const fs=framesOf(k), n=fs.filter(f=>st.has(f.id)).length, done=conquered(k);
+      h+=`<div class="bookpref${done?" done":""}">
+        <div class="bookhead">
+          <span class="bp-name">${PREF[k].label}</span>
+          <span class="mono bp-n">${n}<small>/${fs.length}</small></span>
+          ${done?`<span class="bp-bird">${esc(BIRDS[k])}</span><button class="certbtn" onclick="window.__cert('pref','${k}')">証明書</button>`
+                :`<span class="bp-bird mono" style="opacity:.55">？？？</span>`}
+        </div>
+        ${puzzleSVG(k)}
+      </div>`;
+    }
+  }
+  document.getElementById("bookbox").innerHTML=h;
+}
+/* ---------- 制覇証明書（PNG保存できる） ---------- */
+function certDate(keys){
+  /* 制覇が確定した日＝対象の枠の中で最後に初押印された日 */
+  const st=new Map();
+  for(const v of [...state.visits].reverse()){ if(!st.has(v.facilityId)) st.set(v.facilityId,v.date); }
+  let d="";
+  for(const k of keys) for(const f of framesOf(k)){ const x=st.get(f.id); if(x&&x>d) d=x; }
+  return d||today();
+}
+function certSVG(kind,key){
+  const keys = kind==="pref"?[key] : kind==="region"?regKeys(key) : PREF_KEYS;
+  const title = kind==="pref"?PREF[key].label+"県" : kind==="region"?key+"地方" : "全国四十七都道府県";
+  const seals = keys.flatMap(k=>framesOf(k));
+  const cols = seals.length>60?12:seals.length>20?10:5;
+  const rows=Math.ceil(seals.length/cols);
+  const W=560, gridTop=250, cell=(W-100)/cols, H=gridTop+rows*cell+150;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#FEF6E6"/>
+    <rect x="14" y="14" width="${W-28}" height="${H-28}" fill="none" stroke="#C7973F" stroke-width="3"/>
+    <rect x="22" y="22" width="${W-44}" height="${H-44}" fill="none" stroke="#C7973F" stroke-width="1"/>
+    <text x="${W/2}" y="86" text-anchor="middle" font-size="30" font-weight="800" fill="#4A3B2E" font-family="'Hiragino Mincho ProN','Yu Mincho',serif" letter-spacing="10">制覇之証</text>
+    <text x="${W/2}" y="140" text-anchor="middle" font-size="24" font-weight="700" fill="#C75B47" font-family="'Hiragino Mincho ProN','Yu Mincho',serif" letter-spacing="4">${title}</text>
+    <text x="${W/2}" y="178" text-anchor="middle" font-size="13" fill="#8A7358">サウナイキタイ都道府県別TOP10 ${seals.length}湯 満了</text>
+    <text x="${W/2}" y="204" text-anchor="middle" font-size="13" fill="#8A7358" font-family="ui-monospace,monospace">${certDate(keys)}</text>`;
+  seals.forEach((f,i)=>{
+    const x=50+(i%cols)*cell+cell/2, y=gridTop+Math.floor(i/cols)*cell+cell/2, r=cell*0.38;
+    s+=`<g transform="rotate(${(i%7-3)*3} ${x} ${y})"><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#D9483B" stroke-width="2"/>
+      <text x="${x}" y="${y+r*0.38}" text-anchor="middle" font-size="${r*0.95}" font-weight="800" fill="#D9483B" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${sealText(f)}</text></g>`;
+  });
+  s+=`<g transform="rotate(-9 ${W-96} ${H-92})"><circle cx="${W-96}" cy="${H-92}" r="42" fill="none" stroke="#C7973F" stroke-width="5"/>
+    <text x="${W-96}" y="${H-78}" text-anchor="middle" font-size="40" font-weight="800" fill="#C7973F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">制</text></g>
+    <text x="50" y="${H-64}" font-size="12" fill="#8A7358">SAUNA 30 — ${esc(EDITION)}</text></svg>`;
+  return s;
+}
+window.__cert=(kind,key)=>{
+  const svg=certSVG(kind,key);
+  const disp=svg.replace(/width="\d+" height="\d+"/,'style="width:100%;height:auto;display:block"');
+  openSheet(sheetHead("制覇証明書")+`
+    <div style="border:1.5px solid var(--line);border-radius:12px;overflow:hidden">${disp}</div>
+    <button class="btn primary" style="width:100%;margin-top:14px" id="certSave">画像として保存</button>`);
+  document.getElementById("certSave").addEventListener("click",()=>{
+    const blob=new Blob([svg],{type:"image/svg+xml;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement("canvas");
+      c.width=img.width*2; c.height=img.height*2;
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      const a=document.createElement("a");
+      a.href=c.toDataURL("image/png");
+      a.download=`sauna30-制覇之証-${kind==="pref"?PREF[key].label:key==="全国"?"全国":key}.png`;
+      a.click();
+      notify("証明書を保存しました");
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); notify("画像の生成に失敗しました。","err"); };
+    img.src=url;
+  });
+};
+function renderAll(){ renderHeader(); renderMap(); renderList(); renderLog(); renderBook(); }
 
 /* ---------- シート ---------- */
 const overlay=document.getElementById("overlay"), sheetEl=document.getElementById("sheet");

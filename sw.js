@@ -3,7 +3,10 @@
    このファイルを手で書き換える必要はない。 */
 const VERSION = new URL(self.location).searchParams.get("v") || "0";
 const CACHE = "sauna30-" + VERSION;
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
+const PREFS = ["hokkaido","aomori","iwate","miyagi","akita","yamagata","fukushima","ibaraki","tochigi","gunma","saitama","chiba","tokyo","kanagawa","niigata","toyama","ishikawa","fukui","yamanashi","nagano","gifu","shizuoka","aichi","mie","shiga","kyoto","osaka","hyogo","nara","wakayama","tottori","shimane","okayama","hiroshima","yamaguchi","tokushima","kagawa","ehime","kochi","fukuoka","saga","nagasaki","kumamoto","oita","miyazaki","kagoshima","okinawa"];
+/* 判子帳の隠し絵もプリキャッシュする（圏外の山サウナで押した瞬間にピースが開けるように。47枚で約1.4MB） */
+const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"]
+  .concat(PREFS.map(s => "./art/" + s + ".webp"));
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
