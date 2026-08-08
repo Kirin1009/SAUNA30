@@ -175,7 +175,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.5.0";
+const APP_VERSION = "2.5.1";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -601,11 +601,14 @@ function facSeal(f,o={}){
     }).join("");
   }
   const city=f.city?`<text y="-16" text-anchor="middle" font-size="${f.city.length>5?5.4:6.8}" letter-spacing="0.8" fill="${ink}">${esc(f.city)}</text>`:"";
-  return `<svg viewBox="-45 -45 90 90" ${attr}><g filter="url(#sealtex)" opacity="0.9" transform="rotate(${rot})">
+  /* body＝<svg>とかすれフィルタ抜きの中身。満願之証が独立SVGとして再利用する */
+  const body=`<g transform="rotate(${rot})">
     ${frame}${city}
     <text y="${chY}" text-anchor="middle" font-size="${chFs}" font-weight="800" fill="${ink}" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${esc(ch)}</text>
     ${bx}
-  </g></svg>`;
+  </g>`;
+  if(o.bodyOnly) return body;
+  return `<svg viewBox="-45 -45 90 90" ${attr}><g filter="url(#sealtex)" opacity="0.9">${body}</g></svg>`;
 }
 
 /* ---------- 判子帳（帳タブ）。押すまで判子は伏せ ---------- */
@@ -667,20 +670,27 @@ function stampFx(f){
 window.__cert=qid=>{
   const q=QUESTS.find(x=>x.id===qid), p=progress(q);
   const seals=q.targets.filter(stamped);
-  const cols=seals.length>20?8:5, cell=(560-100)/cols, rows=Math.ceil(seals.length/cols);
+  const cols=seals.length>60?10:seals.length>20?8:5, cell=(560-100)/cols, rows=Math.ceil(seals.length/cols);
   const H=250+rows*cell+150;
-  let svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 ${H}" width="560" height="${H}"><rect width="560" height="${H}" fill="#FEF6E6"/>
+  let svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 ${H}" width="560" height="${H}">
+    <defs><filter id="ctex" x="0" y="0" width="560" height="${H}" filterUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="3" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="2.2"/>
+    </filter></defs>
+    <rect width="560" height="${H}" fill="#FEF6E6"/>
     <rect x="14" y="14" width="532" height="${H-28}" fill="none" stroke="#C7973F" stroke-width="3"/>
     <rect x="22" y="22" width="516" height="${H-44}" fill="none" stroke="#C7973F" stroke-width="1"/>
     <text x="280" y="86" text-anchor="middle" font-size="30" font-weight="800" fill="#4A3B2E" font-family="'Hiragino Mincho ProN','Yu Mincho',serif" letter-spacing="10">満願之証</text>
     <text x="280" y="140" text-anchor="middle" font-size="22" font-weight="700" fill="#C75B47" font-family="'Hiragino Mincho ProN','Yu Mincho',serif" letter-spacing="3">${esc(q.name)}</text>
     <text x="280" y="178" text-anchor="middle" font-size="13" fill="#8A7358">${seals.length}湯 満了</text>
     <text x="280" y="204" text-anchor="middle" font-size="13" fill="#8A7358" font-family="ui-monospace,monospace">${esc(today())}</text>`;
+  /* 集めた施設の判子そのものを敷き詰める（同じ判は2つとない） */
+  svg+=`<g filter="url(#ctex)" opacity="0.92">`;
   seals.forEach((id,i)=>{
-    const x=50+(i%cols)*cell+cell/2, y=250+Math.floor(i/cols)*cell+cell/2, r=cell*0.36;
-    svg+=`<g transform="rotate(${(i%7-3)*3} ${x} ${y})"><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#D9483B" stroke-width="2"/>
-      <text x="${x}" y="${y+r*0.4}" text-anchor="middle" font-size="${r}" font-weight="800" fill="#D9483B" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${q.seal}</text></g>`;
+    const x=50+(i%cols)*cell+cell/2, y=250+Math.floor(i/cols)*cell+cell/2;
+    svg+=`<g transform="translate(${x} ${y}) scale(${(cell*0.0104).toFixed(4)})">${facSeal(byId[id],{bodyOnly:1})}</g>`;
   });
+  svg+=`</g>`;
   svg+=`<g transform="rotate(-9 464 ${H-92})"><circle cx="464" cy="${H-92}" r="42" fill="none" stroke="#C7973F" stroke-width="5"/>
     <text x="464" y="${H-78}" text-anchor="middle" font-size="38" font-weight="800" fill="#C7973F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">満</text></g>
     <text x="50" y="${H-64}" font-size="12" fill="#8A7358">サ道場 東海 — ${esc(EDITION)}</text></svg>`;
