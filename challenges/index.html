@@ -64,6 +64,11 @@
   .fbtnrow{display:flex;gap:8px;margin-top:12px}
   .fbtnrow .btn{flex:1;padding:11px 4px;font-size:12.5px}
   .backbtn{font-size:12px;color:var(--indigo);background:none;border:none;font-weight:700;padding:4px 0}
+  .bgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 8px}
+  .bcell{background:none;border:none;padding:0;text-align:center;font-family:inherit;color:var(--text);min-width:0}
+  .bcell svg{width:100%;height:auto;display:block}
+  .bnm{display:block;font-size:8.5px;color:var(--mid);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bnm.off{color:#C9B58F}
   .shihan{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line2);flex-shrink:0;background:#FBF1DC}
   .chgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px;margin-top:12px}
   .chgrid figure{text-align:center;margin:0}
@@ -116,8 +121,11 @@
 
   <div class="tabs">
     <button class="tab on" data-v="dojo">道場</button>
+    <button class="tab" data-v="book">判子帳</button>
     <button class="tab" data-v="map">地図</button>
   </div>
+
+  <div id="bookView" style="display:none"></div>
 
   <div id="mapView" style="display:none">
     <div id="mapbox"></div>
@@ -158,10 +166,16 @@
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 <div id="stampfx"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="sealtex" x="-15%" y="-15%" width="130%" height="130%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="3" seed="7"/>
+    <feDisplacementMap in="SourceGraphic" scale="2.6"/>
+  </filter>
+</defs></svg>
 
 <script>
 "use strict";
-const APP_VERSION = "2.4.0";
+const APP_VERSION = "2.5.0";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -438,6 +452,7 @@ function render(){
   }).join("");
   document.querySelectorAll(".qcard").forEach(b=>b.addEventListener("click",()=>openQuest(b.dataset.q)));
   if(mapInit) renderMap();   // 地図を開いたことがあれば押印・行きたいを反映し直す
+  if(curTab==="book") renderBook();
 }
 
 /* ---------- シート ---------- */
@@ -513,7 +528,7 @@ function openFac(fid,backQid){
   const back=backQid?`<button class="backbtn" onclick="window.__quest('${backQid}')">‹ ${esc(QUESTS.find(q=>q.id===backQid).name)}</button>`:"";
   openSheet(`<div class="shead">${back||'<span class="eyebrow">施設カード</span>'}<button class="xbtn" onclick="window.__close()">×</button></div>
     <div style="display:flex;align-items:flex-start;gap:11px">
-      ${on?`<span class="hanko" style="width:34px;height:34px;font-size:15px">${isU?"湯":"済"}</span>`:`<span class="dot" style="width:15px;height:15px;border-radius:8px;border:1.5px solid var(--muted);flex-shrink:0;margin-top:5px"></span>`}
+      ${on?`<span style="width:48px;flex-shrink:0">${facSeal(f,{size:48})}</span>`:`<span style="width:48px;flex-shrink:0;opacity:0.55">${facSeal(f,{hidden:true,size:48})}</span>`}
       <div style="flex:1;min-width:0">
         <div style="font-size:16.5px;font-weight:800;line-height:1.4">${esc(f.name)}${want?'<span class="wantstar">★</span>':""}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(PREF_LABEL[f.pref]||"")}${esc(f.city?"・"+f.city:"")}</div>
@@ -534,6 +549,82 @@ function openFac(fid,backQid){
     </div>
     ${on?"":`<p style="font-size:10px;color:var(--muted);margin-top:8px">手動押印は現地で使う用。GPSが届く場所では「現在地で押印」が確実です。</p>`}`);
 }
+/* ---------- 施設判子（自動生成） ----------
+   形=施設タイプ（丸=温浴・銭湯 / 角=貸切・カプセル / 六角=宿 / 五角=アウトドア）、
+   中央=施設名の頭文字、肩=市町村、下のモチーフ=実データの武勇伝
+   （炎=サ室100°C・双炎=110°C / 雪=シングル / 月=深夜 / 鍵=予約制 / 小判=3,000円以上）。
+   モチーフ3個以上は下弧に扇状に並べる（勲章式。数が増えるほど豪華になり破綻しない） */
+const sealHash=s=>{ let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))>>>0; return h; };
+function sealBadges(f){
+  const b=[];
+  if(f.smax!=null&&f.smax>=110) b.push("flame2"); else if(f.smax!=null&&f.smax>=100) b.push("flame");
+  if(f.wmin!=null&&f.wmin<10) b.push("snow");
+  if((f.tag||"").includes("n")) b.push("moon");
+  if((f.tag||"").includes("y")) b.push("key");
+  if(f.fee!=null&&f.fee>=3000) b.push("koban");
+  return b;
+}
+function facSeal(f,o={}){
+  const ink=o.ink||"#D9483B";
+  const h=sealHash(f.id), rot=(h%9)-4;
+  const attr=o.size?`width="${o.size}" height="${o.size}"`:"";
+  let frame;
+  if(f.k==="private"||f.k==="capsule")
+    frame=`<rect x="-34" y="-34" width="68" height="68" rx="6" fill="none" stroke="${ink}" stroke-width="4.5"/><rect x="-28" y="-28" width="56" height="56" fill="none" stroke="${ink}" stroke-width="1.3"/>`;
+  else if(f.k==="hotel")
+    frame=`<polygon points="0,-37 32,-18.5 32,18.5 0,37 -32,18.5 -32,-18.5" fill="none" stroke="${ink}" stroke-width="4.5"/><polygon points="0,-30 26,-15 26,15 0,30 -26,15 -26,-15" fill="none" stroke="${ink}" stroke-width="1.3"/>`;
+  else if(f.k==="camp")
+    frame=`<polygon points="0,-38 36,-10 23,36 -23,36 -36,-10" fill="none" stroke="${ink}" stroke-width="4.5"/><polygon points="0,-31 29,-8 18.5,29 -18.5,29 -29,-8" fill="none" stroke="${ink}" stroke-width="1.3"/>`;
+  else
+    frame=`<circle r="36" fill="none" stroke="${ink}" stroke-width="4.5"/><circle r="30" fill="none" stroke="${ink}" stroke-width="1.3"/>`;
+  if(o.hidden)
+    return `<svg viewBox="-45 -45 90 90" ${attr}><g opacity="0.4">${frame.replaceAll(ink,"#C9B58F")}<text y="10" text-anchor="middle" font-size="26" fill="#C9B58F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">？</text></g></svg>`;
+  const ch=(f.name||"").replace(/[ 　]/g,"")[0]||"湯";
+  const badge=(t,x,y,s)=>{
+    const g=v=>`<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) scale(${s})">${v}</g>`;
+    if(t==="flame") return g(`<path d="M0,-7 C3,-3 5,-1 5,2 C5,5.5 2.8,8 0,8 C-2.8,8 -5,5.5 -5,2 C-5,0 -4,-2 -2.5,-3.5 C-2.5,-1.5 -1,-0.5 0,-1 C-1,-3.5 -0.5,-5 0,-7Z" fill="${ink}"/>`);
+    if(t==="flame2") return g(`<path transform="translate(-3.2,1) scale(0.72)" d="M0,-7 C3,-3 5,-1 5,2 C5,5.5 2.8,8 0,8 C-2.8,8 -5,5.5 -5,2 C-5,0 -4,-2 -2.5,-3.5 C-2.5,-1.5 -1,-0.5 0,-1 C-1,-3.5 -0.5,-5 0,-7Z" fill="${ink}"/><path transform="translate(2.6,0)" d="M0,-7 C3,-3 5,-1 5,2 C5,5.5 2.8,8 0,8 C-2.8,8 -5,5.5 -5,2 C-5,0 -4,-2 -2.5,-3.5 C-2.5,-1.5 -1,-0.5 0,-1 C-1,-3.5 -0.5,-5 0,-7Z" fill="${ink}"/>`);
+    if(t==="snow") return g(`<g stroke="${ink}" stroke-width="1.7" stroke-linecap="round"><line y1="-6.5" y2="6.5"/><line x1="-5.6" y1="-3.2" x2="5.6" y2="3.2"/><line x1="-5.6" y1="3.2" x2="5.6" y2="-3.2"/></g>`);
+    if(t==="moon") return g(`<path d="M2,-7 A7,7 0 1,0 2,7 A5.5,5.5 0 1,1 2,-7Z" fill="${ink}"/>`);
+    if(t==="key") return g(`<circle r="3.2" cy="-2.5" fill="none" stroke="${ink}" stroke-width="1.7"/><rect x="-1" y="0.2" width="2" height="6.6" fill="${ink}"/><rect x="0.8" y="4" width="2.4" height="1.6" fill="${ink}"/>`);
+    if(t==="koban") return g(`<ellipse rx="4.6" ry="6.4" fill="none" stroke="${ink}" stroke-width="1.8"/><line x1="-2" x2="2" stroke="${ink}" stroke-width="1.6"/>`);
+    return "";
+  };
+  const bad=sealBadges(f);
+  let bx="", chY=12, chFs=34;
+  if(bad.length){
+    chY=6; chFs=bad.length>=3?27:30;
+    if(bad.length<=2) bx=bad.map((t,i)=>badge(t,(i-(bad.length-1)/2)*13,20,1)).join("");
+    else bx=bad.map((t,i)=>{
+      const a=(90+(i-(bad.length-1)/2)*24)*Math.PI/180;
+      return badge(t,23.5*Math.cos(a),23.5*Math.sin(a)+0.5,0.8);
+    }).join("");
+  }
+  const city=f.city?`<text y="-16" text-anchor="middle" font-size="${f.city.length>5?5.4:6.8}" letter-spacing="0.8" fill="${ink}">${esc(f.city)}</text>`:"";
+  return `<svg viewBox="-45 -45 90 90" ${attr}><g filter="url(#sealtex)" opacity="0.9" transform="rotate(${rot})">
+    ${frame}${city}
+    <text y="${chY}" text-anchor="middle" font-size="${chFs}" font-weight="800" fill="${ink}" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${esc(ch)}</text>
+    ${bx}
+  </g></svg>`;
+}
+
+/* ---------- 判子帳（帳タブ）。押すまで判子は伏せ ---------- */
+function renderBook(){
+  const el=document.getElementById("bookView");
+  let html=`<p class="settext" style="margin:14px 0 2px">押した施設の判子が集まります。判子は施設ごとに違い、<b>押すまで伏せ</b>。形は施設のタイプ、モチーフはその湯の武勇伝（炎=サ室100°C・双炎=110°C／雪=シングル／月=深夜／鍵=予約制／小判=¥3,000以上）。</p>`;
+  for(const key of REGION.prefs){
+    const fs=FAC.filter(f=>f.pref===key);
+    const n=fs.filter(f=>stamped(f.id)).length;
+    html+=`<div class="eyebrow" style="margin:18px 2px 9px">${PREF_LABEL[key]}　${n}<span style="letter-spacing:0">/${fs.length}</span></div>
+      <div class="bgrid">`+fs.map(f=>`<button class="bcell" onclick="window.__fac('${f.id}')">${facSeal(f,{hidden:!stamped(f.id)})}<span class="bnm${stamped(f.id)?"":" off"}">${esc(f.name)}</span></button>`).join("")+`</div>`;
+  }
+  if(state.ufacs.length){
+    html+=`<div class="eyebrow" style="margin:18px 2px 9px">台帳（自分で登録）</div>
+      <div class="bgrid">`+state.ufacs.map(f=>`<button class="bcell" onclick="window.__fac('${f.id}')">${facSeal(f,{hidden:!stamped(f.id)})}<span class="bnm">${esc(f.name)}</span></button>`).join("")+`</div>`;
+  }
+  el.innerHTML=html;
+}
+
 window.__quest=qid=>openQuest(qid);
 window.__stamp=(fid,backQid)=>{ toggleStamp(byId[fid]); openFac(fid,backQid||undefined); };
 window.__want=(fid,backQid)=>{
@@ -563,18 +654,9 @@ function stampFx(f){
   const el=document.getElementById("stampfx");
   const full=QUESTS.filter(q=>q.targets.includes(f.id)).map(q=>progress(q)).some(p=>p.full);
   const ink=full?"#C7973F":"#D9483B";
-  el.innerHTML=`<div class="seal"><svg width="140" height="140" viewBox="0 0 140 140">
-    <defs><filter id="fxr" x="-15%" y="-15%" width="130%" height="130%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="3" seed="7"/>
-      <feDisplacementMap in="SourceGraphic" scale="4"/></filter></defs>
-    <g filter="url(#fxr)" opacity="0.9">
-      <circle cx="70" cy="70" r="62" fill="none" stroke="${ink}" stroke-width="5.5"/>
-      <circle cx="70" cy="70" r="53" fill="none" stroke="${ink}" stroke-width="1.5"/>
-      <text x="70" y="41" text-anchor="middle" font-size="11" letter-spacing="3" font-weight="700" fill="${ink}">サ道場 東海</text>
-      <text x="70" y="88" text-anchor="middle" font-size="46" font-weight="800" fill="${ink}" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">修</text>
-      <text x="70" y="113" text-anchor="middle" font-size="10.5" letter-spacing="1" fill="${ink}" font-family="ui-monospace,monospace">${esc(today())}</text>
-    </g></svg></div>
-    <div class="fxname">${esc(f.name)}</div>`;
+  /* その施設だけの判子がここで初めて現れる（開封の瞬間） */
+  el.innerHTML=`<div class="seal">${facSeal(f,{ink,size:150})}</div>
+    <div class="fxname">${esc(f.name)}　${esc(today())}</div>`;
   el.classList.remove("bye"); el.classList.add("on");
   clearTimeout(fxT1); clearTimeout(fxT2);
   fxT1=setTimeout(()=>el.classList.add("bye"),1400);
@@ -618,7 +700,7 @@ window.__cert=qid=>{
 };
 
 /* ---------- 地図（東海。470sの方式：pointerupでelementFromPoint判定・ズーム後に再描画） ---------- */
-let view=null, mapMoved=false, renderedW=0, mapInit=false, lastPos=null;
+let view=null, mapMoved=false, renderedW=0, mapInit=false, lastPos=null, curTab="dojo";
 const _anchor={};
 function prefAnchor(key){
   if(_anchor[key]) return _anchor[key];
@@ -768,12 +850,15 @@ function bindMapGestures(svg){
 }
 document.getElementById("mapReset").addEventListener("click",()=>{ view=null; renderMap(); });
 
-/* タブ切り替え。地図は初回に描く */
+/* タブ切り替え。地図は初回に描き、判子帳は開くたびに描く */
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+  curTab=b.dataset.v;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
-  document.getElementById("dojoView").style.display = b.dataset.v==="dojo" ? "" : "none";
-  document.getElementById("mapView").style.display = b.dataset.v==="map" ? "" : "none";
-  if(b.dataset.v==="map" && !mapInit){ mapInit=true; renderMap(); }
+  document.getElementById("dojoView").style.display = curTab==="dojo" ? "" : "none";
+  document.getElementById("bookView").style.display = curTab==="book" ? "" : "none";
+  document.getElementById("mapView").style.display = curTab==="map" ? "" : "none";
+  if(curTab==="map" && !mapInit){ mapInit=true; renderMap(); }
+  if(curTab==="book") renderBook();
 }));
 
 /* ---------- 枠外の施設を現在地で登録（台帳。お題には数えない） ---------- */
