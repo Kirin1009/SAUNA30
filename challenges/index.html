@@ -175,7 +175,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.6.0";
+const APP_VERSION = "2.7.0";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -400,11 +400,12 @@ QUESTS.forEach(q=>q.targets=(q.pick?q.pick(FAC):FAC.filter(q.test)).map(f=>f.id)
 
 /* ---------- 状態 ---------- */
 const KEY="sadojo:v1";
-/* wants=行きたい（ブックマーク）、ufacs=枠外の自由登録施設。旧ファイルに無くても既定値で埋まる */
-let state={stamps:{}, wants:{}, ufacs:[], radius:300};
+/* wants=行きたい、ufacs=枠外の自由登録施設、scores=採点（4軸+特別加減点）。旧ファイルに無くても既定値で埋まる */
+let state={stamps:{}, wants:{}, ufacs:[], scores:{}, radius:300};
 try{ const raw=localStorage.getItem(KEY); if(raw) state=Object.assign(state,JSON.parse(raw)); }catch(e){}
 if(!state.wants) state.wants={};
 if(!Array.isArray(state.ufacs)) state.ufacs=[];
+if(!state.scores) state.scores={};
 reindex();
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 const stamped=id=>!!state.stamps[id];
@@ -537,18 +538,67 @@ function openFac(fid,backQid){
     <div style="margin-top:9px">${kind?`<span class="badge">${esc(kind)}</span>`:""}${tags.map(t=>`<span class="badge" style="color:var(--stamp);border-color:var(--stamp)">${esc(t)}</span>`).join("")}</div>
     ${specs.length?`<p style="font-size:12.5px;color:var(--mid);margin:8px 0 0" class="mono">${specs.join("　")}</p>`:""}
     ${inQuests.length?`<p style="font-size:11px;color:var(--muted);margin:8px 0 0">対象のお題：${inQuests.map(q=>`<span class="hanko" style="display:inline-flex;width:20px;height:20px;font-size:9px;vertical-align:middle;margin-right:3px;${progress(q).full?"border-color:var(--gold);color:var(--gold);background:rgba(199,151,63,.08)":""}">${q.seal}</span>`).join("")}</p>`:""}
-    <p style="font-size:11.5px;color:var(--mid);margin:10px 0 0">${on?`<b style="color:var(--stamp)">押印済み</b>　<span class="mono">${esc(state.stamps[fid])}</span>`:"未踏"}</p>
+    <p style="font-size:11.5px;color:var(--mid);margin:10px 0 0">${on?`<b style="color:var(--stamp)">押印済み</b>　<span class="mono">${esc(state.stamps[fid])}</span>${state.scores[fid]?`　採点 <b style="color:var(--stamp)">${scoreTotal(state.scores[fid])}点</b>`:""}`:"未踏"}</p>
     <div class="fbtnrow">
-      ${on?`<button class="btn" onclick="window.__stamp('${fid}','${backQid||""}')">押印を取り消す</button>`
-          :`<button class="btn primary" onclick="window.__stamp('${fid}','${backQid||""}')">手動で押印する</button>`}
-      <button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}','${backQid||""}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>
+      ${on?`<button class="btn${state.scores[fid]?"":" primary"}" onclick="window.__scoreOpen('${fid}','${backQid||""}')">${state.scores[fid]?"採点を編集":"採点する"}</button>
+            <button class="btn" onclick="window.__stamp('${fid}','${backQid||""}')">押印を取り消す</button>`
+          :`<button class="btn primary" onclick="window.__scoreOpen('${fid}','${backQid||""}')">手動で押印する</button>
+            <button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}','${backQid||""}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>`}
     </div>
     <div class="fbtnrow">
+      ${on?`<button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}','${backQid||""}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>`:""}
       <button class="btn" onclick="window.__maps(${f.lat},${f.lng})">Googleマップで開く</button>
       ${isU?`<button class="btn" style="color:var(--stamp);border-color:var(--stamp)" onclick="window.__udel('${fid}')">登録を削除</button>`:""}
     </div>
-    ${on?"":`<p style="font-size:10px;color:var(--muted);margin-top:8px">手動押印は現地で使う用。GPSが届く場所では「現在地で押印」が確実です。</p>`}`);
+    ${on?"":`<p style="font-size:10px;color:var(--muted);margin-top:8px">手動押印は現地で使う用。GPSが届く場所では「現在地で押印」が確実です（押印後にカードから採点できます）。</p>`}`);
 }
+
+/* ---------- 採点（470sと同じ思想：4軸×25点＋特別加減点±10・理由必須） ---------- */
+const scoreTotal=sc=>sc.s.reduce((a,b)=>a+b,0)+(sc.x||0);
+window.__scoreOpen=(fid,backQid)=>{
+  const f=byId[fid]; if(!f) return;
+  const on=stamped(fid);
+  const sc=state.scores[fid]||{s:[13,13,13,13],x:0,why:""};
+  const AX=["サウナ室","水風呂","外気浴・休憩","清潔・雰囲気"];
+  openSheet(sheetHead(on?"採点":"押印と採点")+`
+    <p style="font-size:14px;font-weight:800;margin:0 0 2px">${esc(f.name)}</p>
+    <p style="font-size:10.5px;color:var(--muted);margin:0 0 6px">4軸×25点＋特別加減点±10。基準線：竜泉寺の湯 ≒ 82点</p>
+    ${AX.map((a,i)=>`<div style="margin-top:9px">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>${a}</span><b class="mono" id="sv${i}">${sc.s[i]}</b></div>
+      <input type="range" min="0" max="25" step="1" value="${sc.s[i]}" id="sx${i}"></div>`).join("")}
+    <div style="margin-top:12px;border-top:1.5px dashed var(--line2);padding-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>特別加減点</span><b class="mono" id="svx">${sc.x>0?"+":""}${sc.x}</b></div>
+      <input type="range" min="-10" max="10" step="1" value="${sc.x}" id="sxx">
+      <input id="swhy" placeholder="特別加減点の理由（±をつけたら必須）" maxlength="60" value="${esc(sc.why||"")}"
+        style="width:100%;font-family:inherit;font-size:13px;padding:10px 12px;border:1.5px solid var(--line2);border-radius:10px;background:var(--panel);color:var(--text);margin-top:6px">
+    </div>
+    <p style="text-align:center;margin:12px 0 4px;font-size:12px;color:var(--mid)">合計 <b class="mono" id="stot" style="font-size:24px;color:var(--stamp)">${scoreTotal(sc)}</b> 点</p>
+    <div class="fbtnrow">
+      <button class="btn primary" id="scSave">${on?"採点を保存":"押印して保存"}</button>
+      ${on?"":`<button class="btn" id="scSkip">採点せず押印</button>`}
+    </div>`);
+  const cur=()=>({ s:AX.map((_,i)=>+document.getElementById("sx"+i).value), x:+document.getElementById("sxx").value, why:document.getElementById("swhy").value.trim() });
+  const upd=()=>{ const c=cur();
+    AX.forEach((_,i)=>document.getElementById("sv"+i).textContent=c.s[i]);
+    document.getElementById("svx").textContent=(c.x>0?"+":"")+c.x;
+    document.getElementById("stot").textContent=scoreTotal(c); };
+  AX.forEach((_,i)=>document.getElementById("sx"+i).addEventListener("input",upd));
+  document.getElementById("sxx").addEventListener("input",upd);
+  document.getElementById("scSave").addEventListener("click",()=>{
+    const c=cur();
+    if(c.x!==0&&!c.why){ notify("特別加減点の理由を書いてください。","err"); return; }
+    state.scores[fid]=c;
+    const first=!stamped(fid);
+    if(first) state.stamps[fid]=today();
+    save(); render(); openFac(fid,backQid||undefined);
+    if(first) stampFx(f);
+  });
+  const skip=document.getElementById("scSkip");
+  if(skip) skip.addEventListener("click",()=>{
+    state.stamps[fid]=today();
+    save(); render(); openFac(fid,backQid||undefined); stampFx(f);
+  });
+};
 /* ---------- 施設判子（自動生成） ----------
    形=施設タイプ（丸=温浴・銭湯 / 角=貸切・カプセル / 六角=宿 / 五角=アウトドア）、
    中央=施設名の頭文字、肩=市町村、下のモチーフ=実データの武勇伝
@@ -638,14 +688,14 @@ window.__udel=fid=>{
   const f=byId[fid]; if(!f||!f.u) return;
   if(!confirm(`${f.name} の登録を削除しますか？（押印・行きたいも消えます）`)) return;
   state.ufacs=state.ufacs.filter(x=>x.id!==fid);
-  delete state.stamps[fid]; delete state.wants[fid];
+  delete state.stamps[fid]; delete state.wants[fid]; delete state.scores[fid];
   reindex(); save(); render(); closeSheet(); notify("登録を削除しました");
 };
 
 function toggleStamp(f){
   if(stamped(f.id)){
-    if(!confirm(`${f.name} の押印を取り消しますか？`)) return;
-    delete state.stamps[f.id]; save(); render(); notify("押印を取り消しました");
+    if(!confirm(`${f.name} の押印を取り消しますか？${state.scores[f.id]?"（採点も消えます）":""}`)) return;
+    delete state.stamps[f.id]; delete state.scores[f.id]; save(); render(); notify("押印を取り消しました");
   }else{
     state.stamps[f.id]=today(); save(); render(); stampFx(f);
   }
@@ -701,8 +751,8 @@ window.__cert=async qid=>{
     <text x="280" y="204" text-anchor="middle" font-size="13" fill="#8A7358" font-family="ui-monospace,monospace">${esc(today())}</text>`;
   /* 下絵：満願で完成した武将たちの絵を薄く敷く */
   if(art){
-    svg+=`<image href="${art}" x="40" y="${gridY-12}" width="480" height="${gridH+24}" preserveAspectRatio="xMidYMid slice" opacity="0.9"/>
-      <rect x="40" y="${gridY-12}" width="480" height="${gridH+24}" fill="#FEF6E6" opacity="0.62"/>
+    svg+=`<image href="${art}" x="40" y="${gridY-12}" width="480" height="${gridH+24}" preserveAspectRatio="xMidYMid slice"/>
+      <rect x="40" y="${gridY-12}" width="480" height="${gridH+24}" fill="#FEF6E6" opacity="0.38"/>
       <rect x="40" y="${gridY-12}" width="480" height="${gridH+24}" fill="none" stroke="#D9CBA8" stroke-width="1.2"/>`;
   }
   /* その上に、集めた施設の判子を押した順で敷き詰める（同じ判は2つとない） */
