@@ -178,7 +178,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.9.1";
+const APP_VERSION = "2.10.0";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -404,11 +404,12 @@ QUESTS.forEach(q=>q.targets=(q.pick?q.pick(FAC):FAC.filter(q.test)).map(f=>f.id)
 /* ---------- 状態 ---------- */
 const KEY="sadojo:v1";
 /* wants=行きたい、ufacs=枠外の自由登録施設、scores=採点（4軸+特別加減点）。旧ファイルに無くても既定値で埋まる */
-let state={stamps:{}, wants:{}, ufacs:[], scores:{}, radius:300};
+let state={stamps:{}, wants:{}, ufacs:[], scores:{}, paid:{}, radius:300};
 try{ const raw=localStorage.getItem(KEY); if(raw) state=Object.assign(state,JSON.parse(raw)); }catch(e){}
 if(!state.wants) state.wants={};
 if(!Array.isArray(state.ufacs)) state.ufacs=[];
 if(!state.scores) state.scores={};
+if(!state.paid) state.paid={};
 reindex();
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 const stamped=id=>!!state.stamps[id];
@@ -541,7 +542,7 @@ function openFac(fid,backQid){
     <div style="margin-top:9px">${kind?`<span class="badge">${esc(kind)}</span>`:""}${tags.map(t=>`<span class="badge" style="color:var(--stamp);border-color:var(--stamp)">${esc(t)}</span>`).join("")}</div>
     ${specs.length?`<p style="font-size:12.5px;color:var(--mid);margin:8px 0 0" class="mono">${specs.join("　")}</p>`:""}
     ${inQuests.length?`<p style="font-size:11px;color:var(--muted);margin:8px 0 0">対象のお題：${inQuests.map(q=>`<span class="hanko" style="display:inline-flex;width:22px;height:22px;border:none;background:none;vertical-align:middle;margin-right:3px;${progress(q).full?"color:var(--gold)":""}"><i class="kmz" style="--km:url(art/km-${q.id}.webp)"></i></span>`).join("")}</p>`:""}
-    <p style="font-size:11.5px;color:var(--mid);margin:10px 0 0">${on?`<b style="color:var(--stamp)">押印済み</b>　<span class="mono">${esc(state.stamps[fid])}</span>${state.scores[fid]?`　採点 <b style="color:var(--stamp)">${fmt1(scoreTotal(state.scores[fid])*4)}点</b>`:""}`:"未踏"}</p>
+    <p style="font-size:11.5px;color:var(--mid);margin:10px 0 0">${on?`<b style="color:var(--stamp)">押印済み</b>　<span class="mono">${esc(state.stamps[fid])}</span>${state.scores[fid]?`　採点 <b style="color:var(--stamp)">${fmt1(scoreTotal(state.scores[fid])*4)}点</b>`:""}${state.paid[fid]!=null?`　支払 <b>¥${state.paid[fid].toLocaleString()}</b>`:""}`:"未踏"}</p>
     <div class="fbtnrow">
       ${on?`<button class="btn${state.scores[fid]?"":" primary"}" onclick="window.__scoreOpen('${fid}','${backQid||""}')">${state.scores[fid]?"採点を編集":"採点する"}</button>
             <button class="btn" onclick="window.__stamp('${fid}','${backQid||""}')">押印を取り消す</button>`
@@ -585,11 +586,19 @@ window.__scoreOpen=(fid,backQid)=>{
       <input id="swhy" placeholder="特別加減点の理由（±をつけたら必須）" maxlength="60" value="${esc(sc.why||"")}"
         style="width:100%;font-family:inherit;font-size:13px;padding:10px 12px;border:1.5px solid var(--line2);border-radius:10px;background:var(--panel);color:var(--text);margin-top:6px">
     </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:12.5px;flex-shrink:0">支払った料金</span>
+      <input id="spaid" type="number" inputmode="numeric" min="0" max="200000" placeholder="任意" value="${state.paid[fid]??""}"
+        style="flex:1;min-width:0;font-family:ui-monospace,monospace;font-size:14px;padding:9px 12px;border:1.5px solid var(--line2);border-radius:10px;background:var(--panel);color:var(--text);text-align:right">
+      <span style="font-size:12px;color:var(--muted)">円</span>
+    </div>
     <p style="text-align:center;margin:12px 0 4px;font-size:12px;color:var(--mid)">合計 <b class="mono" id="stot" style="font-size:24px;color:var(--stamp)">${fmt1(scoreTotal(sc)*4)}</b> <span style="font-size:11px">/100点</span></p>
     <div class="fbtnrow">
       <button class="btn primary" id="scSave">${on?"採点を保存":"押印して保存"}</button>
       ${on?"":`<button class="btn" id="scSkip">採点せず押印</button>`}
     </div>`);
+  const savePaid=()=>{ const yen=parseInt(document.getElementById("spaid").value,10);
+    if(yen>=0&&isFinite(yen)) state.paid[fid]=yen; else delete state.paid[fid]; };
   const cur=()=>({ s:AX.map((_,i)=>r1(+document.getElementById("sx"+i).value)), x:r1(+document.getElementById("sxx").value), why:document.getElementById("swhy").value.trim(), v:2 });
   const upd=()=>{ const c=cur();
     AX.forEach((_,i)=>document.getElementById("sv"+i).textContent=fmt1(c.s[i]));
@@ -600,7 +609,7 @@ window.__scoreOpen=(fid,backQid)=>{
   document.getElementById("scSave").addEventListener("click",()=>{
     const c=cur();
     if(c.x!==0&&!c.why){ notify("特別加減点の理由を書いてください。","err"); return; }
-    state.scores[fid]=c;
+    state.scores[fid]=c; savePaid();
     const first=!stamped(fid);
     if(first) state.stamps[fid]=today();
     save(); render(); openFac(fid,backQid||undefined);
@@ -608,6 +617,7 @@ window.__scoreOpen=(fid,backQid)=>{
   });
   const skip=document.getElementById("scSkip");
   if(skip) skip.addEventListener("click",()=>{
+    savePaid();                                  // 採点は飛ばしても料金だけは残せる
     state.stamps[fid]=today();
     save(); render(); openFac(fid,backQid||undefined); stampFx(f);
   });
@@ -701,14 +711,14 @@ window.__udel=fid=>{
   const f=byId[fid]; if(!f||!f.u) return;
   if(!confirm(`${f.name} の登録を削除しますか？（押印・行きたいも消えます）`)) return;
   state.ufacs=state.ufacs.filter(x=>x.id!==fid);
-  delete state.stamps[fid]; delete state.wants[fid]; delete state.scores[fid];
+  delete state.stamps[fid]; delete state.wants[fid]; delete state.scores[fid]; delete state.paid[fid];
   reindex(); save(); render(); closeSheet(); notify("登録を削除しました");
 };
 
 function toggleStamp(f){
   if(stamped(f.id)){
-    if(!confirm(`${f.name} の押印を取り消しますか？${state.scores[f.id]?"（採点も消えます）":""}`)) return;
-    delete state.stamps[f.id]; delete state.scores[f.id]; save(); render(); notify("押印を取り消しました");
+    if(!confirm(`${f.name} の押印を取り消しますか？${state.scores[f.id]||state.paid[f.id]!=null?"（採点・支払記録も消えます）":""}`)) return;
+    delete state.stamps[f.id]; delete state.scores[f.id]; delete state.paid[f.id]; save(); render(); notify("押印を取り消しました");
   }else{
     state.stamps[f.id]=today(); save(); render(); stampFx(f);
   }
