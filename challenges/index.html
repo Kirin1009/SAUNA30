@@ -142,6 +142,17 @@
   <div id="dojoView">
   <div id="quests"></div>
 
+  <div class="sect" id="rankSect" style="display:none">
+    <div class="eyebrow">マイ番付 — 採点した湯の比較</div>
+    <div class="tabs" style="margin-top:10px">
+      <button class="tab rtab on" data-r="score">点数</button>
+      <button class="tab rtab" data-r="cospa">コスパ</button>
+      <button class="tab rtab" data-r="paid">支払</button>
+    </div>
+    <div id="ranking"></div>
+    <p class="settext" style="font-size:10.5px">コスパは採点軸にはしない主義。ここは比較用——100点換算の点数を支払額で割った「点/千円」。</p>
+  </div>
+
   <div class="sect">
     <div class="eyebrow">記録の取り込み</div>
     <p class="settext">Sauna470sの設定タブで書き出したバックアップJSONを読み込むと、行った施設がすべてのお題に反映されます（こちらからの逆流はありません）。</p>
@@ -178,7 +189,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.10.0";
+const APP_VERSION = "2.11.0";
 const EDITION = "2026.08.06版";   /* 出題元＝Sauna470sの枠データの版 */
 
 /* 施設スナップショット（Sauna470sの枠から生成。wmin=最低水温 smax=最高サウナ温 fee=最安 tag: y=事前予約制 t=宿泊者限定） */
@@ -456,9 +467,44 @@ function render(){
     </button>`;
   }).join("");
   document.querySelectorAll(".qcard").forEach(b=>b.addEventListener("click",()=>openQuest(b.dataset.q)));
+  renderRank();
   if(mapInit) renderMap();   // 地図を開いたことがあれば押印・行きたいを反映し直す
   if(curTab==="book") renderBook();
 }
+
+/* ---------- マイ番付（採点した湯の比較。コスパは採点軸ではなく比較軸） ---------- */
+let rankMode="score";
+function renderRank(){
+  const sect=document.getElementById("rankSect");
+  const rows=Object.keys(state.scores).filter(id=>byId[id]&&stamped(id)).map(id=>{
+    const pt=r1(scoreTotal(state.scores[id])*4);
+    const yen=state.paid[id];
+    const cospa=(yen>0)?r1(pt/yen*1000):null;
+    return {id, f:byId[id], pt, yen:yen??null, cospa};
+  });
+  if(!rows.length){ sect.style.display="none"; return; }
+  sect.style.display="";
+  rows.sort((a,b)=>{
+    if(rankMode==="cospa") return (b.cospa??-1)-(a.cospa??-1) || b.pt-a.pt;
+    if(rankMode==="paid")  return (a.yen??Infinity)-(b.yen??Infinity) || b.pt-a.pt;
+    return b.pt-a.pt || (b.cospa??-1)-(a.cospa??-1);
+  });
+  document.getElementById("ranking").innerHTML=rows.map((r,i)=>`
+    <button class="frow" onclick="window.__fac('${r.id}')">
+      <span class="mono" style="width:22px;flex-shrink:0;font-size:12px;color:${i<3?"var(--gold)":"var(--muted)"};font-weight:700">${i+1}</span>
+      <span style="width:30px;flex-shrink:0">${facSeal(r.f,{size:30})}</span>
+      <span class="nm">${esc(r.f.name)}</span>
+      <span class="ct" style="text-align:right;line-height:1.5">
+        <b style="color:var(--stamp);font-size:12px">${fmt1(r.pt)}点</b><br>
+        ${r.yen!=null?`¥${r.yen.toLocaleString()}`:"¥—"}・${r.cospa!=null?`${fmt1(r.cospa)}点/千円`:"—"}
+      </span>
+    </button>`).join("");
+}
+document.querySelectorAll(".rtab").forEach(b=>b.addEventListener("click",()=>{
+  rankMode=b.dataset.r;
+  document.querySelectorAll(".rtab").forEach(x=>x.classList.toggle("on",x===b));
+  renderRank();
+}));
 
 /* ---------- シート ---------- */
 const overlay=document.getElementById("overlay"), sheetEl=document.getElementById("sheet");
@@ -955,9 +1001,9 @@ function bindMapGestures(svg){
 document.getElementById("mapReset").addEventListener("click",()=>{ view=null; renderMap(); });
 
 /* タブ切り替え。地図は初回に描き、判子帳は開くたびに描く */
-document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+document.querySelectorAll(".tab[data-v]").forEach(b=>b.addEventListener("click",()=>{
   curTab=b.dataset.v;
-  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".tab[data-v]").forEach(x=>x.classList.toggle("on",x===b));
   document.getElementById("dojoView").style.display = curTab==="dojo" ? "" : "none";
   document.getElementById("bookView").style.display = curTab==="book" ? "" : "none";
   document.getElementById("mapView").style.display = curTab==="map" ? "" : "none";
