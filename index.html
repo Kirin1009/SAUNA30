@@ -100,6 +100,13 @@
   .nobath{font-size:9.5px;color:var(--muted);border:1px solid var(--line2);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:1px}
   .prefcell.done{border-color:#C7973F;background:#FFFBEF}
   .seihamark{font-size:9px;color:#C7973F;border:1px solid #C7973F;border-radius:4px;padding:0 3px;margin-left:5px;font-weight:700}
+  .statsrow{display:flex;gap:10px;margin-top:14px}
+  .statsrow .stat{flex:1;background:var(--panel);border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;text-align:center}
+  .statsrow .stat b{font-family:ui-monospace,monospace;font-size:21px;display:block;line-height:1.3}
+  .statsrow .stat span{font-size:9.5px;color:var(--muted);letter-spacing:.12em}
+  .joren{font-size:9px;color:#C7973F;border:1.5px solid #C7973F;border-radius:50%;width:26px;height:26px;display:inline-flex;
+    align-items:center;justify-content:center;font-weight:800;margin-left:6px;transform:rotate(-8deg);vertical-align:middle;
+    font-family:'Hiragino Mincho ProN','Yu Mincho',serif}
   .fixrow{display:flex;gap:8px;margin-top:10px}
   .fixrow button{background:none;border:1.5px solid var(--line2);border-radius:999px;color:var(--muted);
     font-size:11px;font-family:inherit;padding:4px 11px}
@@ -207,10 +214,11 @@
 <div class="wrap">
   <header>
     <div class="hrow"><h1>SAUNA&nbsp;470s</h1><span class="mono edition" id="edition"></span></div>
-    <p class="sub">県ごとのイキタイTOP10、全国470湯を踏破する</p>
+    <p class="sub">サ活を記録する帳。全国470枠の踏破はライフタイムチャレンジ</p>
   </header>
 
-  <div class="reglist" id="prefgrid"></div>
+  <!-- 記録ファースト：最初に見えるのは自分のサ活。枠の進捗は帳タブへ -->
+  <div class="statsrow" id="statsrow"></div>
 
   <div class="actions">
     <button class="btn primary" id="stampBtn" style="flex:1">現在地でスタンプ</button>
@@ -255,7 +263,11 @@
 
   <div class="pane" id="pane-log"><div id="logbox"></div></div>
 
-  <div class="pane" id="pane-book"><div id="bookbox"></div></div>
+  <div class="pane" id="pane-book">
+    <div class="eyebrow" style="margin-bottom:8px">枠の進捗 — ライフタイムチャレンジ</div>
+    <div class="reglist" id="prefgrid"></div>
+    <div id="bookbox"></div>
+  </div>
 
   <div class="pane" id="pane-set">
     <div class="eyebrow">利用する浴室</div>
@@ -301,7 +313,7 @@
 /* アプリのバージョン。ここだけ上げればService Workerのキャッシュ名も追従する
    （登録URLに ?v= を付けて渡すので、sw.js側を手で書き換える必要はない）。
    MAJOR=データ構造やlocalStorageの互換が変わる / MINOR=機能追加 / PATCH=修正 */
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.5.0";
 /* 枠データの版。アプリのバージョンとは別物で、サウナイキタイのランキングを固定した日付を指す */
 const EDITION = "2026.08.06版";
 const REGIONS = [
@@ -1009,6 +1021,15 @@ function renderHeader(){
   const bl=bathLabel();
   document.getElementById("total").innerHTML=`計 ${frameN}<span style="font-size:10px">/${usable.length}</span>`
     +(bl?`<span style="font-size:9px;color:var(--muted);display:block;text-align:right">${bl}で入れる枠</span>`:"");
+  /* 記録ファーストのサマリー：今年のサ活・通算・行った湯の数 */
+  const yr=String(new Date().getFullYear());
+  const yearN=state.visits.filter(v=>(v.date||"").startsWith(yr)).length;
+  const jorenN=[...st].filter(id=>visitsOf(id).length>=10).length;
+  document.getElementById("statsrow").innerHTML=`
+    <div class="stat"><b>${yearN}</b><span>今年のサ活</span></div>
+    <div class="stat"><b>${state.visits.length}</b><span>通算サ活</span></div>
+    <div class="stat"><b>${st.size}</b><span>行った湯</span></div>
+    ${jorenN?`<div class="stat"><b style="color:#C7973F">${jorenN}</b><span>常連の湯</span></div>`:""}`;
 }
 
 /* ---------- 地図（全国・ズーム対応） ---------- */
@@ -1243,8 +1264,8 @@ function renderList(){
       <span class="rank" style="color:${col}">${tag}</span>
       ${mark}
       <span class="body">
-        <span class="name" style="opacity:${on?1:0.6}">${esc(f.name)}${state.wants.includes(f.id)?' <span style="color:#C7973F">◇</span>':""}${ok?"":'<span class="nobath">枠外</span>'}</span>
-        <span class="meta">${esc(f.city||"")}${f.ikitai?` · イキタイ ${f.ikitai.toLocaleString()}`:""}${f.note?" · "+esc(f.note):""}</span>
+        <span class="name" style="opacity:${on?1:0.6}">${esc(f.name)}${visitsOf(f.id).length>=10?'<span class="joren" style="width:20px;height:20px;font-size:8px">常</span>':""}${state.wants.includes(f.id)?' <span style="color:#C7973F">◇</span>':""}${ok?"":'<span class="nobath">枠外</span>'}</span>
+        <span class="meta">${esc(f.city||"")}${visitsOf(f.id).length>=2?` · ${visitsOf(f.id).length}回`:""}${f.ikitai?` · イキタイ ${f.ikitai.toLocaleString()}`:""}${f.note?" · "+esc(f.note):""}</span>
       </span>
       ${sc?`<span class="best">${sc.t}${sc.legacy?'<small>旧</small>':""}</span>`:""}
     </button>`;
@@ -1509,7 +1530,7 @@ function openDetail(id){
     : `<p style="font-size:13px;color:var(--muted);margin:8px 0 0">未踏破。</p>`;
   openSheet(sheetHead(isFree?"台帳":`${PREF[f.pref].label} ${f.rank}位`)+`
     <div style="display:flex;justify-content:space-between;align-items:baseline">
-      <div style="font-size:17px">${esc(f.name)}</div>
+      <div style="font-size:17px">${esc(f.name)}${vs.length>=10?'<span class="joren">常連</span>':""}</div>
       ${sc?`<div class="mono" style="font-size:20px">${sc.t}<small style="font-size:10px;color:var(--muted)">${sc.legacy?" 旧":""}</small></div>`:""}
     </div>
     <div class="mono" style="font-size:11px;color:var(--muted);margin:4px 0 12px">
