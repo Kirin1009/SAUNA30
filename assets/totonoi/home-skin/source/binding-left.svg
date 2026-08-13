@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="512" viewBox="0 0 64 512">
+  <defs>
+    <g id="stitch">
+      <path d="M14 0v128" stroke="#4A3B2E" stroke-opacity=".13" stroke-width="2"/>
+      <path d="M6 18 C21 28 22 52 8 63 C22 76 21 101 6 111" fill="none" stroke="#4A3B2E" stroke-width="4" stroke-linecap="round"/>
+      <path d="M7 18h26 M8 63h25 M7 111h26" stroke="#4A3B2E" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="32" cy="18" r="3" fill="#4A3B2E"/>
+      <circle cx="32" cy="63" r="3" fill="#4A3B2E"/>
+      <circle cx="32" cy="111" r="3" fill="#4A3B2E"/>
+      <path d="M48 0v128" stroke="#A08C72" stroke-opacity=".32" stroke-width="1.5" stroke-dasharray="2 7"/>
+    </g>
+  </defs>
+  <use href="#stitch" y="0"/>
+  <use href="#stitch" y="128"/>
+  <use href="#stitch" y="256"/>
+  <use href="#stitch" y="384"/>
+</svg>
