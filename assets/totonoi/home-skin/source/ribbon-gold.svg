@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="600" viewBox="0 0 200 600">
+  <defs>
+    <filter id="rough" x="-10%" y="-4%" width="120%" height="108%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.06" numOctaves="2" seed="9" stitchTiles="stitch" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+  <path d="M58 0 H151 L143 513 L101 585 L59 516 Z" fill="#C7973F" filter="url(#rough)"/>
+  <path d="M67 0 H84 L79 505 L101 552 L101 585 L59 516Z" fill="#A8792F" opacity=".36"/>
+  <path d="M142 0 L136 503 L101 552 L101 585 L143 513 L151 0Z" fill="#F0D89A" opacity=".28"/>
+  <path d="M59 516 L101 585 L143 513" fill="none" stroke="#7B5A27" stroke-opacity=".36" stroke-width="2"/>
+</svg>
