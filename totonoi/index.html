@@ -72,6 +72,11 @@
   .chip{flex-shrink:0;font-size:12px;font-weight:600;padding:6px 13px;border-radius:999px;border:1.5px solid var(--line2);
     background:var(--paper);color:var(--mid)}
   .chip.on{background:var(--stamp);border-color:var(--stamp);color:#FBF6EA}
+  .mselrow{display:flex;gap:6px;margin-top:8px}
+  .mselrow select{flex:1;min-width:0;background:var(--paper);border:1.5px solid var(--line2);border-radius:10px;
+    color:var(--text);font:inherit;font-size:12px;padding:7px 8px;appearance:none;-webkit-appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+    background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat}
   #mapbox{border:1.5px solid var(--line2);border-radius:14px;overflow:hidden;background:#FBF1DC;margin-top:8px}
   #mapbox svg{width:100%;display:block;touch-action:none}
   .maptools{display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:8px}
@@ -167,9 +172,13 @@
   <!-- 探す -->
   <div class="pane" id="pane-find">
     <div class="chips" id="chips"></div>
+    <div class="mselrow">
+      <select id="selReg"><option value="">全国</option></select>
+      <select id="selPref"><option value="">県（地方を選ぶ）</option></select>
+    </div>
     <div id="mapbox"></div>
     <div class="maptools">
-      <span class="maplegend">●朱=訪問済 ○=未訪問 ○金=行きたい ▢=自分の登録。タップで施設ページ</span>
+      <span class="maplegend">●朱=訪問済 ○=未訪問 ○金=行きたい ▢=自分の登録。タップで施設ページ、重なりは候補から選択</span>
       <button class="btn" id="mapReset" style="padding:5px 10px;font-size:11px;flex-shrink:0">全体</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
@@ -227,7 +236,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.2";
+const APP_VERSION = "2.0.0-alpha.3";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -585,8 +594,26 @@ window.__regHere=(lat,lng)=>{
 const CHIPS=[["single","シングル",f=>f.wmin!=null&&f.wmin<10],["night","深夜",f=>f.n],["sento","銭湯",f=>f.k==="sento"],
   ["private","貸切",f=>f.k==="private"||f.k==="capsule"],["yoyaku","予約制",f=>f.y],["luxe","¥3,000以上",f=>f.fee!=null&&f.fee>=3000],
   ["want","★行きたい",f=>!!state.wants[f.id]]];
-let chipOn=new Set(), findPos=null;
+let chipOn=new Set(), findPos=null, findReg=null, findPref=null;
 function chipPass(f){ for(const [k,,fn] of CHIPS) if(chipOn.has(k)&&!fn(f)) return false; return true; }
+function regKeys(name){ const r=REGIONS.find(r=>r[0]===name); return r?r[1]:[]; }
+function areaPass(f){ return findPref? f.pref===findPref : findReg? regKeys(findReg).includes(f.pref) : true; }
+/* 地方→県の二段セレクト。選ぶと地図がその範囲へ飛び、リストも絞られる */
+const selReg=document.getElementById("selReg"), selPref=document.getElementById("selPref");
+selReg.innerHTML=`<option value="">全国</option>`+REGIONS.map(([n])=>`<option value="${n}">${n}</option>`).join("");
+function fillPrefSel(){
+  selPref.innerHTML=`<option value="">${findReg?"全県":"県（地方を選ぶ）"}</option>`+
+    regKeys(findReg).filter(k=>PREF[k]).map(k=>`<option value="${k}">${PREF[k].label}</option>`).join("");
+  selPref.value="";
+}
+fillPrefSel();
+function areaZoom(){
+  if(findPref) zoomTo([findPref]);
+  else if(findReg) zoomTo(regKeys(findReg));
+  else { view=null; renderMap(); }
+}
+selReg.addEventListener("change",()=>{ findReg=selReg.value||null; findPref=null; fillPrefSel(); areaZoom(); renderFind(); });
+selPref.addEventListener("change",()=>{ findPref=selPref.value||null; areaZoom(); renderFind(); });
 function renderChips(){
   document.getElementById("chips").innerHTML=CHIPS.map(([k,l])=>
     `<button class="chip ${chipOn.has(k)?"on":""}" data-c="${k}">${l}</button>`).join("");
@@ -597,7 +624,7 @@ function renderChips(){
   }));
 }
 function renderFind(){
-  const pool=FACILITIES.filter(chipPass);
+  const pool=FACILITIES.filter(f=>chipPass(f)&&areaPass(f));
   let items, title;
   if(findPos){
     items=pool.map(f=>({f,d:distance(findPos,f)})).sort((a,b)=>a.d-b.d).slice(0,30);
@@ -606,7 +633,8 @@ function renderFind(){
     items=pool.map(f=>({f,d:null})).sort((a,b)=>(b.f.ikitai||0)-(a.f.ikitai||0)).slice(0,30);
     title="イキタイ順（現在地で並べ替え可）";
   }
-  document.getElementById("findTitle").textContent=title+`　${pool.length}湯`;
+  const area=findPref?(PREF[findPref]?.label||""):findReg||"";
+  document.getElementById("findTitle").textContent=(area?area+"・":"")+title+`　${pool.length}湯`;
   document.getElementById("findlist").innerHTML=items.map(({f,d})=>{
     const on=visited(f.id);
     const at=[f.wmin!=null&&f.wmin<10?"❄":"",f.n?"🌙":"",f.k==="sento"?"♨":"",f.y?"🔑":""].join("");
@@ -628,7 +656,32 @@ document.getElementById("nearBtn").addEventListener("click",()=>{
 });
 
 /* ---------- 地図（470s方式：全国SHAPES・pointerup判定・ズーム再描画） ---------- */
-let view=null, mapMoved=false, renderedW=0, mapInit=false;
+let view=null, mapMoved=false, renderedW=0, mapInit=false, mapPins=[];
+const _bbox={};
+function prefBBox(key){
+  if(_bbox[key]) return _bbox[key];
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const m of SHAPES.prefs[key].matchAll(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g)){
+    const x=+m[1], y=+m[2];
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+  }
+  return _bbox[key]={x0,y0,x1,y1};
+}
+function zoomTo(keys){
+  const {W,H}=SHAPES.meta;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const k of keys){
+    if(!SHAPES.prefs[k]) continue;
+    const b=prefBBox(k);
+    x0=Math.min(x0,b.x0); y0=Math.min(y0,b.y0); x1=Math.max(x1,b.x1); y1=Math.max(y1,b.y1);
+  }
+  if(x1<x0){ view=null; renderMap(); return; }
+  let w=(x1-x0)*1.24, h=(y1-y0)*1.24;
+  if(w/h>W/H) h=w*H/W; else w=h*W/H;
+  w=Math.min(Math.max(w,W/64),W); h=w*H/W;
+  view={x:(x0+x1)/2-w/2, y:(y0+y1)/2-h/2, w, h};
+  renderMap();
+}
 const _anchor={};
 function prefAnchor(key){
   if(_anchor[key]) return _anchor[key];
@@ -655,7 +708,7 @@ function renderMap(){
   const zoom=W/view.w;
   const mk=Math.min(3.3, 1.45*Math.pow(zoom,0.4));
   const z=v=>+(v*zf).toFixed(2), zm=v=>+(v*zf*mk).toFixed(2);
-  const hitR=zm(zf>0.6?5:9);
+  mapPins=[];
   let s=`<svg id="mapsvg" viewBox="${view.x} ${view.y} ${view.w} ${view.h}">`;
   s+=`<defs><pattern id="mgrid" width="26" height="26" patternUnits="userSpaceOnUse">
       <path d="M26 0H0V26" fill="none" stroke="#EDDFC3" stroke-width="0.6"/></pattern></defs>`;
@@ -680,17 +733,19 @@ function renderMap(){
   }
   for(const f of state.ufacs){
     const on=visited(f.id), x=px(f), y=py(f);
-    s+=`<g data-id="${f.id}" style="cursor:pointer"><rect x="${(x-hitR).toFixed(1)}" y="${(y-hitR).toFixed(1)}" width="${(hitR*2).toFixed(1)}" height="${(hitR*2).toFixed(1)}" fill="transparent"/>`;
+    mapPins.push({id:f.id,x,y});
+    s+=`<g style="cursor:pointer">`;
     s+= on?`<rect x="${(x-zm(2.6)).toFixed(1)}" y="${(y-zm(2.6)).toFixed(1)}" width="${zm(5.2)}" height="${zm(5.2)}" rx="${zm(0.7)}" fill="#C8402F" transform="rotate(-8 ${x.toFixed(1)} ${y.toFixed(1)})"/>`
           :`<rect x="${(x-zm(2.2)).toFixed(1)}" y="${(y-zm(2.2)).toFixed(1)}" width="${zm(4.4)}" height="${zm(4.4)}" fill="#FFFDF4" stroke="#A69374" stroke-width="${zm(1)}"/>`;
     s+=`</g>`;
   }
-  const pass=f=>chipOn.size===0||chipPass(f);
+  const pass=f=>(chipOn.size===0||chipPass(f))&&areaPass(f);
   for(const f of FACILITIES){
     if(!pass(f)) continue;
     const on=visited(f.id), want=!!state.wants[f.id], x=px(f), y=py(f);
     const col=PREF[f.pref]?.color||"#A69374";
-    s+=`<g data-id="${f.id}" style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${hitR}" fill="transparent"/>`;
+    mapPins.push({id:f.id,x,y});
+    s+=`<g style="cursor:pointer">`;
     s+= on
       ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(3.6)}" fill="#C8402F"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(2.2)}" fill="none" stroke="#FBF6EA" stroke-width="${zm(0.5)}"/>`
       : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${zm(2.6)}" fill="${want?"#FFF6DF":"#FFFDF4"}" stroke="${want?"#C7973F":col}" stroke-width="${zm(want?1.3:1)}"/>`;
@@ -747,11 +802,7 @@ function bindMapGestures(svg){
   const up=e=>{
     const wasSingle = ptrs.size===1;
     ptrs.delete(e.pointerId);
-    if(wasSingle && !mapMoved){
-      const el=document.elementFromPoint(e.clientX,e.clientY);
-      const g=el && el.closest ? el.closest("g[data-id]") : null;
-      if(g) openFac(g.dataset.id);
-    }
+    if(wasSingle && !mapMoved) pickPin(e,svg);
     if(ptrs.size===0 && Math.abs(view.w-renderedW)>0.5) setTimeout(()=>renderMap(),0);
     setTimeout(()=>{mapMoved=false;},50);
   };
@@ -767,7 +818,23 @@ function bindMapGestures(svg){
     wheelT=setTimeout(()=>{ if(Math.abs(view.w-renderedW)>0.5) renderMap(); },160);
   },{passive:false});
 }
-document.getElementById("mapReset").addEventListener("click",()=>{ view=null; renderMap(); });
+/* タップは描画順ではなく「タップ点に最も近いピン」を数学的に選ぶ。指の範囲に複数あれば候補から選ばせる */
+function pickPin(e,svg){
+  const r=svg.getBoundingClientRect(), sc=r.width/view.w;
+  const lx=view.x+(e.clientX-r.left)/r.width*view.w;
+  const ly=view.y+(e.clientY-r.top)/r.height*view.h;
+  const cand=mapPins.map(p=>({p,d:Math.hypot(p.x-lx,p.y-ly)*sc})).filter(o=>o.d<=20).sort((a,b)=>a.d-b.d);
+  if(!cand.length) return;
+  if(cand.length===1||(cand[0].d<6&&cand[1].d>cand[0].d*2.5)){ openFac(cand[0].p.id); return; }
+  openSheet(sheetHead("どの施設？")+cand.slice(0,7).map(o=>{
+    const f=byId[o.p.id]; if(!f) return "";
+    return `<button class="choosebtn" onclick="window.__fac('${f.id}')"><span>${visited(f.id)?"●":"○"} ${esc(f.name)}</span><span class="d">${esc(f.city||"")}</span></button>`;
+  }).join(""));
+}
+document.getElementById("mapReset").addEventListener("click",()=>{
+  findReg=null; findPref=null; selReg.value=""; fillPrefSel();
+  view=null; renderMap(); renderFind();
+});
 
 /* ---------- 棚 ---------- */
 let openReg=null;
