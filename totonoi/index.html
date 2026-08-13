@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F5EEDF">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <title>ととのい帳</title>
 <style>
   /* 承認ビジュアルターゲット（Issue #24）準拠：和紙の帳・判子朱・金は達成のみ */
@@ -31,10 +31,10 @@
   .notice.err{border-left-color:var(--stamp)}
   /* ---------- 帳（パスポートページ） ---------- */
   #book{background:var(--paper);border:1px solid var(--line2);border-radius:6px 14px 14px 6px;margin-top:10px;
-    padding:20px 14px 26px;position:relative;
+    padding:20px 14px 26px 30px;position:relative;
     box-shadow:inset 12px 0 18px -14px rgba(74,59,46,.35), 0 2px 8px rgba(74,59,46,.12);
-    background-image:radial-gradient(rgba(74,59,46,.028) 1px, transparent 1.4px); background-size:7px 7px}
-  #book:before{content:"";position:absolute;left:5px;top:8px;bottom:8px;width:1px;border-left:1.5px dashed var(--line2);opacity:.6}
+    background-image:url(art/binding-left.webp),url(art/paper-page.webp);
+    background-repeat:repeat-y,repeat;background-position:left top,0 0;background-size:26px auto,256px 256px}
   .pageentry{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;background:none;border:none;width:100%;
     text-align:left;color:var(--text);padding:2px}
   .pageentry.R{flex-direction:row-reverse;text-align:right}
@@ -47,8 +47,8 @@
   .pe-note{font-size:11.5px;color:var(--mid);margin-top:2px;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .pe-nth{display:inline-block;font-size:9px;color:var(--mid);border:1px solid var(--line2);background:var(--paper2);
     border-radius:3px;padding:0 5px;margin-top:3px;letter-spacing:.15em}
-  .pgdiv{border:none;border-top:1.5px solid var(--line2);margin:16px -14px;position:relative;
-    box-shadow:0 -3px 0 -1px var(--line), 0 -6px 0 -2px rgba(211,197,164,.5)}
+  .pgdiv{border:none;height:16px;margin:14px -14px 14px -30px;
+    background:url(art/page-peek.webp) center/100% 100% no-repeat}
   .empty{padding:34px 10px;text-align:center;color:var(--muted);font-size:13px;line-height:2}
   /* サマリー（帳の冒頭に小さく） */
   .stats{display:flex;gap:8px;margin-top:10px}
@@ -62,7 +62,8 @@
   nav{position:fixed;left:0;right:0;bottom:0;z-index:31;background:var(--paper);border-top:1.5px solid var(--line2);
     display:flex;padding-bottom:env(safe-area-inset-bottom)}
   nav button{flex:1;background:none;border:none;font-size:10.5px;color:var(--muted);padding:8px 0 7px;letter-spacing:.15em;line-height:1.5}
-  nav button .ic{display:block;font-size:17px;line-height:1.2}
+  nav button .ic{display:block;width:22px;height:22px;margin:0 auto 2px;background:currentColor;
+    -webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
   nav button.on{color:var(--stamp);font-weight:700}
   .pane{display:none}.pane.on{display:block}
   /* ---------- 探す ---------- */
@@ -208,10 +209,10 @@
 
 <div id="ctabar"><button id="stampBtn">現在地で押印</button></div>
 <nav id="nav">
-  <button data-v="book" class="on"><span class="ic">📖</span>帳</button>
-  <button data-v="find"><span class="ic">🔍</span>探す</button>
-  <button data-v="shelf"><span class="ic">🗄</span>棚</button>
-  <button data-v="log"><span class="ic">📝</span>記録</button>
+  <button data-v="book" class="on"><span class="ic" style="--ic:url(art/tab-book.webp)"></span>帳</button>
+  <button data-v="find"><span class="ic" style="--ic:url(art/tab-search.webp)"></span>探す</button>
+  <button data-v="shelf"><span class="ic" style="--ic:url(art/tab-shelf.webp)"></span>棚</button>
+  <button data-v="log"><span class="ic" style="--ic:url(art/tab-log.webp)"></span>記録</button>
 </nav>
 <div id="notice" style="display:none;position:fixed;left:16px;right:16px;bottom:calc(120px + env(safe-area-inset-bottom));z-index:40"></div>
 
@@ -226,7 +227,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.1";
+const APP_VERSION = "2.0.0-alpha.2";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
