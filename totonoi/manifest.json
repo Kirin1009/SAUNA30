@@ -1,0 +1,14 @@
+{
+  "name": "ととのい帳",
+  "short_name": "ととのい帳",
+  "description": "サウナの御朱印帳 — 行った湯に一印、旅先では次の湯を",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5EEDF",
+  "theme_color": "#F5EEDF",
+  "icons": [
+    { "src": "../icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "../icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
