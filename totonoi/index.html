@@ -77,7 +77,11 @@
     color:var(--text);font:inherit;font-size:12px;padding:7px 8px;appearance:none;-webkit-appearance:none;
     background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
     background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat}
-  #mapbox{border:1.5px solid var(--line2);border-radius:14px;overflow:hidden;background:#FBF1DC;margin-top:8px}
+  #mapbox{border:1.5px solid var(--line2);border-radius:14px;overflow:hidden;margin-top:8px;
+    background:#FBF1DC url(art/map-paper.webp) repeat;background-size:256px 256px}
+  .ft{display:inline-block;width:12px;height:12px;background:currentColor;vertical-align:-2px;
+    -webkit-mask:var(--ft) center/contain no-repeat;mask:var(--ft) center/contain no-repeat}
+  .chip .ft{margin-right:3px;vertical-align:-1.5px}
   #mapbox svg{width:100%;display:block;touch-action:none}
   .maptools{display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:8px}
   .maplegend{font-size:9.5px;color:var(--muted);line-height:1.8}
@@ -236,7 +240,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.3";
+const APP_VERSION = "2.0.0-alpha.4";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -614,9 +618,10 @@ function areaZoom(){
 }
 selReg.addEventListener("change",()=>{ findReg=selReg.value||null; findPref=null; fillPrefSel(); areaZoom(); renderFind(); });
 selPref.addEventListener("change",()=>{ findPref=selPref.value||null; areaZoom(); renderFind(); });
+const FTICON={single:"ft-snow",night:"ft-moon",sento:"ft-oke",yoyaku:"ft-key"};
 function renderChips(){
   document.getElementById("chips").innerHTML=CHIPS.map(([k,l])=>
-    `<button class="chip ${chipOn.has(k)?"on":""}" data-c="${k}">${l}</button>`).join("");
+    `<button class="chip ${chipOn.has(k)?"on":""}" data-c="${k}">${FTICON[k]?`<span class="ft" style="--ft:url(art/${FTICON[k]}.webp)"></span>`:""}${l}</button>`).join("");
   document.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.c;
     chipOn.has(k)?chipOn.delete(k):chipOn.add(k);
@@ -637,7 +642,8 @@ function renderFind(){
   document.getElementById("findTitle").textContent=(area?area+"・":"")+title+`　${pool.length}湯`;
   document.getElementById("findlist").innerHTML=items.map(({f,d})=>{
     const on=visited(f.id);
-    const at=[f.wmin!=null&&f.wmin<10?"❄":"",f.n?"🌙":"",f.k==="sento"?"♨":"",f.y?"🔑":""].join("");
+    const at=[f.wmin!=null&&f.wmin<10?"snow":null,f.n?"moon":null,f.k==="sento"?"oke":null,f.y?"key":null]
+      .filter(Boolean).map(n=>`<span class="ft" style="--ft:url(art/ft-${n}.webp)"></span>`).join(" ");
     return `<button class="frow" onclick="window.__fac('${f.id}')">
       <span style="width:30px;flex-shrink:0">${on?facSeal(f,{size:30,gold:visitsOf(f.id).length>=10}):facSeal(f,{size:30,hidden:true})}</span>
       <span class="nm">${esc(f.name)}${state.wants[f.id]?'<span class="wantstar">★</span>':""}</span>
@@ -712,7 +718,8 @@ function renderMap(){
   let s=`<svg id="mapsvg" viewBox="${view.x} ${view.y} ${view.w} ${view.h}">`;
   s+=`<defs><pattern id="mgrid" width="26" height="26" patternUnits="userSpaceOnUse">
       <path d="M26 0H0V26" fill="none" stroke="#EDDFC3" stroke-width="0.6"/></pattern></defs>`;
-  s+=`<rect x="${-W}" y="${-H}" width="${W*3}" height="${H*3}" fill="#FBF1DC"/><rect x="${-W}" y="${-H}" width="${W*3}" height="${H*3}" fill="url(#mgrid)"/>`;
+  /* 下地の紙はSVGでなく#mapboxのCSS背景（art/map-paper.webp）。ズームしても紙目が一定＝印刷された紙を覗く感覚 */
+  s+=`<rect x="${-W}" y="${-H}" width="${W*3}" height="${H*3}" fill="url(#mgrid)"/>`;
   for(const key in SHAPES.prefs){
     const p=PREF[key];
     const n=FACILITIES.filter(f=>f.pref===key&&visited(f.id)).length;
