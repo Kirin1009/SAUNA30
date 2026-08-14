@@ -33,8 +33,13 @@
   #book{background:var(--paper);border:1px solid var(--line2);border-radius:6px 14px 14px 6px;margin-top:10px;
     padding:20px 14px 26px 30px;position:relative;
     box-shadow:inset 12px 0 18px -14px rgba(74,59,46,.35), 0 2px 8px rgba(74,59,46,.12);
-    background-image:url(art/binding-left.webp),url(art/paper-page.webp);
-    background-repeat:repeat-y,repeat;background-position:left top,0 0;background-size:26px auto,256px 256px}
+    background-image:url(art/binding-left.webp),linear-gradient(to left,rgba(74,59,46,.12),rgba(74,59,46,.04) 4px,transparent 9px),url(art/paper-page.webp);
+    background-repeat:repeat-y,no-repeat,repeat;background-position:left top,right top,0 0;background-size:26px auto,9px 100%,256px 256px}
+  /* 紙の厚み：下辺と右小口にだけ、下に重なる紙を2枚覗かせる（枠で囲うカードUIには寄せない） */
+  #book::before,#book::after{content:"";position:absolute;z-index:-1;pointer-events:none;
+    border:1px solid var(--line2);border-radius:6px 14px 14px 6px}
+  #book::before{left:12px;right:-6px;top:10px;bottom:-7px;background:#EFE5CF;transform:rotate(-.3deg)}
+  #book::after{left:8px;right:-3px;top:6px;bottom:-4px;background:#F5EBD9;transform:rotate(.35deg)}
   .pageentry{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;background:none;border:none;width:100%;
     text-align:left;color:var(--text);padding:2px}
   .pageentry.R{flex-direction:row-reverse;text-align:right}
@@ -244,7 +249,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.5";
+const APP_VERSION = "2.0.0-alpha.6";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -336,7 +341,7 @@ function facSeal(f,o={}){
     <text y="${chY}" text-anchor="middle" font-size="${chFs}" font-weight="800" fill="${ink}" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${esc(ch)}</text>
     ${bx}</g>`;
   if(o.bodyOnly) return body;
-  return `<svg viewBox="-45 -45 90 90" ${attr}><g filter="url(#sealtex)" opacity="${o.faint?0.32:0.9}">${body}</g></svg>`;
+  return `<svg viewBox="-45 -45 90 90" ${attr}><g filter="url(#sealtex)" opacity="${o.faint?0.32:(o.op!=null?o.op:0.9)}">${body}</g></svg>`;
 }
 
 /* ---------- 通知 ---------- */
@@ -371,7 +376,8 @@ function renderBook(){
     box.innerHTML=`<div class="empty">まだ白紙の帳です。<br>サウナに行ったら「現在地で押印」——<br>その湯だけの御朱印がここに押されます。</div>`;
     return;
   }
-  /* 月ごとにページ区切り。各訪問=判子＋走り書き。左右交互、最新だけ大きい */
+  /* 月ごとにページ区切り。各訪問=判子＋走り書き。最新の一印だけ大判・濃く（主役）、
+     過去は小さく薄く。乱れ（傾き・横ずれ）は訪問IDのハッシュで決まる＝再描画で動かない */
   let html="", lastMonth=null;
   state.visits.forEach((v,i)=>{
     const f=byId[v.fid]; if(!f) return;
@@ -379,7 +385,10 @@ function renderBook(){
     if(lastMonth!==null && mo!==lastMonth) html+=`<hr class="pgdiv">`;
     lastMonth=mo;
     const latest=i===0;
-    const size=latest?118:74;
+    const size=latest?126:80;
+    const vh=[...v.id].reduce((a,c)=>((a*31+c.charCodeAt(0))>>>0),7);
+    const rot=((sealHash(f.id)%9)-4)+((vh%9)-4);
+    const dx=((vh>>3)%13)-6;
     const n=nthOf(v), total=visitsOf(v.fid).length;
     const gold=total>=10;
     const side=`<span class="pe-side">
@@ -389,7 +398,7 @@ function renderBook(){
       ${n>1?`<span class="pe-nth">${n}回目${gold?"・常連":""}</span>`:""}
     </span>`;
     html+=`<button class="pageentry ${i%2?"R":""}" onclick="window.__visit('${v.id}')">
-      <span class="pe-seal" style="width:${size}px">${facSeal(f,{size,gold,faint:!latest&&n<total})}</span>
+      <span class="pe-seal" style="width:${size}px;transform:translateX(${dx}px)">${facSeal(f,{size,gold,faint:!latest&&n<total,rot,op:latest?0.95:0.62})}</span>
       ${side}
     </button>`;
   });
