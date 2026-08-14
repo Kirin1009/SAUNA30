@@ -96,11 +96,15 @@
   .reghead{display:flex;width:100%;align-items:center;gap:9px;background:none;border:none;padding:11px 13px;
     font-size:13px;font-weight:700;color:var(--text)}
   .reghead .num{margin-left:auto;font-family:ui-monospace,monospace;font-size:11px;color:var(--muted)}
-  .shelf{background:#5C4A38;border-radius:0 0 11px 11px;padding:12px 10px 4px;
-    background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:100% 4px}
-  .bgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 8px;margin-bottom:12px}
+  .shelf{background:#EFE6D2 url(art/wood-back.webp) repeat;background-size:256px 256px;
+    border-radius:0 0 11px 11px;padding:12px 10px 10px}
+  .plank{height:11px;margin:4px -4px 14px;border-radius:2px;box-shadow:0 2px 3px rgba(74,59,46,.22);
+    background:#C29055 url(art/wood-shelf.webp) repeat;background-size:256px 256px}
+  .okirow{display:flex;justify-content:flex-end;align-items:flex-end;gap:14px;padding:0 12px;margin-bottom:-2px}
+  .okirow img{display:block}
+  .bgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 8px;margin-bottom:0}
   .bcell{background:var(--paper);border:none;border-radius:8px;padding:6px 3px 4px;text-align:center;font-family:inherit;
-    color:var(--text);min-width:0;box-shadow:0 2px 3px rgba(0,0,0,.28)}
+    color:var(--text);min-width:0;box-shadow:0 2px 3px rgba(74,59,46,.2)}
   .bcell svg{width:100%;height:auto;display:block}
   .bnm{display:block;font-size:8px;color:var(--mid);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bnm.off{color:#C9B58F}
@@ -240,7 +244,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.4";
+const APP_VERSION = "2.0.0-alpha.5";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -853,19 +857,21 @@ function renderShelf(){
     const open=openReg===name;
     let inner="";
     if(open){
+      /* 最下段は飾り棚：しつらえ小物（盆栽/一輪挿し/湯呑み）を地方ごとに1点、決め打ちで置く */
+      const oki=[["bonsai",52],["vase",44],["yunomi",34]][REGIONS.findIndex(r=>r[0]===name)%3];
       inner=`<div class="shelf">`+keys.map(pk=>{
         const pfs=FACILITIES.filter(f=>f.pref===pk);
         if(!pfs.length) return "";
         const pn=pfs.filter(f=>visited(f.id)).length;
-        return `<div style="font-size:10px;color:#D8CBB2;letter-spacing:.15em;margin:2px 2px 7px">${PREF[pk].label}　${pn}<span style="opacity:.6">/${pfs.length}</span></div>
+        return `<div style="font-size:10px;color:#6E5D4B;letter-spacing:.15em;margin:2px 2px 7px">${PREF[pk].label}　${pn}<span style="opacity:.6">/${pfs.length}</span></div>
           <div class="bgrid">`+pfs.map(f=>{
             const c=visitsOf(f.id).length, gold=c>=10;
             return `<button class="bcell" onclick="window.__fac('${f.id}')"><span class="cnt">
               ${c?facSeal(f,{gold}):facSeal(f,{hidden:true})}
               ${c>1?`<span class="cntb${gold?" g":""}">${c}</span>`:""}</span>
               <span class="bnm${c?"":" off"}">${esc(f.name)}</span></button>`;
-          }).join("")+`</div>`;
-      }).join("")+`</div>`;
+          }).join("")+`</div><div class="plank"></div>`;
+      }).join("")+`<div class="okirow"><img src="art/deco-${oki[0]}.webp" height="${oki[1]}" alt=""></div><div class="plank" style="margin-bottom:0"></div></div>`;
     }
     return `<div class="regbox">
       <button class="reghead" data-r="${esc(name)}">${esc(name)}<span class="num">${n}/${fs.length}</span><span>${open?"−":"＋"}</span></button>
@@ -874,7 +880,7 @@ function renderShelf(){
     ${openReg==="__u"?`<div class="shelf"><div class="bgrid">`+state.ufacs.map(f=>{
       const c=visitsOf(f.id).length;
       return `<button class="bcell" onclick="window.__fac('${f.id}')"><span class="cnt">${facSeal(f,{gold:c>=10})}${c>1?`<span class="cntb">${c}</span>`:""}</span><span class="bnm">${esc(f.name)}</span></button>`;
-    }).join("")+`</div></div>`:""}</div>`:"");
+    }).join("")+`</div><div class="plank" style="margin-bottom:0"></div></div>`:""}</div>`:"");
   box.querySelectorAll(".reghead").forEach(b=>b.addEventListener("click",()=>{
     openReg=openReg===b.dataset.r?null:b.dataset.r; renderShelf();
   }));
