@@ -2,7 +2,8 @@
 const VERSION = new URL(self.location).searchParams.get("v") || "0";
 const CACHE = "totonoi-" + VERSION;
 const SKIN = ["paper-page","paper-divider","binding-left","page-peek","ribbon-gold","tab-book","tab-search","tab-shelf","tab-log",
-  "map-paper","ft-snow","ft-moon","ft-oke","ft-key"];
+  "map-paper","ft-snow","ft-moon","ft-oke","ft-key",
+  "wood-back","wood-shelf","deco-bonsai","deco-vase","deco-yunomi"];
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./apple-touch-icon.png"].concat(SKIN.map(n => "./art/" + n + ".webp"));
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
