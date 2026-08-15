@@ -39,17 +39,25 @@
     background-repeat:repeat-y,no-repeat,no-repeat,repeat-y,repeat;
     background-position:left top,top,bottom,right top,0 0;
     background-size:26px auto,100% 24px,100% 30px,12px 64px,256px 256px}
-  .pageentry{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;background:none;border:none;width:100%;
-    text-align:left;color:var(--text);padding:2px}
-  .pageentry.R{flex-direction:row-reverse;text-align:right}
+  .pageentry{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;background:none;border:none;width:100%;
+    text-align:left;color:var(--text);padding:2px;border-bottom:1px dashed rgba(211,197,164,.55)}
   .pe-seal{flex-shrink:0}
+  .pe-fn{font-size:10.5px;color:var(--mid);font-weight:700;letter-spacing:0}
+  /* きょうの欄：行く前は空き枠、押すとここに大判が載る */
+  .hero{display:block;width:100%;text-align:center;background:none;border:none;color:var(--text);font-family:inherit;padding:2px 0 12px}
+  .hero .hn{font-size:13.5px;font-weight:800;margin-top:1px}
+  .hero .hrow{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:2px}
+  .heroslot{text-align:center;padding:8px 0 16px}
+  .heroring{width:128px;height:128px;margin:4px auto 10px;border:2.5px dashed #D3C5A4;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:36px;color:#D8C9A8;
+    font-family:'Hiragino Mincho ProN','Yu Mincho',serif}
+  .heroslot p{font-size:10.5px;color:var(--muted);letter-spacing:.12em}
   .pe-side{padding-top:8px;min-width:0}
   .pe-date{font-family:ui-monospace,monospace;font-size:11px;color:var(--mid);letter-spacing:.05em}
   .pe-score{font-size:16px;font-weight:800;color:var(--text)}
   .pe-score small{font-size:10px;font-weight:600;color:var(--muted)}
   .pe-score u{text-decoration:none;border-bottom:2px solid rgba(200,64,47,.5)}
   .pe-scorerow{display:flex;align-items:center;gap:6px}
-  .pageentry.R .pe-scorerow{justify-content:flex-end;flex-direction:row-reverse}
   .pe-why{font-size:10px;color:var(--muted);line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pe-note{font-size:11.5px;color:var(--mid);margin-top:2px;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .pe-note.s{font-size:10.5px;-webkit-line-clamp:1}
@@ -257,7 +265,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.8";
+const APP_VERSION = "2.0.0-alpha.9";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -414,38 +422,57 @@ function renderBook(){
     box.innerHTML=`<div class="empty">まだ白紙の帳です。<br>サウナに行ったら「現在地で押印」——<br>その湯だけの御朱印がここに押されます。</div>`;
     return;
   }
-  /* 月ごとにページ区切り。各訪問=判子＋走り書き。最新の一印だけ大判・濃く（主役）、
-     過去は小さく薄く。乱れ（傾き・横ずれ）は訪問IDのハッシュで決まる＝再描画で動かない */
+  /* 帳の構成：最上部に「きょうの欄」（行く前は空き枠、押すとそこに大判が載る）、
+     以下は台帳形式（左=判子・右=決まった欄）。月ごとにページ区切り。
+     乱れ（傾き・横ずれ）は訪問IDのハッシュで決まる＝再描画で動かない */
+  const td=today();
+  const heroV=(state.visits[0]&&state.visits[0].date===td&&byId[state.visits[0].fid])?state.visits[0]:null;
+  let heroHtml="";
+  if(heroV){
+    const f=byId[heroV.fid];
+    const n=nthOf(heroV), total=visitsOf(heroV.fid).length, gold=total>=10;
+    const t=heroV.sc?scoreTotal(heroV.sc)*4:null;
+    heroHtml=`<button class="hero" onclick="window.__visit('${heroV.id}')">
+      <div class="pe-date">${esc(heroV.date)}　きょうの一印</div>
+      <div style="width:150px;margin:2px auto">${facSeal(f,{size:150,gold,op:0.95})}</div>
+      <div class="hn">${esc(f.name)}</div>
+      ${heroV.sc?`<div class="hrow"><span>${starsSVG(t,16)}<br><span class="pe-score"><u>${fmt1(t)}</u><small>点</small></span></span>${radarSVG(heroV.sc,92)}</div>`:`<div class="pe-why" style="margin-top:4px">採点はあとからでも</div>`}
+      ${heroV.sc&&heroV.sc.x?`<div class="pe-why">特別${heroV.sc.x>0?"+":""}${fmt1(heroV.sc.x)}${heroV.sc.why?`　${esc(heroV.sc.why)}`:""}</div>`:""}
+      ${heroV.note?`<div class="pe-note" style="margin:3px 12px 0">${esc(heroV.note)}</div>`:""}
+      ${heroV.paid!=null?`<div class="pe-why">支払 ¥${heroV.paid.toLocaleString()}</div>`:""}
+      ${n>1?`<span class="pe-nth">${n}回目${gold?"・常連":""}</span>`:""}
+    </button>`;
+  }else{
+    heroHtml=`<div class="heroslot"><div class="heroring">？</div><p>きょうの一印はまだ——行ったら「現在地で押印」</p></div>`;
+  }
   let html="", lastMonth=null, buf="";
   const flush=()=>{ if(!buf) return; html+=(html?`<hr class="pgdiv">`:"")+`<section class="pg${html?"":" cur"}">${buf}</section>`; buf=""; };
-  state.visits.forEach((v,i)=>{
+  state.visits.slice(heroV?1:0).forEach((v,i)=>{
     const f=byId[v.fid]; if(!f) return;
     const mo=(v.date||"").slice(0,7);
     if(lastMonth!==null && mo!==lastMonth) flush();
     lastMonth=mo;
-    const latest=i===0;
-    const size=latest?126:80;
+    const first=!heroV&&i===0;
+    const size=first?96:78;
     const vh=[...v.id].reduce((a,c)=>((a*31+c.charCodeAt(0))>>>0),7);
     const rot=((sealHash(f.id)%9)-4)+((vh%9)-4);
-    const dx=((vh>>3)%13)-6;
+    const dx=((vh>>3)%9)-4;
     const n=nthOf(v), total=visitsOf(v.fid).length;
     const gold=total>=10;
-    const side=`<span class="pe-side">
-      <div class="pe-date">${esc(v.date)}</div>
-      ${v.sc?`<div class="pe-scorerow"><div class="pe-score">${starsSVG(scoreTotal(v.sc)*4,latest?15:12)}<br><u>${fmt1(scoreTotal(v.sc)*4)}</u><small>点</small></div>${radarSVG(v.sc,latest?86:68)}</div>`:""}
-      ${v.sc&&v.sc.x?`<div class="pe-why">特別${v.sc.x>0?"+":""}${fmt1(v.sc.x)}${v.sc.why?`　${esc(v.sc.why)}`:""}</div>`:""}
-      ${v.note?`<div class="pe-note${latest?"":" s"}">${esc(v.note)}</div>`:""}
-      ${v.paid!=null&&latest?`<div class="pe-why">支払 ¥${v.paid.toLocaleString()}</div>`:""}
-      ${n>1?`<span class="pe-nth">${n}回目${gold?"・常連":""}</span>`:""}
-    </span>`;
-    buf+=`<button class="pageentry ${i%2?"R":""}" onclick="window.__visit('${v.id}')">
-      <span class="pe-seal" style="width:${size}px;transform:translateX(${dx}px)">${facSeal(f,{size,gold,faint:!latest&&n<total,rot,op:latest?0.95:0.62})}</span>
-      ${side}
+    buf+=`<button class="pageentry" onclick="window.__visit('${v.id}')">
+      <span class="pe-seal" style="width:${size}px;transform:translateX(${dx}px)">${facSeal(f,{size,gold,faint:n<total,rot,op:first?0.85:0.62})}</span>
+      <span class="pe-side">
+        <div class="pe-date">${esc(v.date)}<span class="pe-fn">　${esc(f.name)}</span></div>
+        ${v.sc?`<div class="pe-scorerow"><div class="pe-score">${starsSVG(scoreTotal(v.sc)*4,first?14:12)}<br><u>${fmt1(scoreTotal(v.sc)*4)}</u><small>点</small></div>${radarSVG(v.sc,first?74:64)}</div>`:""}
+        ${v.sc&&v.sc.x?`<div class="pe-why">特別${v.sc.x>0?"+":""}${fmt1(v.sc.x)}${v.sc.why?`　${esc(v.sc.why)}`:""}</div>`:""}
+        ${v.note?`<div class="pe-note s">${esc(v.note)}</div>`:""}
+        ${n>1?`<span class="pe-nth">${n}回目${gold?"・常連":""}</span>`:""}
+      </span>
     </button>`;
   });
   flush();
   html+=`<hr class="pgdiv"><div style="text-align:center;font-size:10px;color:var(--muted);letter-spacing:.2em;padding-bottom:4px">帳のはじまり</div>`;
-  box.innerHTML=html;
+  box.innerHTML=heroHtml+html;
 }
 
 /* ---------- 訪問詳細カード（判子タップで開く） ---------- */
