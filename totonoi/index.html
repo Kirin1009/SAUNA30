@@ -235,6 +235,15 @@
       <button class="btn" id="importBtn" style="width:100%;margin-top:9px">470s・サ道場から取り込む</button>
     </div>
     <div class="sect">
+      <div class="eyebrow">バックアップ</div>
+      <p class="settext" id="bkinfo"></p>
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <button class="btn" id="bkExport" style="flex:1">書き出す</button>
+        <button class="btn" id="bkImport" style="flex:1">読み込む</button>
+      </div>
+      <input type="file" id="bkFile" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="sect">
       <div class="eyebrow" id="radlabel"></div>
       <input type="range" min="100" max="1000" step="50" id="radius">
     </div>
@@ -265,7 +274,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.9";
+const APP_VERSION = "2.0.0-alpha.10";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -1042,6 +1051,57 @@ document.getElementById("importBtn").addEventListener("click",()=>{
   notify(added?`${added}件の記録を取り込みました（写真は正式版で対応）`:"新しく取り込める記録はありませんでした");
 });
 
+/* ---------- バックアップ（schema version付きJSON） ----------
+   絶対ルール：読み込み側は全過去版のschemaを受理し続ける（バックアップこそ災害時の正本）。
+   写真アーカイブは写真実装時に「データJSON＋無圧縮ZIP」の分離形式で追加する——JSONに写真は同梱しない */
+const BK_SCHEMA=1;
+function bkInfo(){
+  const el=document.getElementById("bkinfo"); if(!el) return;
+  const unsaved=Math.max(0,state.visits.length-(state.bk?state.bk.visits:0));
+  el.innerHTML=state.bk
+    ?`最終書き出し：${esc(state.bk.at.slice(0,10))}（訪問${state.bk.visits}件時点）${unsaved?`／<b style="color:var(--stamp)">未保全 ${unsaved}件</b>`:"／未保全なし"}`
+    :`まだ一度も書き出していません。記録はこの端末の中だけにあります——<b>端末変更やアイコン削除で消えます</b>。iCloud Drive等へ書き出しておくと安全です。`;
+}
+async function bkExport(){
+  const data={app:"totonoi",schema:BK_SCHEMA,exportedAt:new Date().toISOString(),appVersion:APP_VERSION,
+    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported}};
+  const name=`totonoi-${today()}.json`;
+  const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
+  const done=()=>{ state.bk={at:new Date().toISOString(),visits:state.visits.length}; save(); bkInfo(); };
+  const file=new File([blob],name,{type:"application/json"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:"ととのい帳バックアップ"}); done(); notify("書き出しました。iCloud Drive等の安全な場所へ。"); return; }
+    catch(e){ if(e&&e.name==="AbortError") return; /* 共有不可時はダウンロードへフォールバック */ }
+  }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+  done(); notify("書き出しました。ファイルを安全な場所へ。");
+}
+function bkImportFile(f){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(d.app!=="totonoi"||!d.state||!Array.isArray(d.state.visits)){ notify("ととのい帳のバックアップファイルではありません。","err"); return; }
+      if((d.schema||1)>BK_SCHEMA) notify("このアプリより新しい版のバックアップです。読める範囲で取り込みます。");
+      if(!confirm(`バックアップ（訪問${d.state.visits.length}件・${(d.exportedAt||"").slice(0,10)}書き出し）で、いまの記録（訪問${state.visits.length}件）を置き換えます。よろしいですか？`)) return;
+      state.visits=d.state.visits;
+      state.wants=d.state.wants||{};
+      state.ufacs=Array.isArray(d.state.ufacs)?d.state.ufacs:[];
+      state.imported=d.state.imported||{};
+      if(d.state.radius){ state.radius=d.state.radius; radEl.value=state.radius; radLabel(); }
+      state.bk={at:new Date().toISOString(),visits:state.visits.length};
+      reindex(); save(); renderAll(); bkInfo();
+      notify("バックアップを読み込みました。");
+    }catch(e){ notify("読み込みに失敗しました。ファイルを確認してください。","err"); }
+  };
+  r.readAsText(f);
+}
+document.getElementById("bkExport").addEventListener("click",bkExport);
+document.getElementById("bkImport").addEventListener("click",()=>document.getElementById("bkFile").click());
+document.getElementById("bkFile").addEventListener("change",e=>{ if(e.target.files[0]) bkImportFile(e.target.files[0]); e.target.value=""; });
+
 /* ---------- タブ・全体描画 ---------- */
 let curTab="book";
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
@@ -1064,8 +1124,16 @@ radLabel();
 radEl.addEventListener("input",()=>{ state.radius=+radEl.value; radLabel(); save(); });
 document.getElementById("edition").textContent=EDITION;
 document.getElementById("verNote").textContent=
-  `ととのい帳 v${APP_VERSION}（アルファ版）／ 収録569湯（全国470枠＋東海TOP30、${EDITION}・サウナイキタイ）。記録はこの端末に保存されます。正式版で写真・バックアップ・栞（ごほうび）に対応予定。`;
-renderBook(); renderFind(); renderChips(); renderShelf(); renderLog();
+  `ととのい帳 v${APP_VERSION}（アルファ版）／ 収録569湯（全国470枠＋東海TOP30、${EDITION}・サウナイキタイ）。記録はこの端末に保存されます。バックアップはこまめに。写真・栞（ごほうび）は正式版で対応予定。`;
+renderBook(); renderFind(); renderChips(); renderShelf(); renderLog(); bkInfo();
+/* 自動保全（外部依存禁止の枠内でできる最大）：persist要求＋起動時の未保全検知 */
+if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+(function(){
+  const unsaved=Math.max(0,state.visits.length-(state.bk?state.bk.visits:0));
+  const days=state.bk?Math.floor((Date.now()-Date.parse(state.bk.at))/86400000):null;
+  if(unsaved>=5) setTimeout(()=>notify(`未保全の記録が${unsaved}件あります。記録タブからバックアップの書き出しを。`),1200);
+  else if(days!=null&&days>=30&&unsaved>0) setTimeout(()=>notify(`最後の書き出しから${days}日たちました。記録タブからバックアップを。`),1200);
+})();
 if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v="+APP_VERSION).catch(()=>{});
 </script>
 </body>
