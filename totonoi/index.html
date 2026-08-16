@@ -415,6 +415,49 @@ function starsSVG(total,h=13){
   return out+"</svg>";
 }
 
+/* ---------- 栞（達成リワード）----------
+   原則：進捗を先に見せない。達成した瞬間に祝い、帳のそのページに金の栞が挟まる。
+   対象＝県制覇（その県の470枠を全訪問）→地方制覇→全国制覇。判定は枠（f.rank持ち）のみ */
+function calcShiori(){
+  const first={};  /* fid→最初の訪問（古い側から走査） */
+  for(let i=state.visits.length-1;i>=0;i--){ const v=state.visits[i]; if(!first[v.fid]) first[v.fid]=v; }
+  const out=[], doneP={};
+  for(const pk in PREF){
+    const fr=FACILITIES.filter(f=>f.pref===pk&&f.rank);
+    if(!fr.length||!fr.every(f=>first[f.id])) continue;
+    let lastV=null;
+    for(const f of fr){ const fv=first[f.id]; if(!lastV||fv.date>lastV.date) lastV=fv; }
+    doneP[pk]={at:lastV.date,vid:lastV.id};
+    out.push({id:"p:"+pk, label:PREF[pk].label+"を制覇", short:PREF[pk].short||PREF[pk].label, at:lastV.date, vid:lastV.id});
+  }
+  for(const [rn,keys] of REGIONS){
+    const ks=keys.filter(k=>PREF[k]);
+    if(!ks.length||!ks.every(k=>doneP[k])) continue;
+    const last=ks.map(k=>doneP[k]).reduce((a,b)=>a.at>b.at?a:b);
+    out.push({id:"r:"+rn, label:rn+"を制覇", short:rn.slice(0,2), at:last.at, vid:last.vid});
+  }
+  if(Object.keys(doneP).length===Object.keys(PREF).length&&out.length){
+    const last=Object.values(doneP).reduce((a,b)=>a.at>b.at?a:b);
+    out.push({id:"all", label:"全国470枠を踏破", short:"全国", at:last.at, vid:last.vid});
+  }
+  return out;
+}
+function checkShiori(){
+  const got=calcShiori().filter(s=>!state.shioriSeen[s.id]);
+  if(!got.length) return;
+  got.forEach(s=>state.shioriSeen[s.id]=1); save();
+  openSheet(sheetHead("")+`
+    <div style="text-align:center;padding:12px 0 6px">
+      <svg viewBox="-50 -50 100 100" width="130" height="130"><g filter="url(#sealtex)" opacity="0.92">
+        <circle r="42" fill="none" stroke="#C7973F" stroke-width="5"/><circle r="35" fill="none" stroke="#C7973F" stroke-width="1.5"/>
+        <text y="14" text-anchor="middle" font-size="40" font-weight="800" fill="#C7973F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">制</text>
+      </g></svg>
+      ${got.map(s=>`<div style="font-size:17px;font-weight:800;margin-top:6px">${esc(s.label)}</div>`).join("")}
+      <p class="settext" style="margin-top:8px">おめでとうございます。帳のそのページに、金の栞が挟まりました。</p>
+      <button class="btn primary" style="width:100%;margin-top:14px" onclick="window.__close()">帳を見る</button>
+    </div>`);
+}
+
 /* ---------- 帳（パスポートページ） ---------- */
 function renderBook(){
   const yr=String(new Date().getFullYear());
