@@ -52,9 +52,16 @@
     display:flex;align-items:center;justify-content:center;font-size:36px;color:#D8C9A8;
     font-family:'Hiragino Mincho ProN','Yu Mincho',serif}
   .heroslot p{font-size:10.5px;color:var(--muted);letter-spacing:.12em}
-  /* 写真：ポラロイド風（第5弾素材が届くまでのCSS仮枠） */
-  .pol{background:#FFFEF8;padding:7px 7px 20px;box-shadow:0 3px 8px rgba(74,59,46,.28);transform:rotate(-1.6deg);border-radius:2px}
-  .pol img{display:none;width:100%;max-width:222px;border-radius:1px}
+  /* 写真：ポラロイド枠＋マステ（第5弾素材。窓位置は polaroid-frame.webp の実測%） */
+  .pol{position:relative;display:inline-block;width:238px;aspect-ratio:640/760;transform:rotate(-1deg);
+    filter:drop-shadow(0 3px 5px rgba(74,59,46,.3))}
+  .pol .win{position:absolute;left:13.9%;top:10.4%;width:71.9%;height:63.7%;overflow:hidden}
+  .pol .win img{display:none;width:100%;height:100%;object-fit:cover}
+  .pol::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:url(art/polaroid-frame.webp) center/100% 100% no-repeat}
+  .pol::before{content:"";position:absolute;top:-11px;left:50%;width:112px;height:34px;margin-left:-56px;z-index:2;
+    transform:rotate(-4deg);background:url(art/tape-washi-a.webp) center/100% 100% no-repeat}
+  .pol.b::before{transform:rotate(3deg);background-image:url(art/tape-washi-b.webp);width:100px;margin-left:-50px}
   .pe-ph{display:none;width:46px;height:46px;object-fit:cover;flex-shrink:0;align-self:center;
     border:3px solid #FFFEF8;border-radius:2px;box-shadow:0 1px 4px rgba(74,59,46,.3);transform:rotate(2.5deg)}
   .pe-side{padding-top:8px;min-width:0}
@@ -459,7 +466,7 @@ function renderBook(){
       <div class="hn">${esc(f.name)}</div>
       ${heroV.sc?`<div class="hrow"><span>${starsSVG(t,16)}<br><span class="pe-score"><u>${fmt1(t)}</u><small>点</small></span></span>${radarSVG(heroV.sc,92)}</div>`:`<div class="pe-why" style="margin-top:4px">採点はあとからでも</div>`}
       ${heroV.sc&&heroV.sc.x?`<div class="pe-why">特別${heroV.sc.x>0?"+":""}${fmt1(heroV.sc.x)}${heroV.sc.why?`　${esc(heroV.sc.why)}`:""}</div>`:""}
-      ${heroV.ph?`<div style="margin:8px 0 2px"><span class="pol" style="display:none"><img data-ph="${heroV.id}" alt=""></span></div>`:""}
+      ${heroV.ph?`<div style="margin:10px 0 4px"><span class="pol" style="display:none"><span class="win"><img data-ph="${heroV.id}" alt=""></span></span></div>`:""}
       ${heroV.note?`<div class="pe-note" style="margin:3px 12px 0">${esc(heroV.note)}</div>`:""}
       ${heroV.paid!=null?`<div class="pe-why">支払 ¥${heroV.paid.toLocaleString()}</div>`:""}
       ${n>1?`<span class="pe-nth">${n}回目${gold?"・常連":""}</span>`:""}
@@ -521,7 +528,7 @@ function openVisit(vid){
       <p style="text-align:center;font-size:10.5px;color:var(--muted)">${AXES.map((a,i)=>`${a} ${fmt1(v.sc.s[i])}`).join("　")}${v.sc.x?`　特別 ${v.sc.x>0?"+":""}${fmt1(v.sc.x)}${v.sc.why?`（${esc(v.sc.why)}）`:""}`:""}</p>`
       :`<p style="text-align:center;font-size:12px;color:var(--muted)">採点なし</p>`}
     ${v.paid!=null?`<p style="text-align:center;font-size:12px;color:var(--mid)">支払 <b>¥${v.paid.toLocaleString()}</b></p>`:""}
-    ${v.ph?`<div style="text-align:center;margin:10px 0 2px"><span class="pol" style="display:none"><img data-ph="${v.id}" alt=""></span></div>
+    ${v.ph?`<div style="text-align:center;margin:12px 0 4px"><span class="pol b" style="display:none"><span class="win"><img data-ph="${v.id}" alt=""></span></span></div>
       <p style="text-align:center"><button class="btn" style="padding:6px 12px;font-size:11px" onclick="window.__phAdd('${v.id}')">写真を差し替え</button>
       <button class="btn" style="padding:6px 12px;font-size:11px;color:var(--stamp)" onclick="window.__phDel('${v.id}')">写真を削除</button></p>`
       :`<p style="text-align:center;margin:10px 0 2px"><button class="btn" onclick="window.__phAdd('${v.id}')">📷 写真を添える</button></p>`}
