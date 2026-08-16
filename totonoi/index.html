@@ -40,11 +40,17 @@
     background-position:left top,top,bottom,right top,0 0;
     background-size:26px auto,100% 24px,100% 30px,12px 64px,256px 256px}
   .pageentry{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;background:none;border:none;width:100%;
-    text-align:left;color:var(--text);padding:2px;border-bottom:1px dashed rgba(211,197,164,.55)}
+    text-align:left;color:var(--text);padding:2px;border-bottom:1px dashed rgba(211,197,164,.55);position:relative}
+  /* 金の栞：達成のあったページにだけ挟まる（1画面1本の原則はcalcShioriの粒度で担保） */
+  .shiori{position:absolute;top:-15px;right:16px;width:30px;height:82px;z-index:1;pointer-events:none;
+    background:url(art/ribbon-gold.webp) top center/100% auto no-repeat;
+    writing-mode:vertical-rl;font-size:9px;font-weight:700;color:#6B4E15;letter-spacing:.16em;
+    display:flex;justify-content:center;padding-top:12px;filter:drop-shadow(0 2px 3px rgba(74,59,46,.3))}
+  .hero .shiori{top:-8px;right:20px}
   .pe-seal{flex-shrink:0}
   .pe-fn{font-size:10.5px;color:var(--mid);font-weight:700;letter-spacing:0}
   /* きょうの欄：行く前は空き枠、押すとここに大判が載る */
-  .hero{display:block;width:100%;text-align:center;background:none;border:none;color:var(--text);font-family:inherit;padding:2px 0 12px}
+  .hero{display:block;width:100%;text-align:center;background:none;border:none;color:var(--text);font-family:inherit;padding:2px 0 12px;position:relative}
   .hero .hn{font-size:13.5px;font-weight:800;margin-top:1px}
   .hero .hrow{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:2px}
   .heroslot{text-align:center;padding:8px 0 16px}
@@ -52,6 +58,18 @@
     display:flex;align-items:center;justify-content:center;font-size:36px;color:#D8C9A8;
     font-family:'Hiragino Mincho ProN','Yu Mincho',serif}
   .heroslot p{font-size:10.5px;color:var(--muted);letter-spacing:.12em}
+  /* 写真：ポラロイド枠＋マステ（第5弾素材。窓位置は polaroid-frame.webp の実測%） */
+  .pol{position:relative;display:inline-block;width:238px;aspect-ratio:640/760;transform:rotate(-1deg);
+    filter:drop-shadow(0 3px 5px rgba(74,59,46,.3))}
+  .pol .win{position:absolute;left:13.9%;top:10.4%;width:71.9%;height:63.7%;overflow:hidden}
+  .pol .win img{display:none;width:100%;height:100%;object-fit:cover}
+  .pol::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:url(art/polaroid-frame.webp) center/100% 100% no-repeat}
+  .pol::before{content:"";position:absolute;top:-11px;left:50%;width:112px;height:34px;margin-left:-56px;z-index:2;
+    transform:rotate(-4deg);background:url(art/tape-washi-a.webp) center/100% 100% no-repeat}
+  .pol.b::before{transform:rotate(3deg);background-image:url(art/tape-washi-b.webp);width:100px;margin-left:-50px}
+  .pe-ph{display:none;width:46px;height:46px;object-fit:cover;flex-shrink:0;align-self:center;
+    border:3px solid #FFFEF8;border-radius:2px;box-shadow:0 1px 4px rgba(74,59,46,.3);transform:rotate(2.5deg)}
   .pe-side{padding-top:8px;min-width:0}
   .pe-date{font-family:ui-monospace,monospace;font-size:11px;color:var(--mid);letter-spacing:.05em}
   .pe-score{font-size:16px;font-weight:800;color:var(--text)}
@@ -242,6 +260,13 @@
         <button class="btn" id="bkImport" style="flex:1">読み込む</button>
       </div>
       <input type="file" id="bkFile" accept=".json,application/json" style="display:none">
+      <p class="settext" id="bkphinfo" style="margin-top:10px"></p>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn" id="bkPhExport" style="flex:1">写真を書き出す（ZIP）</button>
+        <button class="btn" id="bkPhImport" style="flex:1">写真を読み込む</button>
+      </div>
+      <input type="file" id="bkPhFile" accept=".zip,application/zip" style="display:none">
+      <input type="file" id="phFile" accept="image/*" style="display:none">
     </div>
     <div class="sect">
       <div class="eyebrow" id="radlabel"></div>
@@ -274,7 +299,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.10";
+const APP_VERSION = "2.0.0-alpha.12";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -304,6 +329,7 @@ if(!Array.isArray(state.visits)) state.visits=[];
 if(!state.wants) state.wants={};
 if(!Array.isArray(state.ufacs)) state.ufacs=[];
 if(!state.imported) state.imported={};
+if(!state.shioriSeen) state.shioriSeen={};
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 let byId={};
 function reindex(){ byId=Object.fromEntries(FACILITIES.concat(state.ufacs).map(f=>[f.id,f])); }
@@ -385,6 +411,50 @@ overlay.addEventListener("click",e=>{ if(e.target===overlay) closeSheet(); });
 window.__close=closeSheet;
 const sheetHead=(t,back)=>`<div class="shead">${back||`<span class="eyebrow">${esc(t)}</span>`}<button class="xbtn" onclick="window.__close()">×</button></div>`;
 
+/* ---------- 栞（達成リワード） ----------
+   原則：進捗を先に見せない。達成した瞬間に祝い、帳のそのページに金の栞が挟まる。
+   対象＝県制覇（その県の470枠を全訪問）→地方制覇→全国。判定は枠（f.rank持ち）のみ */
+function calcShiori(){
+  const first={};  /* fid→最初の訪問（古い側から走査） */
+  for(let i=state.visits.length-1;i>=0;i--){ const v=state.visits[i]; if(!first[v.fid]) first[v.fid]=v; }
+  const out=[], doneP={};
+  for(const pk in PREF){
+    const fr=FACILITIES.filter(f=>f.pref===pk&&f.rank);
+    if(!fr.length||!fr.every(f=>first[f.id])) continue;
+    let lastV=null;
+    for(const f of fr){ const fv=first[f.id]; if(!lastV||fv.date>lastV.date) lastV=fv; }
+    doneP[pk]={at:lastV.date,vid:lastV.id};
+    out.push({id:"p:"+pk, label:PREF[pk].label+"を制覇", short:PREF[pk].short||PREF[pk].label, at:lastV.date, vid:lastV.id});
+  }
+  for(const [rn,keys] of REGIONS){
+    const ks=keys.filter(k=>PREF[k]);
+    if(!ks.length||!ks.every(k=>doneP[k])) continue;
+    const last=ks.map(k=>doneP[k]).reduce((a,b)=>a.at>b.at?a:b);
+    out.push({id:"r:"+rn, label:rn+"を制覇", short:rn.slice(0,2), at:last.at, vid:last.vid});
+  }
+  if(Object.keys(doneP).length===Object.keys(PREF).length&&out.length){
+    const last=Object.values(doneP).reduce((a,b)=>a.at>b.at?a:b);
+    out.push({id:"all", label:"全国470枠を踏破", short:"全国", at:last.at, vid:last.vid});
+  }
+  return out;
+}
+function checkShiori(){
+  const got=calcShiori().filter(s=>!state.shioriSeen[s.id]);
+  if(!got.length) return;
+  got.forEach(s=>state.shioriSeen[s.id]=1); save();
+  openSheet(sheetHead("")+`
+    <div style="text-align:center;padding:12px 0 6px">
+      <svg viewBox="-50 -50 100 100" width="130" height="130"><g filter="url(#sealtex)" opacity="0.92">
+        <circle r="42" fill="none" stroke="#C7973F" stroke-width="5"/><circle r="35" fill="none" stroke="#C7973F" stroke-width="1.5"/>
+        <text y="14" text-anchor="middle" font-size="40" font-weight="800" fill="#C7973F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">制</text>
+      </g></svg>
+      ${got.map(s=>`<div style="font-size:17px;font-weight:800;margin-top:6px">${esc(s.label)}</div>`).join("")}
+      <p class="settext" style="margin-top:8px">おめでとうございます。帳のそのページに、金の栞が挟まりました。</p>
+      <button class="btn primary" style="width:100%;margin-top:14px" onclick="window.__close()">帳を見る</button>
+    </div>`);
+  renderBook();
+}
+
 /* 5軸のミニレーダー（サ室/水風呂/外気浴/清潔/導線）。走り書きの五角形＋各項目の点数 */
 function radarSVG(sc,size){
   const pt=(r,i)=>{const a=(-90+i*72)*Math.PI/180;return `${(r*Math.cos(a)).toFixed(1)},${(r*Math.sin(a)).toFixed(1)}`};
@@ -435,6 +505,9 @@ function renderBook(){
      以下は台帳形式（左=判子・右=決まった欄）。月ごとにページ区切り。
      乱れ（傾き・横ずれ）は訪問IDのハッシュで決まる＝再描画で動かない */
   const td=today();
+  const shioriByVid={};
+  calcShiori().forEach(s=>{ (shioriByVid[s.vid]=shioriByVid[s.vid]||[]).push(s); });
+  const shioriTag=v=>{ const sh=shioriByVid[v.id]; return sh?`<span class="shiori">${esc(sh[sh.length-1].short)}制覇</span>`:""; };
   const heroV=(state.visits[0]&&state.visits[0].date===td&&byId[state.visits[0].fid])?state.visits[0]:null;
   let heroHtml="";
   if(heroV){
@@ -442,11 +515,13 @@ function renderBook(){
     const n=nthOf(heroV), total=visitsOf(heroV.fid).length, gold=total>=10;
     const t=heroV.sc?scoreTotal(heroV.sc)*4:null;
     heroHtml=`<button class="hero" onclick="window.__visit('${heroV.id}')">
+      ${shioriTag(heroV)}
       <div class="pe-date">${esc(heroV.date)}　きょうの一印</div>
       <div style="width:150px;margin:2px auto">${facSeal(f,{size:150,gold,op:0.95})}</div>
       <div class="hn">${esc(f.name)}</div>
       ${heroV.sc?`<div class="hrow"><span>${starsSVG(t,16)}<br><span class="pe-score"><u>${fmt1(t)}</u><small>点</small></span></span>${radarSVG(heroV.sc,92)}</div>`:`<div class="pe-why" style="margin-top:4px">採点はあとからでも</div>`}
       ${heroV.sc&&heroV.sc.x?`<div class="pe-why">特別${heroV.sc.x>0?"+":""}${fmt1(heroV.sc.x)}${heroV.sc.why?`　${esc(heroV.sc.why)}`:""}</div>`:""}
+      ${heroV.ph?`<div style="margin:10px 0 4px"><span class="pol" style="display:none"><span class="win"><img data-ph="${heroV.id}" alt=""></span></span></div>`:""}
       ${heroV.note?`<div class="pe-note" style="margin:3px 12px 0">${esc(heroV.note)}</div>`:""}
       ${heroV.paid!=null?`<div class="pe-why">支払 ¥${heroV.paid.toLocaleString()}</div>`:""}
       ${n>1?`<span class="pe-nth">${n}回目${gold?"・常連":""}</span>`:""}
@@ -469,6 +544,7 @@ function renderBook(){
     const n=nthOf(v), total=visitsOf(v.fid).length;
     const gold=total>=10;
     buf+=`<button class="pageentry" onclick="window.__visit('${v.id}')">
+      ${shioriTag(v)}
       <span class="pe-seal" style="width:${size}px;transform:translateX(${dx}px)">${facSeal(f,{size,gold,faint:n<total,rot,op:first?0.85:0.62})}</span>
       <span class="pe-side">
         <div class="pe-date">${esc(v.date)}<span class="pe-fn">　${esc(f.name)}</span></div>
@@ -477,11 +553,13 @@ function renderBook(){
         ${v.note?`<div class="pe-note s">${esc(v.note)}</div>`:""}
         ${n>1?`<span class="pe-nth">${n}回目${gold?"・常連":""}</span>`:""}
       </span>
+      ${v.ph?`<img class="pe-ph" data-ph="${v.id}" alt="">`:""}
     </button>`;
   });
   flush();
   html+=`<hr class="pgdiv"><div style="text-align:center;font-size:10px;color:var(--muted);letter-spacing:.2em;padding-bottom:4px">帳のはじまり</div>`;
   box.innerHTML=heroHtml+html;
+  hydratePhotos();
 }
 
 /* ---------- 訪問詳細カード（判子タップで開く） ---------- */
@@ -506,17 +584,23 @@ function openVisit(vid){
       <p style="text-align:center;font-size:10.5px;color:var(--muted)">${AXES.map((a,i)=>`${a} ${fmt1(v.sc.s[i])}`).join("　")}${v.sc.x?`　特別 ${v.sc.x>0?"+":""}${fmt1(v.sc.x)}${v.sc.why?`（${esc(v.sc.why)}）`:""}`:""}</p>`
       :`<p style="text-align:center;font-size:12px;color:var(--muted)">採点なし</p>`}
     ${v.paid!=null?`<p style="text-align:center;font-size:12px;color:var(--mid)">支払 <b>¥${v.paid.toLocaleString()}</b></p>`:""}
+    ${v.ph?`<div style="text-align:center;margin:12px 0 4px"><span class="pol b" style="display:none"><span class="win"><img data-ph="${v.id}" alt=""></span></span></div>
+      <p style="text-align:center"><button class="btn" style="padding:6px 12px;font-size:11px" onclick="window.__phAdd('${v.id}')">写真を差し替え</button>
+      <button class="btn" style="padding:6px 12px;font-size:11px;color:var(--stamp)" onclick="window.__phDel('${v.id}')">写真を削除</button></p>`
+      :`<p style="text-align:center;margin:10px 0 2px"><button class="btn" onclick="window.__phAdd('${v.id}')">📷 写真を添える</button></p>`}
     ${v.note?`<p style="font-size:13px;color:var(--mid);line-height:1.9;margin:10px 4px 0;border-top:1.5px dashed var(--line2);padding-top:10px">${esc(v.note)}</p>`:""}
     <div class="fbtnrow">
       <button class="btn" onclick="window.__score('${v.id}')">${v.sc?"採点・メモを編集":"採点・メモを書く"}</button>
       <button class="btn" style="color:var(--stamp)" onclick="window.__delVisit('${v.id}')">この記録を削除</button>
     </div>`);
+  hydratePhotos();
 }
 window.__delVisit=vid=>{
   const v=state.visits.find(x=>x.id===vid); if(!v) return;
   const f=byId[v.fid];
   if(!confirm(`${f?f.name:""} ${v.date} の記録を削除しますか？`)) return;
   state.visits=state.visits.filter(x=>x.id!==vid);
+  photoDel(vid);  /* 紐づく写真もIndexedDBから消す */
   save(); renderAll(); closeSheet(); notify("記録を削除しました");
 };
 
@@ -582,6 +666,7 @@ window.__udel=fid=>{
 /* ---------- 押印（訪問を作る）→採点シート ---------- */
 function addVisit(fid){
   const v={id:uid(), fid, date:today(), sc:null, paid:null, note:""};
+  setTimeout(()=>{ if(!overlay.classList.contains("on")) checkShiori(); },3200);
   state.visits.unshift(v);
   save(); renderAll();
   const f=byId[fid];
@@ -1051,6 +1136,62 @@ document.getElementById("importBtn").addEventListener("click",()=>{
   notify(added?`${added}件の記録を取り込みました（写真は正式版で対応）`:"新しく取り込める記録はありませんでした");
 });
 
+/* ---------- 写真（IndexedDB totonoi/photos。1訪問=1枚、1280px JPEG圧縮） ---------- */
+let _idb=null;
+function pdb(){ return new Promise((res,rej)=>{ if(_idb) return res(_idb);
+  const r=indexedDB.open("totonoi",1);
+  r.onupgradeneeded=()=>r.result.createObjectStore("photos");
+  r.onsuccess=()=>{ _idb=r.result; res(_idb); };
+  r.onerror=()=>rej(r.error); }); }
+const photoPut=(vid,blob)=>pdb().then(d=>new Promise((res,rej)=>{ const t=d.transaction("photos","readwrite"); t.objectStore("photos").put(blob,vid); t.oncomplete=res; t.onerror=()=>rej(t.error); }));
+const photoGet=vid=>pdb().then(d=>new Promise(res=>{ const q=d.transaction("photos").objectStore("photos").get(vid); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); })).catch(()=>null);
+const photoDel=vid=>pdb().then(d=>new Promise(res=>{ const t=d.transaction("photos","readwrite"); t.objectStore("photos").delete(vid); t.oncomplete=res; t.onerror=res; })).catch(()=>{});
+const photoKeys=()=>pdb().then(d=>new Promise(res=>{ const q=d.transaction("photos").objectStore("photos").getAllKeys(); q.onsuccess=()=>res(q.result); q.onerror=()=>res([]); })).catch(()=>[]);
+function shrinkPhoto(file){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{ try{
+      const M=1280; let w=img.naturalWidth,h=img.naturalHeight;
+      const s=Math.min(1,M/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(img.src);
+      c.toBlob(b=>b?res(b):rej(new Error("toBlob")),"image/jpeg",0.82);
+    }catch(e){ rej(e); } };
+    img.onerror=()=>rej(new Error("img"));
+    img.src=URL.createObjectURL(file);
+  });
+}
+/* renderBook/openVisit内の <img data-ph="vid"> を後から埋める */
+function hydratePhotos(){
+  document.querySelectorAll('img[data-ph]:not([src])').forEach(img=>{
+    photoGet(img.dataset.ph).then(b=>{
+      if(!b) return;
+      img.onload=()=>URL.revokeObjectURL(img.src);
+      img.src=URL.createObjectURL(b); img.style.display="block";
+      const w=img.closest(".pol"); if(w) w.style.display="inline-block";
+    });
+  });
+}
+window.__phAdd=vid=>{
+  const inp=document.getElementById("phFile"); inp.dataset.vid=vid; inp.click();
+};
+window.__phDel=vid=>{
+  if(!confirm("この訪問の写真を削除しますか？")) return;
+  photoDel(vid).then(()=>{ const v=state.visits.find(x=>x.id===vid); if(v) delete v.ph;
+    save(); renderAll(); openVisit(vid); });
+};
+document.getElementById("phFile").addEventListener("change",async e=>{
+  const f=e.target.files[0], vid=e.target.dataset.vid; e.target.value="";
+  if(!f||!vid) return;
+  try{
+    const blob=await shrinkPhoto(f);
+    await photoPut(vid,blob);
+    const v=state.visits.find(x=>x.id===vid); if(v) v.ph=1;
+    save(); renderAll(); openVisit(vid); notify("写真を貼りました。");
+  }catch(err){ notify("写真の取り込みに失敗しました。","err"); }
+});
+
 /* ---------- バックアップ（schema version付きJSON） ----------
    絶対ルール：読み込み側は全過去版のschemaを受理し続ける（バックアップこそ災害時の正本）。
    写真アーカイブは写真実装時に「データJSON＋無圧縮ZIP」の分離形式で追加する——JSONに写真は同梱しない */
@@ -1064,7 +1205,7 @@ function bkInfo(){
 }
 async function bkExport(){
   const data={app:"totonoi",schema:BK_SCHEMA,exportedAt:new Date().toISOString(),appVersion:APP_VERSION,
-    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported}};
+    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported,shioriSeen:state.shioriSeen}};
   const name=`totonoi-${today()}.json`;
   const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
   const done=()=>{ state.bk={at:new Date().toISOString(),visits:state.visits.length}; save(); bkInfo(); };
@@ -1090,6 +1231,7 @@ function bkImportFile(f){
       state.wants=d.state.wants||{};
       state.ufacs=Array.isArray(d.state.ufacs)?d.state.ufacs:[];
       state.imported=d.state.imported||{};
+      state.shioriSeen=d.state.shioriSeen||{};
       if(d.state.radius){ state.radius=d.state.radius; radEl.value=state.radius; radLabel(); }
       state.bk={at:new Date().toISOString(),visits:state.visits.length};
       reindex(); save(); renderAll(); bkInfo();
@@ -1101,6 +1243,83 @@ function bkImportFile(f){
 document.getElementById("bkExport").addEventListener("click",bkExport);
 document.getElementById("bkImport").addEventListener("click",()=>document.getElementById("bkFile").click());
 document.getElementById("bkFile").addEventListener("change",e=>{ if(e.target.files[0]) bkImportFile(e.target.files[0]); e.target.value=""; });
+
+/* ---------- 写真バックアップ（無圧縮ZIP・分離形式） ----------
+   データJSONに写真は同梱しない（分析レポートR4）。<訪問id>.jpg を store方式ZIPに詰めるだけの
+   単純なコンテナ。JPEGは圧縮済みなので無圧縮が正しい */
+const CRC_T=(()=>{ const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c; }
+  return t; })();
+const crc32=u8=>{ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=CRC_T[(c^u8[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; };
+async function bkPhotosExport(){
+  const keys=await photoKeys();
+  if(!keys.length){ notify("写真がまだありません。"); return; }
+  const enc=new TextEncoder(), parts=[], central=[]; let off=0;
+  const u16=v=>new Uint8Array([v&255,(v>>8)&255]);
+  const u32=v=>new Uint8Array([v&255,(v>>8)&255,(v>>16)&255,(v>>24)&255]);
+  for(const k of keys){
+    const blob=await photoGet(k); if(!blob) continue;
+    const data=new Uint8Array(await blob.arrayBuffer());
+    const name=enc.encode(String(k)+".jpg"), crc=crc32(data);
+    const head=[new Uint8Array([80,75,3,4]),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name];
+    central.push({name,crc,size:data.length,off});
+    for(const p of head){ parts.push(p); off+=p.length; }
+    parts.push(data); off+=data.length;
+  }
+  const cdStart=off; let cdLen=0;
+  for(const c of central){
+    const e=[new Uint8Array([80,75,1,2]),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(c.crc),u32(c.size),u32(c.size),u16(c.name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(c.off),c.name];
+    for(const p of e){ parts.push(p); cdLen+=p.length; }
+  }
+  parts.push(new Uint8Array([80,75,5,6]),u16(0),u16(0),u16(central.length),u16(central.length),u32(cdLen),u32(cdStart),u16(0));
+  const blob=new Blob(parts,{type:"application/zip"});
+  const nameZ=`totonoi-photos-${today()}.zip`;
+  const file=new File([blob],nameZ,{type:"application/zip"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:"ととのい帳 写真バックアップ"}); bkphInfo(); notify(`写真${central.length}枚を書き出しました。`); return; }
+    catch(e){ if(e&&e.name==="AbortError") return; }
+  }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=nameZ;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+  notify(`写真${central.length}枚を書き出しました。`);
+}
+async function bkPhotosImport(f){
+  try{
+    const buf=new Uint8Array(await f.arrayBuffer());
+    const dv=new DataView(buf.buffer);
+    let eocd=-1;
+    for(let i=buf.length-22;i>=0&&i>buf.length-70000;i--){ if(dv.getUint32(i,true)===0x06054b50){ eocd=i; break; } }
+    if(eocd<0) throw 0;
+    const count=dv.getUint16(eocd+10,true), cdOff=dv.getUint32(eocd+16,true);
+    const dec=new TextDecoder(); let p=cdOff, n=0;
+    for(let i=0;i<count;i++){
+      if(dv.getUint32(p,true)!==0x02014b50) break;
+      const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true),
+            nlen=dv.getUint16(p+28,true), elen=dv.getUint16(p+30,true), clen=dv.getUint16(p+32,true),
+            lho=dv.getUint32(p+42,true);
+      const name=dec.decode(buf.subarray(p+46,p+46+nlen));
+      p+=46+nlen+elen+clen;
+      if(method!==0||!name.endsWith(".jpg")) continue;
+      const lnlen=dv.getUint16(lho+26,true), lelen=dv.getUint16(lho+28,true);
+      const start=lho+30+lnlen+lelen;
+      const vid=name.slice(0,-4);
+      await photoPut(vid,new Blob([buf.subarray(start,start+csize)],{type:"image/jpeg"}));
+      const v=state.visits.find(x=>x.id===vid); if(v) v.ph=1;
+      n++;
+    }
+    save(); renderAll(); bkphInfo();
+    notify(n?`写真${n}枚を読み込みました。`:"読み込める写真がありませんでした。");
+  }catch(e){ notify("ZIPの読み込みに失敗しました。","err"); }
+}
+async function bkphInfo(){
+  const el=document.getElementById("bkphinfo"); if(!el) return;
+  const keys=await photoKeys();
+  el.textContent=`写真：${keys.length}枚（端末内IndexedDB）。データJSONには含まれないため、写真は別途ZIPで保全してください。`;
+}
+document.getElementById("bkPhExport").addEventListener("click",bkPhotosExport);
+document.getElementById("bkPhImport").addEventListener("click",()=>document.getElementById("bkPhFile").click());
+document.getElementById("bkPhFile").addEventListener("change",e=>{ if(e.target.files[0]) bkPhotosImport(e.target.files[0]); e.target.value=""; });
 
 /* ---------- タブ・全体描画 ---------- */
 let curTab="book";
@@ -1125,7 +1344,8 @@ radEl.addEventListener("input",()=>{ state.radius=+radEl.value; radLabel(); save
 document.getElementById("edition").textContent=EDITION;
 document.getElementById("verNote").textContent=
   `ととのい帳 v${APP_VERSION}（アルファ版）／ 収録569湯（全国470枠＋東海TOP30、${EDITION}・サウナイキタイ）。記録はこの端末に保存されます。バックアップはこまめに。写真・栞（ごほうび）は正式版で対応予定。`;
-renderBook(); renderFind(); renderChips(); renderShelf(); renderLog(); bkInfo();
+renderBook(); renderFind(); renderChips(); renderShelf(); renderLog(); bkInfo(); bkphInfo();
+setTimeout(checkShiori,900);
 /* 自動保全（外部依存禁止の枠内でできる最大）：persist要求＋起動時の未保全検知 */
 if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 (function(){
