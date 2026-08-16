@@ -40,11 +40,17 @@
     background-position:left top,top,bottom,right top,0 0;
     background-size:26px auto,100% 24px,100% 30px,12px 64px,256px 256px}
   .pageentry{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;background:none;border:none;width:100%;
-    text-align:left;color:var(--text);padding:2px;border-bottom:1px dashed rgba(211,197,164,.55)}
+    text-align:left;color:var(--text);padding:2px;border-bottom:1px dashed rgba(211,197,164,.55);position:relative}
+  /* 金の栞：達成のあったページにだけ挟まる（1画面1本の原則はcalcShioriの粒度で担保） */
+  .shiori{position:absolute;top:-15px;right:16px;width:30px;height:82px;z-index:1;pointer-events:none;
+    background:url(art/ribbon-gold.webp) top center/100% auto no-repeat;
+    writing-mode:vertical-rl;font-size:9px;font-weight:700;color:#6B4E15;letter-spacing:.16em;
+    display:flex;justify-content:center;padding-top:12px;filter:drop-shadow(0 2px 3px rgba(74,59,46,.3))}
+  .hero .shiori{top:-8px;right:20px}
   .pe-seal{flex-shrink:0}
   .pe-fn{font-size:10.5px;color:var(--mid);font-weight:700;letter-spacing:0}
   /* きょうの欄：行く前は空き枠、押すとここに大判が載る */
-  .hero{display:block;width:100%;text-align:center;background:none;border:none;color:var(--text);font-family:inherit;padding:2px 0 12px}
+  .hero{display:block;width:100%;text-align:center;background:none;border:none;color:var(--text);font-family:inherit;padding:2px 0 12px;position:relative}
   .hero .hn{font-size:13.5px;font-weight:800;margin-top:1px}
   .hero .hrow{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:2px}
   .heroslot{text-align:center;padding:8px 0 16px}
@@ -293,7 +299,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.11";
+const APP_VERSION = "2.0.0-alpha.12";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -323,6 +329,7 @@ if(!Array.isArray(state.visits)) state.visits=[];
 if(!state.wants) state.wants={};
 if(!Array.isArray(state.ufacs)) state.ufacs=[];
 if(!state.imported) state.imported={};
+if(!state.shioriSeen) state.shioriSeen={};
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 let byId={};
 function reindex(){ byId=Object.fromEntries(FACILITIES.concat(state.ufacs).map(f=>[f.id,f])); }
@@ -404,6 +411,50 @@ overlay.addEventListener("click",e=>{ if(e.target===overlay) closeSheet(); });
 window.__close=closeSheet;
 const sheetHead=(t,back)=>`<div class="shead">${back||`<span class="eyebrow">${esc(t)}</span>`}<button class="xbtn" onclick="window.__close()">×</button></div>`;
 
+/* ---------- 栞（達成リワード） ----------
+   原則：進捗を先に見せない。達成した瞬間に祝い、帳のそのページに金の栞が挟まる。
+   対象＝県制覇（その県の470枠を全訪問）→地方制覇→全国。判定は枠（f.rank持ち）のみ */
+function calcShiori(){
+  const first={};  /* fid→最初の訪問（古い側から走査） */
+  for(let i=state.visits.length-1;i>=0;i--){ const v=state.visits[i]; if(!first[v.fid]) first[v.fid]=v; }
+  const out=[], doneP={};
+  for(const pk in PREF){
+    const fr=FACILITIES.filter(f=>f.pref===pk&&f.rank);
+    if(!fr.length||!fr.every(f=>first[f.id])) continue;
+    let lastV=null;
+    for(const f of fr){ const fv=first[f.id]; if(!lastV||fv.date>lastV.date) lastV=fv; }
+    doneP[pk]={at:lastV.date,vid:lastV.id};
+    out.push({id:"p:"+pk, label:PREF[pk].label+"を制覇", short:PREF[pk].short||PREF[pk].label, at:lastV.date, vid:lastV.id});
+  }
+  for(const [rn,keys] of REGIONS){
+    const ks=keys.filter(k=>PREF[k]);
+    if(!ks.length||!ks.every(k=>doneP[k])) continue;
+    const last=ks.map(k=>doneP[k]).reduce((a,b)=>a.at>b.at?a:b);
+    out.push({id:"r:"+rn, label:rn+"を制覇", short:rn.slice(0,2), at:last.at, vid:last.vid});
+  }
+  if(Object.keys(doneP).length===Object.keys(PREF).length&&out.length){
+    const last=Object.values(doneP).reduce((a,b)=>a.at>b.at?a:b);
+    out.push({id:"all", label:"全国470枠を踏破", short:"全国", at:last.at, vid:last.vid});
+  }
+  return out;
+}
+function checkShiori(){
+  const got=calcShiori().filter(s=>!state.shioriSeen[s.id]);
+  if(!got.length) return;
+  got.forEach(s=>state.shioriSeen[s.id]=1); save();
+  openSheet(sheetHead("")+`
+    <div style="text-align:center;padding:12px 0 6px">
+      <svg viewBox="-50 -50 100 100" width="130" height="130"><g filter="url(#sealtex)" opacity="0.92">
+        <circle r="42" fill="none" stroke="#C7973F" stroke-width="5"/><circle r="35" fill="none" stroke="#C7973F" stroke-width="1.5"/>
+        <text y="14" text-anchor="middle" font-size="40" font-weight="800" fill="#C7973F" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">制</text>
+      </g></svg>
+      ${got.map(s=>`<div style="font-size:17px;font-weight:800;margin-top:6px">${esc(s.label)}</div>`).join("")}
+      <p class="settext" style="margin-top:8px">おめでとうございます。帳のそのページに、金の栞が挟まりました。</p>
+      <button class="btn primary" style="width:100%;margin-top:14px" onclick="window.__close()">帳を見る</button>
+    </div>`);
+  renderBook();
+}
+
 /* 5軸のミニレーダー（サ室/水風呂/外気浴/清潔/導線）。走り書きの五角形＋各項目の点数 */
 function radarSVG(sc,size){
   const pt=(r,i)=>{const a=(-90+i*72)*Math.PI/180;return `${(r*Math.cos(a)).toFixed(1)},${(r*Math.sin(a)).toFixed(1)}`};
@@ -454,6 +505,9 @@ function renderBook(){
      以下は台帳形式（左=判子・右=決まった欄）。月ごとにページ区切り。
      乱れ（傾き・横ずれ）は訪問IDのハッシュで決まる＝再描画で動かない */
   const td=today();
+  const shioriByVid={};
+  calcShiori().forEach(s=>{ (shioriByVid[s.vid]=shioriByVid[s.vid]||[]).push(s); });
+  const shioriTag=v=>{ const sh=shioriByVid[v.id]; return sh?`<span class="shiori">${esc(sh[sh.length-1].short)}制覇</span>`:""; };
   const heroV=(state.visits[0]&&state.visits[0].date===td&&byId[state.visits[0].fid])?state.visits[0]:null;
   let heroHtml="";
   if(heroV){
@@ -461,6 +515,7 @@ function renderBook(){
     const n=nthOf(heroV), total=visitsOf(heroV.fid).length, gold=total>=10;
     const t=heroV.sc?scoreTotal(heroV.sc)*4:null;
     heroHtml=`<button class="hero" onclick="window.__visit('${heroV.id}')">
+      ${shioriTag(heroV)}
       <div class="pe-date">${esc(heroV.date)}　きょうの一印</div>
       <div style="width:150px;margin:2px auto">${facSeal(f,{size:150,gold,op:0.95})}</div>
       <div class="hn">${esc(f.name)}</div>
@@ -489,6 +544,7 @@ function renderBook(){
     const n=nthOf(v), total=visitsOf(v.fid).length;
     const gold=total>=10;
     buf+=`<button class="pageentry" onclick="window.__visit('${v.id}')">
+      ${shioriTag(v)}
       <span class="pe-seal" style="width:${size}px;transform:translateX(${dx}px)">${facSeal(f,{size,gold,faint:n<total,rot,op:first?0.85:0.62})}</span>
       <span class="pe-side">
         <div class="pe-date">${esc(v.date)}<span class="pe-fn">　${esc(f.name)}</span></div>
@@ -610,6 +666,7 @@ window.__udel=fid=>{
 /* ---------- 押印（訪問を作る）→採点シート ---------- */
 function addVisit(fid){
   const v={id:uid(), fid, date:today(), sc:null, paid:null, note:""};
+  setTimeout(()=>{ if(!overlay.classList.contains("on")) checkShiori(); },3200);
   state.visits.unshift(v);
   save(); renderAll();
   const f=byId[fid];
@@ -1148,7 +1205,7 @@ function bkInfo(){
 }
 async function bkExport(){
   const data={app:"totonoi",schema:BK_SCHEMA,exportedAt:new Date().toISOString(),appVersion:APP_VERSION,
-    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported}};
+    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported,shioriSeen:state.shioriSeen}};
   const name=`totonoi-${today()}.json`;
   const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
   const done=()=>{ state.bk={at:new Date().toISOString(),visits:state.visits.length}; save(); bkInfo(); };
@@ -1174,6 +1231,7 @@ function bkImportFile(f){
       state.wants=d.state.wants||{};
       state.ufacs=Array.isArray(d.state.ufacs)?d.state.ufacs:[];
       state.imported=d.state.imported||{};
+      state.shioriSeen=d.state.shioriSeen||{};
       if(d.state.radius){ state.radius=d.state.radius; radEl.value=state.radius; radLabel(); }
       state.bk={at:new Date().toISOString(),visits:state.visits.length};
       reindex(); save(); renderAll(); bkInfo();
@@ -1287,6 +1345,7 @@ document.getElementById("edition").textContent=EDITION;
 document.getElementById("verNote").textContent=
   `ととのい帳 v${APP_VERSION}（アルファ版）／ 収録569湯（全国470枠＋東海TOP30、${EDITION}・サウナイキタイ）。記録はこの端末に保存されます。バックアップはこまめに。写真・栞（ごほうび）は正式版で対応予定。`;
 renderBook(); renderFind(); renderChips(); renderShelf(); renderLog(); bkInfo(); bkphInfo();
+setTimeout(checkShiori,900);
 /* 自動保全（外部依存禁止の枠内でできる最大）：persist要求＋起動時の未保全検知 */
 if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 (function(){
