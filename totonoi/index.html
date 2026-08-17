@@ -97,6 +97,7 @@
   .vrow .vsc{color:var(--stamp);font-weight:700;font-family:ui-monospace,monospace;font-size:11px;flex-shrink:0}
   .vrow-ph{width:24px;height:24px;object-fit:cover;border-radius:3px;border:2px solid #FFFEF8;
     box-shadow:0 1px 2px rgba(74,59,46,.3);display:none;flex-shrink:0}
+  .obstag{background:rgba(200,64,47,.08);border-color:rgba(200,64,47,.4);color:#B0483A;font-family:inherit;margin:0 4px 4px 0}
   .pe-side{padding-top:8px;min-width:0}
   .pe-date{font-family:ui-monospace,monospace;font-size:11px;color:var(--mid);letter-spacing:.05em}
   .pe-score{font-size:16px;font-weight:800;color:var(--text)}
@@ -326,7 +327,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.14";
+const APP_VERSION = "2.0.0-alpha.15";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -357,6 +358,7 @@ if(!state.wants) state.wants={};
 if(!Array.isArray(state.ufacs)) state.ufacs=[];
 if(!state.imported) state.imported={};
 if(!state.shioriSeen) state.shioriSeen={};
+if(!state.obs) state.obs={};  /* 観測層：{fid:{tags:[],memo,at}} スキーマv2 §5の第一歩 */
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 let byId={};
 function reindex(){ byId=Object.fromEntries(FACILITIES.concat(state.ufacs).map(f=>[f.id,f])); }
@@ -726,6 +728,21 @@ function openFac(fid, showAll){
       </div>
     </div>${spark}${duo}${noteList}${bestLine}</div>`
     :(total===1?`<div class="sect" style="margin-top:15px;padding-top:12px">${rows}</div>`:"");
+  /* わたしの観測（観測層の第一歩）：サ室・水風呂の気づきをタグと自由文で。施設単位で保持 */
+  const obs=state.obs[fid]||{tags:[],memo:""};
+  const OBS_PRESET=["サ室2つ","水風呂2つ","薪ストーブ","セルフロウリュ","オートロウリュ","塩サウナ","スチーム","外気浴なし","ととのいイス多め","混みやすい"];
+  const obsBlock=`<div class="sect" style="margin-top:15px;padding-top:12px"><div class="eyebrow">わたしの観測</div>
+    <p class="settext" style="margin-top:4px">サウナ室・水風呂の数や設備、気づいたこと。公式データとは別の、自分のカタログです</p>
+    <div style="margin-top:7px">${obs.tags.map((t,i)=>`<button class="badge obstag" onclick="window.__obsTagDel('${fid}',${i})">${esc(t)} ×</button>`).join("")}</div>
+    <div style="display:flex;gap:6px;margin-top:7px">
+      <input id="obsTag" class="input" style="flex:1;padding:8px 11px;font-size:12.5px" placeholder="タグを追加（薪・2室・激熱上段など）">
+      <button class="btn" style="padding:8px 14px" onclick="window.__obsTagAdd('${fid}')">追加</button>
+    </div>
+    <div style="margin-top:6px">${OBS_PRESET.filter(t=>!obs.tags.includes(t)).slice(0,6).map(t=>`<button class="chip" style="margin:2px 3px 0 0" onclick="window.__obsTagQuick('${fid}',this)">${esc(t)}</button>`).join("")}</div>
+    <textarea id="obsMemo" class="input" rows="2" style="margin-top:8px;font-size:12.5px" placeholder="観測メモ（サ室は2段、上段100°C体感。水風呂は井戸水…）">${esc(obs.memo||"")}</textarea>
+    <button class="btn" style="width:100%;margin-top:7px;padding:8px" onclick="window.__obsSave('${fid}')">観測を書き残す</button>
+    ${obs.at?`<p class="settext" style="margin-top:4px;font-size:10px">最終観測：${esc(obs.at)}</p>`:""}
+  </div>`;
   openSheet(sheetHead("施設のページ")+`
     <div style="display:flex;align-items:flex-start;gap:12px">
       <span style="width:76px;flex-shrink:0">${total?facSeal(f,{size:76,gold}):facSeal(f,{size:76,hidden:true})}</span>
@@ -740,6 +757,7 @@ function openFac(fid, showAll){
     ${actions}
     ${total?latestCard:`<p class="settext" style="margin-top:14px">未踏。押すとこの湯の御朱印がひらきます。</p>`}
     ${joren}
+    ${obsBlock}
     <div class="linkrow" style="margin-top:16px;padding-top:10px;border-top:1.5px dashed var(--line)">
       ${f.sid?`<a href="https://sauna-ikitai.com/saunas/${esc(String(f.sid))}" target="_blank" rel="noopener">サウナイキタイ${f.ikitai?`（イキタイ${f.ikitai.toLocaleString()}${f.rank?`・${f.rank}位`:""}）`:""} ↗</a>`:""}
       ${f.hp?`<a href="${esc(f.hp)}" target="_blank" rel="noopener">公式 ↗</a>`:""}
@@ -748,6 +766,28 @@ function openFac(fid, showAll){
   hydratePhotos();
 }
 window.__facAll=fid=>openFac(fid,true);
+window.__obsTagAdd=fid=>{
+  const inp=document.getElementById("obsTag"); const t=(inp.value||"").trim();
+  if(!t) return;
+  const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""});
+  if(!o.tags.includes(t)) o.tags.push(t);
+  o.at=today(); save(); openFac(fid); notify("タグを足しました");
+};
+window.__obsTagQuick=(fid,btn)=>{
+  const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""});
+  const t=btn.textContent.trim();
+  if(!o.tags.includes(t)) o.tags.push(t);
+  o.at=today(); save(); openFac(fid);
+};
+window.__obsTagDel=(fid,i)=>{
+  const o=state.obs[fid]; if(!o) return;
+  o.tags.splice(i,1); o.at=today(); save(); openFac(fid);
+};
+window.__obsSave=fid=>{
+  const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""});
+  o.memo=(document.getElementById("obsMemo").value||"").trim();
+  o.at=today(); save(); openFac(fid); notify("観測を書き残しました");
+};
 window.__findFac=fid=>{
   const f=byId[fid]; if(!f) return;
   closeSheet(); mapFocus={lat:f.lat,lng:f.lng};
@@ -802,6 +842,7 @@ function openScore(vid){
       <span style="font-size:12px;color:var(--muted)">円</span>
     </div>
     <input id="snote" class="input" placeholder="ひとことメモ（任意）" maxlength="120" value="${esc(v.note||"")}" style="margin-top:9px">
+    <p class="settext" style="margin-top:8px;font-size:10.5px">サウナ室・水風呂そのものの記録（数・設備・タグ）は、保存後に施設ページの「わたしの観測」へ</p>
     <p style="text-align:center;margin:10px 0 2px;font-size:12px;color:var(--mid)">合計 <b class="mono" id="stot" style="font-size:24px;color:var(--stamp)">${fmt1(scoreTotal(sc)*4)}</b> <span style="font-size:11px">/100点</span></p>
     <div class="fbtnrow">
       <button class="btn primary" id="scSave">保存</button>
@@ -1318,7 +1359,7 @@ function bkInfo(){
 }
 async function bkExport(){
   const data={app:"totonoi",schema:BK_SCHEMA,exportedAt:new Date().toISOString(),appVersion:APP_VERSION,
-    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported,shioriSeen:state.shioriSeen}};
+    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported,shioriSeen:state.shioriSeen,obs:state.obs}};
   const name=`totonoi-${today()}.json`;
   const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
   const done=()=>{ state.bk={at:new Date().toISOString(),visits:state.visits.length}; save(); bkInfo(); };
@@ -1345,6 +1386,7 @@ function bkImportFile(f){
       state.ufacs=Array.isArray(d.state.ufacs)?d.state.ufacs:[];
       state.imported=d.state.imported||{};
       state.shioriSeen=d.state.shioriSeen||{};
+      state.obs=d.state.obs||{};
       if(d.state.radius){ state.radius=d.state.radius; radEl.value=state.radius; radLabel(); }
       state.bk={at:new Date().toISOString(),visits:state.visits.length};
       reindex(); save(); renderAll(); bkInfo();
