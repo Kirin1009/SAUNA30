@@ -5,7 +5,8 @@ const SKIN = ["paper-page","paper-divider","binding-left","page-peek","ribbon-go
   "map-paper","ft-snow","ft-moon","ft-oke","ft-key",
   "wood-back","wood-shelf","deco-bonsai","deco-vase","deco-yunomi",
   "page-edge-top","page-stack-bottom","page-fore-edge","page-curl-latest","visit-slip",
-  "polaroid-frame","tape-washi-a","tape-washi-b"];
+  "polaroid-frame","tape-washi-a","tape-washi-b",
+  "demo-mori","demo-machi"];
 const ASSETS = ["./", "./index.html", "./catalog.js", "./manifest.json", "./icon-192.png", "./apple-touch-icon.png"].concat(SKIN.map(n => "./art/" + n + ".webp"));
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
