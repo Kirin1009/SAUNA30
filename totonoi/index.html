@@ -125,6 +125,28 @@
   .pgdiv{border:none;height:16px;margin:14px -14px 14px -30px;
     background:url(art/page-peek.webp) center/100% 100% no-repeat}
   .empty{padding:34px 10px;text-align:center;color:var(--muted);font-size:13px;line-height:2}
+  /* 見本モード（R4）：メモリ上の別モデルを専用オーバーレイに描く。stateには一切触れない */
+  #demo{position:fixed;inset:0;z-index:210;display:none;flex-direction:column;background:var(--bg)}
+  #demo.on{display:flex}
+  #demo .dbar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:calc(8px + env(safe-area-inset-top)) 14px 8px;background:var(--paper2);border-bottom:1.5px solid var(--line)}
+  #demo .dbar b{font-size:11.5px;color:var(--mid);letter-spacing:.08em}
+  #demo .dbar small{font-size:10px;color:var(--muted);margin-left:6px}
+  #demo .dbar .dx{border:1px solid var(--line2);background:none;border-radius:999px;padding:4px 12px;font-size:11px;color:var(--mid)}
+  #demo .dbody{flex:1;overflow-y:auto;padding:14px 16px calc(24px + env(safe-area-inset-bottom))}
+  #demo .dstep{font-size:10px;color:var(--muted);letter-spacing:.15em}
+  .dcard{position:relative;display:block;width:100%;text-align:center;background:var(--paper);border:1.5px solid var(--line);
+    border-radius:13px;padding:14px 12px;font:inherit;color:inherit}
+  .dcard.hot{border:2px dashed var(--stamp);cursor:pointer}
+  .dguide{text-align:center;font-size:11.5px;color:var(--stamp);margin:10px 0 6px;letter-spacing:.1em}
+  .dwm{position:absolute;top:6px;left:6px;background:rgba(74,59,46,.55);color:#FEF6E6;font-size:9px;
+    padding:1px 6px;border-radius:4px;letter-spacing:.18em;z-index:2}
+  .dphoto{position:relative;display:inline-block;max-width:78%;margin:8px auto 2px;border:5px solid #fff;
+    border-bottom-width:16px;box-shadow:0 2px 7px rgba(74,59,46,.18);transform:rotate(-1.6deg)}
+  .dphoto img{display:block;width:100%;height:auto}
+  .drow{position:relative;display:flex;gap:12px;align-items:center;background:var(--paper);border:1.5px solid var(--line);
+    border-radius:11px;padding:9px 12px;margin-top:9px;text-align:left}
+  .dnth{font-size:9.5px;color:var(--muted);border:1px solid var(--line2);border-radius:4px;padding:0 5px;margin-left:6px}
   /* サマリー（帳の冒頭に小さく） */
   .stats{display:flex;gap:8px;margin-top:10px}
   .stats .st{flex:1;background:var(--paper);border:1.5px solid var(--line);border-radius:11px;padding:7px 4px;text-align:center}
@@ -311,11 +333,22 @@
     <div class="sect">
       <div class="eyebrow">この帳について</div>
       <p class="settext" id="verNote"></p>
+      <p style="margin-top:8px"><a href="#" onclick="window.__demoOpen();return false" style="font-size:11.5px;color:var(--muted)">見本をもう一度めくる</a></p>
     </div>
   </div>
 </div>
 
 <div id="ctabar"><button id="stampBtn">現在地で押印</button></div>
+
+<!-- 見本モード（保存しない・stateに触れない読み取り専用オーバーレイ） -->
+<div id="demo">
+  <div class="dbar">
+    <span><b>見本</b><small>保存されません</small></span>
+    <span style="display:flex;align-items:center;gap:10px"><span class="dstep" id="demostep"></span>
+      <button class="dx" onclick="window.__demoClose()">× 見本を閉じる</button></span>
+  </div>
+  <div class="dbody" id="demobody"></div>
+</div>
 <nav id="nav">
   <button data-v="book" class="on"><span class="ic" style="--ic:url(art/tab-book.webp)"></span>帳</button>
   <button data-v="find"><span class="ic" style="--ic:url(art/tab-search.webp)"></span>探す</button>
@@ -336,7 +369,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.19";
+const APP_VERSION = "2.0.0-alpha.20";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -546,7 +579,13 @@ function renderBook(){
     ${joren?`<div class="st"><b style="color:var(--gold)">${joren}</b><span>常連の湯</span></div>`:""}`;
   const box=document.getElementById("book");
   if(!state.visits.length){
-    box.innerHTML=`<div class="empty">まだ白紙の帳です。<br>サウナに行ったら「現在地で押印」——<br>その湯だけの御朱印がここに押されます。</div>`;
+    /* 空帳の3入口（チャッピーR4仕様：主=今日の一印／副=以前の訪問／補助=見本。同格にしない） */
+    box.innerHTML=`<div class="empty" style="padding-bottom:12px">まだ白紙の帳です。<br>最初の一印から、あなたの帳が始まります。</div>
+      <div style="display:flex;flex-direction:column;gap:9px;padding:0 22px">
+        <button class="btn primary" onclick="document.getElementById('stampBtn').click()">今日の湯で一印（現在地で押印）</button>
+        <button class="btn" onclick="window.__gotoManual()">以前の訪問を一件書く</button>
+      </div>
+      <p style="text-align:center;margin:14px 0 20px"><a href="#" onclick="window.__demoOpen();return false" style="font-size:12px;color:var(--muted)">30秒だけ、見本をめくる</a></p>`;
     return;
   }
   /* 帳の構成：最上部に「きょうの欄」（行く前は空き枠、押すとそこに大判が載る）、
@@ -1003,6 +1042,96 @@ function stampFx(f,nth){
   fxT1=setTimeout(()=>el.classList.add("bye"),1400);
   fxT2=setTimeout(()=>el.classList.remove("on","bye"),1900);
 }
+
+/* ---------- 見本モード（R4・チャッピー仕様：2湯3訪問・3タップ・保存しない） ----------
+   DEMO_* はメモリ上の読み取り専用モデル。state/localStorage/IndexedDB/バックアップへ一切書かない。
+   id は demo: 接頭辞（byId/visitsOf/save が受け取らない）。専用レンダラのみが描く */
+const DEMO_FACS={
+  "demo:f1":{id:"demo:f1",name:"見本湯・森のサウナ",city:"見本の森",k:"camp",smax:101,wmin:8},
+  "demo:f2":{id:"demo:f2",name:"見本湯・まちの湯",city:"見本のまち",k:"sento",smax:88,wmin:16}};
+function demoModel(){
+  const ago=m=>{const d=new Date();d.setMonth(d.getMonth()-m);return d.toISOString().slice(0,10);};
+  return [
+    {id:"demo:v3",fid:"demo:f1",date:today(),sc:{s:[4.6,4.8,4.2,4.0,3.8],x:1.0,why:"薪の香りと雪の静けさ",v:2},
+     note:"薪のはぜる音だけ。水風呂8°Cで頭が冴えた",ph:"demo-mori",nth:1},
+    {id:"demo:v2",fid:"demo:f2",date:ago(4),sc:{s:[3.9,4.2,3.6,4.1,3.7],x:0,why:"",v:2},
+     note:"桜の帰り道。前より水風呂が好きになった",ph:"demo-machi",nth:2},
+    {id:"demo:v1",fid:"demo:f2",date:ago(7),sc:{s:[3.7,3.8,3.4,4.0,3.6],x:0,why:"",v:2},
+     note:"仕事帰りに初めて。番台の常連さんに教わった湯",ph:null,nth:1}];
+}
+const demoSeal=(fid,size,op)=>facSeal(DEMO_FACS[fid],{size,op:op!=null?op:0.9});
+const demoScore=v=>fmt1(scoreTotal(v.sc)*4);
+function demoRender(step){
+  const el=document.getElementById("demobody");
+  document.getElementById("demostep").textContent=step===0?"":step+"/3";
+  const [v3,v2,v1]=demoModel();
+  if(step===0){
+    el.innerHTML=`<div style="text-align:center;padding-top:14vh">
+      <div class="seal" style="width:170px;margin:0 auto">${demoSeal("demo:f1",170,0.95)}</div>
+      <p style="font-size:12px;color:var(--mid);margin-top:12px;letter-spacing:.1em">見本湯・森のサウナに一印</p></div>`;
+    setTimeout(()=>{ if(document.getElementById("demo").classList.contains("on")&&!el.dataset.left) demoRender(1); },1200);
+    return;
+  }
+  el.dataset.left=1;
+  if(step===1){
+    el.innerHTML=`<div class="dguide">この一印をひらく ↓</div>
+      <button class="dcard hot" onclick="window.__demoStep(2)">
+        <span class="dwm">見本</span>
+        <div class="pe-date">${esc(v3.date)}　きょうの一印</div>
+        <div style="width:140px;margin:2px auto">${demoSeal("demo:f1",140,0.95)}</div>
+        <div class="hn">${esc(DEMO_FACS[v3.fid].name)}</div>
+        <div style="margin-top:3px">${starsSVG(scoreTotal(v3.sc)*4,15)}　<b class="mono" style="font-size:16px">${demoScore(v3)}</b><small style="color:var(--muted)">点</small></div>
+      </button>
+      ${[v2,v1].map(v=>`<div class="drow"><span class="dwm">見本</span>
+        <span style="width:64px;flex-shrink:0;opacity:${v.nth>1?0.62:0.8}">${demoSeal(v.fid,64)}</span>
+        <span style="flex:1;min-width:0"><span class="pe-date">${esc(v.date)}</span><br>
+          <b style="font-size:13px">${esc(DEMO_FACS[v.fid].name)}</b>${v.nth>1?`<span class="dnth">${v.nth}回目</span>`:""}<br>
+          <span style="font-size:11.5px;color:var(--mid)">${esc(v.note)}</span></span>
+        </div>`).join("")}
+      <p class="settext" style="text-align:center;margin-top:14px">同じ「まちの湯」に2回——重ね押しできるのが、この帳の御朱印です</p>`;
+  }else if(step===2){
+    el.innerHTML=`<div class="dcard"><span class="dwm">見本</span>
+      <div class="pe-date">${esc(v3.date)}　1回目の訪問</div>
+      <div style="width:110px;margin:4px auto">${demoSeal("demo:f1",110,0.95)}</div>
+      <div class="hn">${esc(DEMO_FACS[v3.fid].name)}</div>
+      <div class="hrow" style="margin-top:6px"><span>${starsSVG(scoreTotal(v3.sc)*4,16)}<br><span class="pe-score"><u>${demoScore(v3)}</u><small>点</small></span></span>${radarSVG(v3.sc,92)}</div>
+      <div class="pe-why">特別+${fmt1(v3.sc.x)}　${esc(v3.sc.why)}</div>
+      <div class="dphoto"><span class="dwm">見本</span><img src="./art/demo-mori.webp" alt=""></div>
+      <div class="pe-note" style="margin:8px 10px 0">${esc(v3.note)}</div>
+      <p class="settext" style="margin-top:10px">観測（サ室101°C・水風呂8°C）で判子に<b>炎と雪</b>が付きました——記録が判子を育てます</p>
+    </div>
+    <div class="dguide" style="margin-top:14px">↓</div>
+    <button class="btn primary" style="width:100%" onclick="window.__demoStep(3)">棚で重なりを見る</button>`;
+  }else{
+    el.innerHTML=`<div class="dcard"><span class="dwm">見本</span>
+      <div class="eyebrow" style="margin-bottom:8px">見本の棚</div>
+      <div style="display:flex;justify-content:center;gap:26px;align-items:flex-end">
+        <span style="text-align:center"><span style="display:inline-block;width:84px">${demoSeal("demo:f1",84)}</span><br><small style="font-size:10px;color:var(--mid)">森のサウナ</small></span>
+        <span style="text-align:center;position:relative"><span style="display:inline-block;width:84px">${demoSeal("demo:f2",84)}</span>
+          <span style="position:absolute;top:-4px;right:-6px;background:var(--stamp);color:#FEF6E6;font-size:10px;width:19px;height:19px;line-height:19px;border-radius:50%">2</span><br>
+          <small style="font-size:10px;color:var(--mid)">まちの湯</small></span>
+      </div>
+      <p class="settext" style="margin-top:10px">回数が判子に重なり、10回で金の常連判に変わります</p>
+    </div>
+    <p style="text-align:center;font-size:13px;color:var(--mid);margin:18px 8px 14px;line-height:2">同じ湯に通うほど、<br>帳と判子があなたのものになります。</p>
+    <button class="btn primary" style="width:100%" onclick="window.__demoClose()">見本を閉じて、自分の帳を始める</button>`;
+  }
+}
+window.__demoOpen=()=>{
+  const d=document.getElementById("demo");
+  delete document.getElementById("demobody").dataset.left;
+  d.classList.add("on");
+  demoRender(0);
+};
+window.__demoStep=s=>demoRender(s);
+window.__demoClose=()=>{
+  document.getElementById("demo").classList.remove("on");
+  document.getElementById("demobody").innerHTML="";
+};
+window.__gotoManual=()=>{
+  document.querySelector('nav button[data-v="log"]').click();
+  setTimeout(()=>document.getElementById("manualBtn").click(),60);
+};
 
 /* ---------- GPS押印 ---------- */
 let lastPos=null;
