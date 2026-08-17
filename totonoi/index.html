@@ -1370,7 +1370,9 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
   document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
   ["book","find","shelf","log"].forEach(v=>document.getElementById("pane-"+v).classList.toggle("on",v===curTab));
   document.getElementById("ctabar").style.display=(curTab==="book"||curTab==="find")?"flex":"none";
-  if(curTab==="find"&&!mapInit){ mapInit=true; renderMap(); }
+  /* タブを開いた瞬間に必ずそのタブを描き直す（別タブで押印→棚のカウントが古いまま、のバグ修正） */
+  if(curTab==="find"){ mapInit=true; renderFind(); renderMap(); }
+  if(curTab==="shelf") renderShelf();
 }));
 function renderAll(){
   renderBook();
