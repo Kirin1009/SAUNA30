@@ -329,7 +329,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.16";
+const APP_VERSION = "2.0.0-alpha.17";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -373,10 +373,16 @@ const AXES=["サウナ室","水風呂","外気浴・休憩","清潔・雰囲気"
 
 /* ---------- 御朱印（自動生成判子。サ道場facSealの後継） ---------- */
 const sealHash=s=>{ let h=0; for(const c of String(s)) h=(h*31+c.charCodeAt(0))>>>0; return h; };
+/* 観測温度（採点シートで入れた実測。axObsの temps）。自分の帳では観測が勝つ（要件定義§10.3） */
+function obsTemps(fid,i){ return (((state.obs[fid]||{}).ax||{})[i]||{}).temps||[]; }
 function sealBadges(f){
+  const st=obsTemps(f.id,0), wt=obsTemps(f.id,1);
+  const smax=st.length?Math.max(...st):f.smax;
+  const wmin=wt.length?Math.min(...wt):f.wmin;
   const b=[];
-  if(f.smax!=null&&f.smax>=110) b.push("flame2"); else if(f.smax!=null&&f.smax>=100) b.push("flame");
-  if(f.wmin!=null&&f.wmin<10) b.push("snow");
+  if(smax!=null&&(smax>=110||(smax>=100&&st.length>=2))) b.push("flame2");
+  else if(smax!=null&&smax>=100) b.push("flame");
+  if(wmin!=null&&wmin<10) b.push("snow");
   if(f.n) b.push("moon");
   if(f.y) b.push("key");
   if(f.fee!=null&&f.fee>=3000) b.push("koban");
@@ -734,10 +740,12 @@ function openFac(fid, showAll){
   const obs=state.obs[fid]||{tags:[],memo:""};
   const OBS_PRESET=["サ室2つ","水風呂2つ","薪ストーブ","セルフロウリュ","オートロウリュ","塩サウナ","スチーム","外気浴なし","ととのいイス多め","混みやすい"];
   const obsBlock=`<div class="sect" style="margin-top:15px;padding-top:12px"><div class="eyebrow">わたしの観測</div>
-    <p class="settext" style="margin-top:4px">サウナ室・水風呂の数や設備、気づいたこと。公式データとは別の、自分のカタログです</p>
+    <p class="settext" style="margin-top:4px">サウナ室・水風呂の数や設備、気づいたこと。公式データとは別の、自分のカタログです。実測温度（採点シートの🏷から）は判子の勲章にも反映されます</p>
     ${obs.ax?AXES.map((a,i)=>{
-      const at=(obs.ax[i]||{}).tags||[];
-      return at.length?`<div style="font-size:11px;color:var(--mid);margin-top:5px"><span style="font-size:9.5px;color:var(--muted);letter-spacing:.1em">${a}</span>　${at.map((t,j)=>`<button class="badge obstag" onclick="window.__obsAxDel('${fid}',${i},${j})">${esc(t)} ×</button>`).join("")}</div>`:"";
+      const ao=obs.ax[i]||{}, at=ao.tags||[], tp=ao.temps||[];
+      if(!at.length&&!tp.length) return "";
+      const tb=tp.map((t,j)=>`<button class="badge obstag" style="font-family:ui-monospace,monospace" onclick="window.__obsTempDel('${fid}',${i},${j})">${t}°C ×</button>`).join("");
+      return `<div style="font-size:11px;color:var(--mid);margin-top:5px"><span style="font-size:9.5px;color:var(--muted);letter-spacing:.1em">${a}</span>　${tb}${at.map((t,j)=>`<button class="badge obstag" onclick="window.__obsAxDel('${fid}',${i},${j})">${esc(t)} ×</button>`).join("")}</div>`;
     }).join(""):""}
     <div style="margin-top:7px">${obs.tags.map((t,i)=>`<button class="badge obstag" onclick="window.__obsTagDel('${fid}',${i})">${esc(t)} ×</button>`).join("")}</div>
     <div style="display:flex;gap:6px;margin-top:7px">
@@ -792,6 +800,12 @@ window.__obsTagDel=(fid,i)=>{
 window.__obsAxDel=(fid,i,j)=>{
   const o=state.obs[fid]; if(!o||!o.ax||!o.ax[i]) return;
   o.ax[i].tags.splice(j,1); o.at=today(); save(); openFac(fid);
+};
+window.__obsTempDel=(fid,i,j)=>{
+  const o=state.obs[fid]; if(!o||!o.ax||!o.ax[i]||!o.ax[i].temps) return;
+  o.ax[i].temps.splice(j,1);
+  if(!o.ax[i].temps.length) delete o.ax[i].temps;
+  o.at=today(); save(); openFac(fid);
 };
 window.__obsSave=fid=>{
   const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""});
@@ -870,6 +884,17 @@ window.__axOpen=(fid,i,btn)=>{
   btn.textContent=show?"タグをとじる":"🏷 タグ";
   if(show) renderAxChips(fid,i);
 };
+/* 実測温度（サ室・水風呂のみ）。カンマ区切りで複数室。観測層に即保存し、判子の勲章が育つ */
+window.__axTemp=(fid,i)=>{
+  const inp=document.getElementById("axtemp"+i); if(!inp) return;
+  const ts=(inp.value||"").split(/[,、，\s\/]+/).map(s=>parseFloat(s))
+    .filter(t=>isFinite(t)&&t>-30&&t<150).map(t=>Math.round(t*10)/10);
+  const o=axObs(fid,i);
+  if(ts.length) o.temps=ts; else delete o.temps;
+  state.obs[fid].at=today(); save();
+  inp.value=ts.join(",");
+  notify(ts.length?`${i===0?"サ室":"水風呂"}の実測 ${ts.join("・")}°C を観測に保存しました`:"実測温度を消しました");
+};
 
 function openScore(vid){
   const v=state.visits.find(x=>x.id===vid); if(!v) return;
@@ -888,6 +913,11 @@ function openScore(vid){
           <input id="axinp${i}" class="input" style="flex:1;padding:6px 10px;font-size:12px" placeholder="自由タグ（この施設の${a}について）">
           <button class="btn" style="padding:6px 12px;font-size:12px" onclick="window.__axTagAdd('${v.fid}',${i})">追加</button>
         </div>
+        ${i<2?`<div style="display:flex;gap:6px;margin-top:5px;align-items:center">
+          <input id="axtemp${i}" class="input" inputmode="decimal" style="flex:1;padding:6px 10px;font-size:12px" placeholder="実測温度。複数室は 100,85 のように" value="${esc(obsTemps(v.fid,i).join(","))}">
+          <span style="font-size:11px;color:var(--muted);flex-shrink:0">°C</span>
+          <button class="btn" style="padding:6px 12px;font-size:12px" onclick="window.__axTemp('${v.fid}',${i})">保存</button>
+        </div>`:""}
       </div></div>`).join("")}
     <div style="margin-top:10px;border-top:1.5px dashed var(--line2);padding-top:9px">
       <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>特別加減点</span><b class="mono" id="svx">${sc.x>0?"+":""}${fmt1(sc.x)}</b></div>
@@ -900,7 +930,7 @@ function openScore(vid){
       <span style="font-size:12px;color:var(--muted)">円</span>
     </div>
     <input id="snote" class="input" placeholder="ひとことメモ（任意）" maxlength="120" value="${esc(v.note||"")}" style="margin-top:9px">
-    <p class="settext" style="margin-top:8px;font-size:10.5px">各軸の🏷タグは施設の「わたしの観測」に保存されます（採点とは独立・押すだけで保存済み）</p>
+    <p class="settext" style="margin-top:8px;font-size:10.5px">各軸の🏷タグと実測温度は施設の「わたしの観測」に保存されます（採点とは独立）。実測温度で判子の勲章が育ちます</p>
     <p style="text-align:center;margin:10px 0 2px;font-size:12px;color:var(--mid)">合計 <b class="mono" id="stot" style="font-size:24px;color:var(--stamp)">${fmt1(scoreTotal(sc)*4)}</b> <span style="font-size:11px">/100点</span></p>
     <div class="fbtnrow">
       <button class="btn primary" id="scSave">保存</button>
