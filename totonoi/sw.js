@@ -6,7 +6,7 @@ const SKIN = ["paper-page","paper-divider","binding-left","page-peek","ribbon-go
   "wood-back","wood-shelf","deco-bonsai","deco-vase","deco-yunomi",
   "page-edge-top","page-stack-bottom","page-fore-edge","page-curl-latest","visit-slip",
   "polaroid-frame","tape-washi-a","tape-washi-b"];
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./apple-touch-icon.png"].concat(SKIN.map(n => "./art/" + n + ".webp"));
+const ASSETS = ["./", "./index.html", "./catalog.js", "./manifest.json", "./icon-192.png", "./apple-touch-icon.png"].concat(SKIN.map(n => "./art/" + n + ".webp"));
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
@@ -22,6 +22,13 @@ self.addEventListener("fetch", e => {
     e.respondWith(fetch(req).then(res => {
       const copy = res.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); return res;
     }).catch(() => caches.match("./index.html")));
+    return;
+  }
+  /* 施設カタログはネット優先：アプリ（SW）を更新しなくてもカタログだけ新しい版に差し替わる。圏外はキャッシュ */
+  if (new URL(req.url).pathname.endsWith("/catalog.js")) {
+    e.respondWith(fetch(req).then(res => {
+      const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res;
+    }).catch(() => caches.match(req)));
     return;
   }
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
