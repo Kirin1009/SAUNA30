@@ -84,6 +84,19 @@
   .ts.n{font-size:9.5px;color:var(--muted);font-weight:600}
   .tn{font-size:9.5px;color:var(--mid);line-height:1.5;margin-top:2px;overflow:hidden;display:-webkit-box;
     -webkit-line-clamp:2;-webkit-box-orient:vertical;text-align:left}
+  .trio.duo{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .goblk{margin-top:9px;border:1.5px solid var(--line);border-radius:11px;background:var(--paper2);padding:8px 12px}
+  .goblk .gr{display:flex;gap:8px;font-size:12px;line-height:1.8;color:var(--mid)}
+  .goblk .gl{flex-shrink:0;width:54px;font-size:10px;color:var(--muted);padding-top:3px;letter-spacing:.1em}
+  .lcard{display:block;width:100%;background:var(--paper);border:1.5px solid var(--line2);border-radius:12px;
+    padding:10px 12px;margin-top:8px;text-align:left;font-family:inherit;color:var(--text)}
+  .vrow{display:flex;gap:7px;align-items:center;width:100%;background:none;border:none;text-align:left;
+    border-bottom:1px dashed var(--line);padding:5px 2px;color:var(--mid);font-size:11.5px;font-family:inherit}
+  .vrow .vd{font-size:10px;color:var(--muted);flex-shrink:0}
+  .vrow .vn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vrow .vsc{color:var(--stamp);font-weight:700;font-family:ui-monospace,monospace;font-size:11px;flex-shrink:0}
+  .vrow-ph{width:24px;height:24px;object-fit:cover;border-radius:3px;border:2px solid #FFFEF8;
+    box-shadow:0 1px 2px rgba(74,59,46,.3);display:none;flex-shrink:0}
   .pe-side{padding-top:8px;min-width:0}
   .pe-date{font-family:ui-monospace,monospace;font-size:11px;color:var(--mid);letter-spacing:.05em}
   .pe-score{font-size:16px;font-weight:800;color:var(--text)}
@@ -313,7 +326,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.13";
+const APP_VERSION = "2.0.0-alpha.14";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -620,23 +633,57 @@ window.__delVisit=vid=>{
 
 /* ---------- 施設ページ ---------- */
 window.__fac=fid=>openFac(fid);
-function openFac(fid){
+function openFac(fid, showAll){
   const f=byId[fid]; if(!f) return;
   const vs=visitsOf(fid), total=vs.length, gold=total>=10;
   const want=!!state.wants[fid];
-  const best=vs.filter(v=>v.sc).sort((a,b)=>scoreTotal(b.sc)-scoreTotal(a.sc))[0];
   const K_LABEL={onsen:"温浴施設",sento:"銭湯",private:"プライベートサウナ",capsule:"カプセル・サウナ専門",hotel:"ホテル・旅館",camp:"キャンプ・アウトドア",other:"その他"};
   const tags=[f.k?K_LABEL[f.k]:null,f.y?"事前予約制":null,f.t?"宿泊者限定":null,f.n?"深夜営業":null,f.u?"自分で登録":null].filter(Boolean);
+  /* ページ構成はチャッピー設計（Issue #24）準拠：
+     A身元 → B今日行けるか → C次の行動 → Dわたしの最新記録 → E常連の間 → F外部参考。
+     イキタイ順位・数は主情報から外し末尾の外部参考へ */
   const specs=`<div class="speclist">
     ${f.smax!=null?`<div class="spec"><b style="color:#C75B47">${f.smax}°C</b><span>サウナ室</span></div>`:""}
     ${f.wmin!=null?`<div class="spec"><b style="color:#5E88A0">${f.wmin}°C</b><span>水風呂</span></div>`:""}
     ${f.fee!=null?`<div class="spec"><b>¥${f.fee.toLocaleString()}〜</b><span>料金</span></div>`:""}
-    ${f.ikitai?`<div class="spec"><b>${f.ikitai.toLocaleString()}</b><span>イキタイ</span></div>`:""}
   </div>`;
-  /* 常連の間：訪問史カスケード＋採点推移＋初回/前回/今回＋ひとこと帳。通うほど深くなる場所 */
-  const chrono=vs.slice().reverse();  /* 古い順 */
+  const goRows=[["営業時間",f.hours],["定休日",f.off],["注記",f.note]].filter(([,v])=>v);
+  const goblk=goRows.length?`<div class="goblk">`+goRows.map(([l,v])=>
+    `<div class="gr"><span class="gl">${l}</span><span>${esc(v)}</span></div>`).join("")+`</div>`:"";
+  const todayV=vs.find(v=>v.date===today());
+  const actions=`
+    <div class="fbtnrow" style="margin-top:12px">
+      ${todayV?`<button class="btn primary" onclick="window.__visit('${todayV.id}')">きょうの記録をひらく</button>`
+              :`<button class="btn primary" onclick="window.__stampHere('${fid}')">ここで押印</button>`}
+      <button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>
+    </div>
+    <div class="linkrow" style="margin-top:9px">
+      <a href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener">Googleマップで行く ↗</a>
+      <a href="#" onclick="window.__findFac('${fid}');return false">探すタブで見る</a>
+      ${todayV?`<a href="#" onclick="window.__stampHere('${fid}');return false">もう一度押印</a>`:""}
+    </div>`;
+  /* D. わたしの最新記録：1回目から必ず大判で出す。未採点でもひとこと・写真は独立表示 */
+  const latest=vs[0];
+  const latestCard=total?`<div class="sect" style="margin-top:15px;padding-top:12px"><div class="eyebrow">わたしの最新記録${total>=2?`　${nthOf(latest)}回目`:""}</div>
+    <button class="lcard" onclick="window.__visit('${latest.id}')">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        ${latest.ph?`<span class="pol b" style="display:none;width:96px;flex-shrink:0"><span class="win"><img data-ph="${latest.id}" alt=""></span></span>`:""}
+        <div style="flex:1;min-width:0">
+          <div class="mono" style="font-size:11px;color:var(--muted)">${esc(latest.date)}</div>
+          ${latest.sc?`<div style="margin-top:3px">${starsSVG(scoreTotal(latest.sc)*4,13)}　<span class="mono" style="font-weight:800;font-size:15px;border-bottom:2px solid rgba(200,64,47,.5)">${fmt1(scoreTotal(latest.sc)*4)}</span><small style="color:var(--muted);font-size:9px">点</small></div>`:`<div style="font-size:11px;color:var(--muted);margin-top:3px">未採点</div>`}
+          ${latest.note?`<div style="font-size:12.5px;color:var(--mid);line-height:1.8;margin-top:4px">${esc(latest.note)}</div>`:""}
+          ${latest.paid!=null?`<div style="font-size:10.5px;color:var(--muted);margin-top:2px">支払 ¥${latest.paid.toLocaleString()}</div>`:""}
+        </div>
+      </div>
+    </button>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      ${!latest.ph?`<button class="btn" style="flex:1;padding:7px;font-size:11px" onclick="window.__phAdd('${latest.id}')">📷 写真を添える</button>`:""}
+      ${!latest.sc||!latest.note?`<button class="btn" style="flex:1;padding:7px;font-size:11px" onclick="window.__score('${latest.id}')">採点・ひとことを書く</button>`:""}
+    </div></div>`:"";
+  /* E. 常連の間（再訪から現れて育つ） */
+  const chrono=vs.slice().reverse();
   const scored=chrono.filter(v=>v.sc);
-  const spark=scored.length>=2?(()=>{  /* 採点推移の走り書き折れ線 */
+  const spark=scored.length>=2?(()=>{
     const vals=scored.map(v=>scoreTotal(v.sc)*4);
     const w=280,h=52,min=Math.min(...vals),max=Math.max(...vals),span=Math.max(4,max-min);
     const px=i=>10+(w-20)*(vals.length>1?i/(vals.length-1):0), py=v=>h-12-(h-26)*(v-min)/span;
@@ -648,9 +695,9 @@ function openFac(fid){
       <text x="${w-10}" y="${h-1}" font-size="9" text-anchor="end" font-weight="700" fill="#B0483A">${fmt1(vals[vals.length-1])}</text>
     </svg></div>`;
   })():"";
-  const trioSrc=[["初回",chrono[0]],["前回",vs[1]],["今回",vs[0]]];
-  const seen=new Set();
-  const trio=total>=2?`<div class="trio">`+trioSrc.filter(([,v])=>v&&!seen.has(v.id)&&seen.add(v.id)).map(([lb,v])=>`
+  const seen=new Set([latest?latest.id:""]);
+  const duo=total>=2?`<div class="trio duo">`+[["初回",chrono[0]],["前回",vs[1]]]
+    .filter(([,v])=>v&&!seen.has(v.id)&&seen.add(v.id)).map(([lb,v])=>`
     <button class="tcard" onclick="window.__visit('${v.id}')">
       <div class="tlb">${lb}</div>
       <div class="td">${esc(v.date)}</div>
@@ -658,40 +705,54 @@ function openFac(fid){
       ${v.sc?`<div class="ts">${fmt1(scoreTotal(v.sc)*4)}<small>点</small></div>`:`<div class="ts n">未採点</div>`}
       ${v.note?`<div class="tn">${esc(v.note)}</div>`:""}
     </button>`).join("")+`</div>`:"";
-  const notes=chrono.filter(v=>v.note).slice(-4).reverse();
-  const noteList=notes.length>1?`<div style="margin-top:8px">`+notes.map(v=>
+  const shown=showAll?vs:vs.slice(0,6);
+  const rows=shown.map(v=>`<button class="vrow" onclick="window.__visit('${v.id}')">
+      <span class="mono vd">${esc(v.date)}</span>
+      ${v.ph?`<img class="vrow-ph" data-ph="${v.id}" alt="">`:""}
+      <span class="vn">${v.note?esc(v.note):""}</span>
+      ${v.sc?`<span class="vsc">${fmt1(scoreTotal(v.sc)*4)}</span>`:""}
+    </button>`).join("")
+    +(total>6&&!showAll?`<button class="btn" style="width:100%;margin-top:7px;padding:7px;font-size:11px" onclick="window.__facAll('${fid}')">すべての訪問を見る（${total}回）</button>`:"");
+  const pastNotes=chrono.filter(v=>v.note&&v.id!==latest?.id).slice(-4).reverse();
+  const noteList=pastNotes.length?`<div style="margin-top:8px">`+pastNotes.map(v=>
     `<div style="font-size:11px;color:var(--mid);line-height:1.7;padding:2px 0;border-bottom:1px dashed var(--line)"><span class="mono" style="font-size:9.5px;color:var(--muted)">${esc(v.date)}</span>　${esc(v.note)}</div>`).join("")+`</div>`:"";
-  const hist=total?`<div style="display:flex;gap:10px;margin-top:8px;align-items:flex-start">
-      <div style="flex:1" class="mono">
-        ${vs.slice(0,6).map(v=>`<div style="font-size:11px;color:var(--mid);padding:2px 0">${esc(v.date)}${v.sc?`　<span style="color:var(--stamp)">${fmt1(scoreTotal(v.sc)*4)}</span>`:""}</div>`).join("")}
-        ${total>6?`<div style="font-size:10px;color:var(--muted)">…ほか${total-6}回</div>`:""}
+  const best=scored.slice().sort((a,b)=>scoreTotal(b.sc)-scoreTotal(a.sc))[0];
+  const bestLine=(best&&total>=2)?`<p style="margin-top:8px;font-size:11px;color:var(--muted)">ベストの記憶　<span class="mono" style="font-size:14px;font-weight:800;color:var(--text);border-bottom:2px solid rgba(200,64,47,.5)">${fmt1(scoreTotal(best.sc)*4)}</span>点（${esc(best.date)}）</p>`:"";
+  const joren=total>=2?`<div class="sect" style="margin-top:15px;padding-top:12px"><div class="eyebrow">${total>=10?"常連の間":"わたしの訪問史"}　${total}回</div>
+    <div style="display:flex;gap:10px;margin-top:8px;align-items:flex-start">
+      <div style="flex:1;min-width:0">${rows}</div>
+      <div style="width:96px;position:relative;flex-shrink:0;height:${Math.min(total,4)*24+58}px">
+        ${vs.slice(0,4).map((v,i)=>`<span style="position:absolute;right:${i*12}px;top:${i*22}px;width:${78-i*8}px">${facSeal(f,{size:78-i*8,gold,faint:i>0,rot:(sealHash(v.id)%11)-5})}</span>`).join("")}
       </div>
-      <div style="width:110px;position:relative;height:${Math.min(total,4)*26+62}px">
-        ${vs.slice(0,4).map((v,i)=>`<span style="position:absolute;right:${i*14}px;top:${i*24}px;width:${86-i*8}px">${facSeal(f,{size:86-i*8,gold,faint:i>0,rot:(sealHash(v.id)%11)-5})}</span>`).join("")}
-      </div>
-      ${total>=2?`<span class="nth" style="flex-shrink:0">${["一","二","三","四","五","六","七","八","九","十"][Math.min(total,10)-1]||total}回目のととのい</span>`:""}
-    </div>${spark}${trio}${noteList}`:"";
+    </div>${spark}${duo}${noteList}${bestLine}</div>`
+    :(total===1?`<div class="sect" style="margin-top:15px;padding-top:12px">${rows}</div>`:"");
   openSheet(sheetHead("施設のページ")+`
     <div style="display:flex;align-items:flex-start;gap:12px">
       <span style="width:76px;flex-shrink:0">${total?facSeal(f,{size:76,gold}):facSeal(f,{size:76,hidden:true})}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:17px;font-weight:800;line-height:1.4">${esc(f.name)}${want?'<span class="wantstar">★</span>':""}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}${f.rank?`・イキタイ${f.rank}位`:""}</div>
+        <div style="font-size:17px;font-weight:800;line-height:1.4">${esc(f.name)}${want?'<span class="wantstar">★</span>':""}${gold?'<span class="badge" style="border-color:var(--gold);color:var(--gold);margin-left:6px">常連</span>':""}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}${total?`・${total}回訪問`:""}</div>
         <div style="margin-top:6px">${tags.map(t=>`<span class="badge">${esc(t)}</span>`).join("")}</div>
       </div>
     </div>
     ${specs}
-    ${f.sid||f.hp?`<div class="linkrow">${f.sid?`<a href="https://sauna-ikitai.com/saunas/${esc(String(f.sid))}" target="_blank" rel="noopener">サウナイキタイ ↗</a>`:""}${f.hp?`<a href="${esc(f.hp)}" target="_blank" rel="noopener">公式 ↗</a>`:""}<a href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener">地図 ↗</a></div>`:""}
-    ${total?`<div class="sect" style="margin-top:16px;padding-top:12px"><div class="eyebrow">${total>=10?"常連の間":"わたしの訪問史"}${total>=2?`　${total}回`:""}</div>${hist}</div>`:`<p class="settext">未踏。押すとこの湯の御朱印がひらきます。</p>`}
-    ${best?`<div class="sect" style="margin-top:14px;padding-top:12px"><div class="eyebrow">わたしの記憶</div>
-      <p style="margin-top:6px"><span class="mono" style="font-size:22px;font-weight:800;border-bottom:2.5px solid rgba(200,64,47,.5)">${fmt1(scoreTotal(best.sc)*4)}</span><span style="font-size:11px;color:var(--muted)"> /100点</span>${best.note?`<span style="font-size:12px;color:var(--mid)">　${esc(best.note)}</span>`:""}</p></div>`:""}
-    <div class="fbtnrow">
-      <button class="btn primary" onclick="window.__stampHere('${fid}')">ここで押印</button>
-      <button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>
+    ${goblk}
+    ${actions}
+    ${total?latestCard:`<p class="settext" style="margin-top:14px">未踏。押すとこの湯の御朱印がひらきます。</p>`}
+    ${joren}
+    <div class="linkrow" style="margin-top:16px;padding-top:10px;border-top:1.5px dashed var(--line)">
+      ${f.sid?`<a href="https://sauna-ikitai.com/saunas/${esc(String(f.sid))}" target="_blank" rel="noopener">サウナイキタイ${f.ikitai?`（イキタイ${f.ikitai.toLocaleString()}${f.rank?`・${f.rank}位`:""}）`:""} ↗</a>`:""}
+      ${f.hp?`<a href="${esc(f.hp)}" target="_blank" rel="noopener">公式 ↗</a>`:""}
     </div>
-    ${f.u?`<button class="btn" style="width:100%;margin-top:9px;color:var(--stamp)" onclick="window.__udel('${fid}')">この登録施設を削除</button>`:""}`);
+    ${f.u?`<button class="btn" style="width:100%;margin-top:10px;color:var(--stamp)" onclick="window.__udel('${fid}')">この登録施設を削除</button>`:""}`);
   hydratePhotos();
 }
+window.__facAll=fid=>openFac(fid,true);
+window.__findFac=fid=>{
+  const f=byId[fid]; if(!f) return;
+  closeSheet(); mapFocus={lat:f.lat,lng:f.lng};
+  document.querySelector('nav button[data-v="find"]').click();
+};
 window.__want=fid=>{
   if(state.wants[fid]) delete state.wants[fid]; else state.wants[fid]=today();
   save(); renderAll(); openFac(fid);
@@ -882,7 +943,7 @@ document.getElementById("nearBtn").addEventListener("click",()=>{
 });
 
 /* ---------- 地図（470s方式：全国SHAPES・pointerup判定・ズーム再描画） ---------- */
-let view=null, mapMoved=false, renderedW=0, mapInit=false, mapPins=[];
+let view=null, mapMoved=false, renderedW=0, mapInit=false, mapPins=[], mapFocus=null;
 const _bbox={};
 function prefBBox(key){
   if(_bbox[key]) return _bbox[key];
@@ -924,6 +985,16 @@ function prefAnchor(key){
 function renderMap(){
   if(!mapInit) return;
   const {minLng,maxLng,minLat,maxLat,W,H,pad,okiS,okiAx,okiAy,okiBox,okiMaxLng,okiMaxLat}=SHAPES.meta;
+  if(mapFocus){  /* 施設ページ「探すタブで見る」からのフォーカス */
+    const k0=Math.cos(rad((minLat+maxLat)/2));
+    const sX=(maxLng-minLng)*k0, sY=maxLat-minLat;
+    let fx=pad+((mapFocus.lng-minLng)*k0)/sX*(W-pad*2);
+    let fy=pad+(maxLat-mapFocus.lat)/sY*(H-pad*2);
+    if(mapFocus.lng<okiMaxLng&&mapFocus.lat<okiMaxLat){ fx=fx*okiS+okiAx; fy=fy*okiS+okiAy; }
+    const fw=W/24, fh=fw*H/W;
+    view={x:fx-fw/2,y:fy-fh/2,w:fw,h:fh};
+    mapFocus=null;
+  }
   if(!view) view={x:0,y:0,w:W,h:H};
   const zf=view.w/W; renderedW=view.w;
   const k=Math.cos(rad((minLat+maxLat)/2));
