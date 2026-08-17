@@ -125,6 +125,18 @@
   .pgdiv{border:none;height:16px;margin:14px -14px 14px -30px;
     background:url(art/page-peek.webp) center/100% 100% no-repeat}
   .empty{padding:34px 10px;text-align:center;color:var(--muted);font-size:13px;line-height:2}
+  /* 1日1件の紙片（R3前半）：きょうの欄より目立たない小さな栞。金は使わない・傾きは固定 */
+  .paper1{display:flex;gap:10px;align-items:center;width:calc(100% - 8px);margin:2px 4px 10px;padding:8px 12px;
+    background:var(--paper2);border:1.5px solid var(--line);border-radius:10px;font:inherit;color:inherit;
+    text-align:left;transform:rotate(-0.5deg);cursor:pointer}
+  .paper1 .pp-ph{width:56px;height:56px;flex-shrink:0;border:3px solid #fff;box-shadow:0 1px 4px rgba(74,59,46,.18);overflow:hidden}
+  .paper1 .pp-ph img{width:100%;height:100%;object-fit:cover;display:block}
+  .paper1 .pp-seal{width:44px;flex-shrink:0}
+  .paper1 .pp-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .paper1 .pp-label{font-size:9.5px;color:var(--stamp);letter-spacing:.15em}
+  .paper1 .pp-line{font-size:11.5px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .paper1 .pp-line b{font-size:12.5px;color:var(--text)}
+  .paper1 .pp-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 見本モード（R4）：メモリ上の別モデルを専用オーバーレイに描く。stateには一切触れない */
   #demo{position:fixed;inset:0;z-index:210;display:none;flex-direction:column;background:var(--bg)}
   #demo.on{display:flex}
@@ -369,7 +381,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.21";
+const APP_VERSION = "2.0.0-alpha.22";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -594,6 +606,53 @@ function starsSVG(total,h=13){
 }
 
 /* ---------- 帳（パスポートページ） ---------- */
+/* ---------- 1日1件の紙片（R3前半・チャッピー仕様） ----------
+   選定は純粋関数（日付注入でテスト可能）。優先：①過去の今日（最近年・写真>ひとこと>採点>id）
+   ②この湯の前回（今日押印済みのときだけ）③日付シードで30日以上前から決定的1件（記憶リッチ優先）
+   ④候補なし=null。「書きかけ」は督促になるため候補にしない。最古の一印が選ばれたときだけラベル昇格 */
+function paperPick(td,visits){
+  const vs=visits.filter(v=>v.date&&byId[v.fid]);
+  if(!vs.length) return null;
+  const oldest=vs.reduce((m,v)=>(!m||v.date<m.date||(v.date===m.date&&v.id<m.id))?v:m,null);
+  const lift=(v,label)=>({v,label:v.id===oldest.id?"帳の最初の一印":label});
+  const md=td.slice(5);
+  /* ①過去の今日（2/29は厳密一致のみ） */
+  const same=vs.filter(v=>v.date.slice(5)===md&&v.date<td);
+  if(same.length){
+    const yr=Math.max(...same.map(v=>+v.date.slice(0,4)));
+    const c=same.filter(v=>+v.date.slice(0,4)===yr)
+      .sort((a,b)=>((b.ph?1:0)-(a.ph?1:0))||((b.note?1:0)-(a.note?1:0))||((b.sc?1:0)-(a.sc?1:0))||(a.id<b.id?-1:1));
+    const dy=+td.slice(0,4)-yr;
+    return lift(c[0],dy===1?"去年の今日":`${dy}年前の今日`);
+  }
+  /* ②この湯の前回 */
+  for(const tv of vs.filter(v=>v.date===td)){
+    const prev=vs.find(v=>v.fid===tv.fid&&v.date<td);  /* visitsは新しい順＝直近が先に出る */
+    if(prev) return lift(prev,"この湯の前回");
+  }
+  /* ③日付シード（30日以上前・記憶リッチ優先・決定的） */
+  const cd=new Date(td); cd.setDate(cd.getDate()-30);
+  const cutoff=cd.toISOString().slice(0,10);
+  const old=vs.filter(v=>v.date<=cutoff);
+  if(!old.length) return null;
+  const rich=old.filter(v=>v.ph||v.note||v.sc);
+  const pool=(rich.length?rich:old).slice().sort((a,b)=>a.date===b.date?(a.id<b.id?-1:1):(a.date<b.date?-1:1));
+  return lift(pool[sealHash(td)%pool.length],"今日の紙片");
+}
+/* 当日キャッシュ：派生UI専用キー（totonoi:v1にもバックアップにも入れない）。日付変更か対象削除で再選定 */
+function paperToday(){
+  const td=today(), K="totonoi:r3-paper:v1";
+  try{
+    const c=JSON.parse(localStorage.getItem(K)||"null");
+    if(c&&c.day===td){
+      const v=state.visits.find(x=>x.id===c.vid);
+      if(v) return {v,label:c.label};
+    }
+  }catch(e){}
+  const p=paperPick(td,state.visits);
+  try{ localStorage.setItem(K,JSON.stringify(p?{day:td,vid:p.v.id,label:p.label}:{day:td,vid:null,label:null})); }catch(e){}
+  return p&&p.v?p:null;
+}
 function renderBook(){
   const yr=String(new Date().getFullYear());
   const yearN=state.visits.filter(v=>(v.date||"").startsWith(yr)).length;
@@ -672,7 +731,24 @@ function renderBook(){
   });
   flush();
   html+=`<hr class="pgdiv"><div style="text-align:center;font-size:10px;color:var(--muted);letter-spacing:.2em;padding-bottom:4px">帳のはじまり</div>`;
-  box.innerHTML=heroHtml+html;
+  /* 1日1件の紙片：きょうの欄の直下・最初の月ページの手前。候補ゼロの日は余白も出さない */
+  let paperHtml="";
+  const pk=paperToday();
+  if(pk){
+    const pf=byId[pk.v.fid];
+    if(pf){
+      const pt=pk.v.sc?fmt1(scoreTotal(pk.v.sc)*4):null;
+      paperHtml=`<button class="paper1" onclick="window.__visit('${pk.v.id}')">
+        ${pk.v.ph?`<span class="pp-ph"><img data-ph="${pk.v.id}" alt=""></span>`:`<span class="pp-seal">${facSeal(pf,{size:44,op:0.45})}</span>`}
+        <span class="pp-side">
+          <span class="pp-label">${esc(pk.label)}</span>
+          <span class="pp-line">${esc(pk.v.date)}　<b>${esc(pf.name)}</b></span>
+          <span class="pp-sub">${pk.v.note?esc(pk.v.note):(pt!=null?`${pt}点`:"一回目のととのい")}</span>
+        </span>
+      </button>`;
+    }
+  }
+  box.innerHTML=heroHtml+paperHtml+html;
   hydratePhotos();
 }
 
