@@ -97,6 +97,9 @@
   .vrow .vsc{color:var(--stamp);font-weight:700;font-family:ui-monospace,monospace;font-size:11px;flex-shrink:0}
   .vrow-ph{width:24px;height:24px;object-fit:cover;border-radius:3px;border:2px solid #FFFEF8;
     box-shadow:0 1px 2px rgba(74,59,46,.3);display:none;flex-shrink:0}
+  .obstag{background:rgba(200,64,47,.08);border-color:rgba(200,64,47,.4);color:#B0483A;font-family:inherit;margin:0 4px 4px 0}
+  .axbtn{background:none;border:1px solid var(--line2);border-radius:999px;font-size:9.5px;color:var(--muted);
+    padding:2px 8px;margin-left:7px;font-family:inherit;vertical-align:1px}
   .pe-side{padding-top:8px;min-width:0}
   .pe-date{font-family:ui-monospace,monospace;font-size:11px;color:var(--mid);letter-spacing:.05em}
   .pe-score{font-size:16px;font-weight:800;color:var(--text)}
@@ -326,7 +329,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.14";
+const APP_VERSION = "2.0.0-alpha.16";
 const EDITION = "2026.08.06版";  /* 施設データの版（470s/サ道場と共通） */
 
 /* ---------- 施設マスタ（470s全国470枠＋サ道場東海の新規99湯＝569施設。実データのみ） ---------- */
@@ -357,6 +360,7 @@ if(!state.wants) state.wants={};
 if(!Array.isArray(state.ufacs)) state.ufacs=[];
 if(!state.imported) state.imported={};
 if(!state.shioriSeen) state.shioriSeen={};
+if(!state.obs) state.obs={};  /* 観測層：{fid:{tags:[],memo,at}} スキーマv2 §5の第一歩 */
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 let byId={};
 function reindex(){ byId=Object.fromEntries(FACILITIES.concat(state.ufacs).map(f=>[f.id,f])); }
@@ -726,6 +730,25 @@ function openFac(fid, showAll){
       </div>
     </div>${spark}${duo}${noteList}${bestLine}</div>`
     :(total===1?`<div class="sect" style="margin-top:15px;padding-top:12px">${rows}</div>`:"");
+  /* わたしの観測（観測層の第一歩）：サ室・水風呂の気づきをタグと自由文で。施設単位で保持 */
+  const obs=state.obs[fid]||{tags:[],memo:""};
+  const OBS_PRESET=["サ室2つ","水風呂2つ","薪ストーブ","セルフロウリュ","オートロウリュ","塩サウナ","スチーム","外気浴なし","ととのいイス多め","混みやすい"];
+  const obsBlock=`<div class="sect" style="margin-top:15px;padding-top:12px"><div class="eyebrow">わたしの観測</div>
+    <p class="settext" style="margin-top:4px">サウナ室・水風呂の数や設備、気づいたこと。公式データとは別の、自分のカタログです</p>
+    ${obs.ax?AXES.map((a,i)=>{
+      const at=(obs.ax[i]||{}).tags||[];
+      return at.length?`<div style="font-size:11px;color:var(--mid);margin-top:5px"><span style="font-size:9.5px;color:var(--muted);letter-spacing:.1em">${a}</span>　${at.map((t,j)=>`<button class="badge obstag" onclick="window.__obsAxDel('${fid}',${i},${j})">${esc(t)} ×</button>`).join("")}</div>`:"";
+    }).join(""):""}
+    <div style="margin-top:7px">${obs.tags.map((t,i)=>`<button class="badge obstag" onclick="window.__obsTagDel('${fid}',${i})">${esc(t)} ×</button>`).join("")}</div>
+    <div style="display:flex;gap:6px;margin-top:7px">
+      <input id="obsTag" class="input" style="flex:1;padding:8px 11px;font-size:12.5px" placeholder="タグを追加（薪・2室・激熱上段など）">
+      <button class="btn" style="padding:8px 14px" onclick="window.__obsTagAdd('${fid}')">追加</button>
+    </div>
+    <div style="margin-top:6px">${OBS_PRESET.filter(t=>!obs.tags.includes(t)).slice(0,6).map(t=>`<button class="chip" style="margin:2px 3px 0 0" onclick="window.__obsTagQuick('${fid}',this)">${esc(t)}</button>`).join("")}</div>
+    <textarea id="obsMemo" class="input" rows="2" style="margin-top:8px;font-size:12.5px" placeholder="観測メモ（サ室は2段、上段100°C体感。水風呂は井戸水…）">${esc(obs.memo||"")}</textarea>
+    <button class="btn" style="width:100%;margin-top:7px;padding:8px" onclick="window.__obsSave('${fid}')">観測を書き残す</button>
+    ${obs.at?`<p class="settext" style="margin-top:4px;font-size:10px">最終観測：${esc(obs.at)}</p>`:""}
+  </div>`;
   openSheet(sheetHead("施設のページ")+`
     <div style="display:flex;align-items:flex-start;gap:12px">
       <span style="width:76px;flex-shrink:0">${total?facSeal(f,{size:76,gold}):facSeal(f,{size:76,hidden:true})}</span>
@@ -740,6 +763,7 @@ function openFac(fid, showAll){
     ${actions}
     ${total?latestCard:`<p class="settext" style="margin-top:14px">未踏。押すとこの湯の御朱印がひらきます。</p>`}
     ${joren}
+    ${obsBlock}
     <div class="linkrow" style="margin-top:16px;padding-top:10px;border-top:1.5px dashed var(--line)">
       ${f.sid?`<a href="https://sauna-ikitai.com/saunas/${esc(String(f.sid))}" target="_blank" rel="noopener">サウナイキタイ${f.ikitai?`（イキタイ${f.ikitai.toLocaleString()}${f.rank?`・${f.rank}位`:""}）`:""} ↗</a>`:""}
       ${f.hp?`<a href="${esc(f.hp)}" target="_blank" rel="noopener">公式 ↗</a>`:""}
@@ -748,6 +772,32 @@ function openFac(fid, showAll){
   hydratePhotos();
 }
 window.__facAll=fid=>openFac(fid,true);
+window.__obsTagAdd=fid=>{
+  const inp=document.getElementById("obsTag"); const t=(inp.value||"").trim();
+  if(!t) return;
+  const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""});
+  if(!o.tags.includes(t)) o.tags.push(t);
+  o.at=today(); save(); openFac(fid); notify("タグを足しました");
+};
+window.__obsTagQuick=(fid,btn)=>{
+  const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""});
+  const t=btn.textContent.trim();
+  if(!o.tags.includes(t)) o.tags.push(t);
+  o.at=today(); save(); openFac(fid);
+};
+window.__obsTagDel=(fid,i)=>{
+  const o=state.obs[fid]; if(!o) return;
+  o.tags.splice(i,1); o.at=today(); save(); openFac(fid);
+};
+window.__obsAxDel=(fid,i,j)=>{
+  const o=state.obs[fid]; if(!o||!o.ax||!o.ax[i]) return;
+  o.ax[i].tags.splice(j,1); o.at=today(); save(); openFac(fid);
+};
+window.__obsSave=fid=>{
+  const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""});
+  o.memo=(document.getElementById("obsMemo").value||"").trim();
+  o.at=today(); save(); openFac(fid); notify("観測を書き残しました");
+};
 window.__findFac=fid=>{
   const f=byId[fid]; if(!f) return;
   closeSheet(); mapFocus={lat:f.lat,lng:f.lng};
@@ -781,6 +831,46 @@ window.__stampHere=fid=>{ closeSheet(); addVisit(fid); };
 
 /* ---------- 採点シート（サ道場スタイル：5軸×5点0.1刻み＋特別±2.5、100点換算表示） ---------- */
 window.__score=vid=>openScore(vid);
+/* 軸ごとの観測タグ（採点シートから施設の観測層 state.obs[fid].ax へ書く。
+   訪問でなく施設の性質なので保存は即時・採点の保存とは独立。スライダー値を壊さないようDOM局所更新 */
+const AX_PRESET=[
+  ["薪ストーブ","セルフロウリュ","オートロウリュ","塩サウナ","スチーム","2室ある","TVなし","暗め"],
+  ["シングル","地下水・井戸水","深い","2つある","バイブラ","冷たさ物足りない"],
+  ["外気浴なし","寝転びイス","インフィニティ","星・空が見える","風が通る"],
+  ["静か","混みやすい","新しい・綺麗","昭和レトロ","客層よい"],
+  ["動線短い","露天が遠い","ロッカー使いやすい","段差多い"]];
+function axObs(fid,i){
+  const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""});
+  o.ax=o.ax||{};
+  return o.ax[i]||(o.ax[i]={tags:[]});
+}
+function renderAxChips(fid,i){
+  const el=document.getElementById("axchips"+i); if(!el) return;
+  const cur=axObs(fid,i).tags;
+  el.innerHTML=cur.map(t=>`<button class="chip on" style="margin:2px 3px 0 0" onclick="window.__axTag('${fid}',${i},this)">${esc(t)}</button>`).join("")
+    +AX_PRESET[i].filter(t=>!cur.includes(t)).map(t=>`<button class="chip" style="margin:2px 3px 0 0" onclick="window.__axTag('${fid}',${i},this)">${esc(t)}</button>`).join("");
+}
+window.__axTag=(fid,i,btn)=>{
+  const t=btn.textContent.trim(), o=axObs(fid,i);
+  const k=o.tags.indexOf(t);
+  if(k>=0) o.tags.splice(k,1); else o.tags.push(t);
+  state.obs[fid].at=today(); save(); renderAxChips(fid,i);
+};
+window.__axTagAdd=(fid,i)=>{
+  const inp=document.getElementById("axinp"+i); const t=(inp.value||"").trim();
+  if(!t) return;
+  const o=axObs(fid,i);
+  if(!o.tags.includes(t)) o.tags.push(t);
+  state.obs[fid].at=today(); inp.value=""; save(); renderAxChips(fid,i);
+};
+window.__axOpen=(fid,i,btn)=>{
+  const p=document.getElementById("axobs"+i);
+  const show=p.style.display==="none";
+  p.style.display=show?"block":"none";
+  btn.textContent=show?"タグをとじる":"🏷 タグ";
+  if(show) renderAxChips(fid,i);
+};
+
 function openScore(vid){
   const v=state.visits.find(x=>x.id===vid); if(!v) return;
   const f=byId[v.fid];
@@ -789,8 +879,16 @@ function openScore(vid){
     <p style="font-size:14px;font-weight:800;margin:0 0 2px">${esc(f.name)}<span class="mono" style="font-size:11px;color:var(--muted)">　${esc(v.date)}</span></p>
     <p style="font-size:10.5px;color:var(--muted);margin:0 0 6px">5軸×5点（0.1刻み）＋特別加減点±2.5。合計は100点換算。基準線：竜泉寺の湯 ≒ 82点</p>
     ${AXES.map((a,i)=>`<div style="margin-top:8px">
-      <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>${a}</span><b class="mono" id="sv${i}">${fmt1(sc.s[i])}</b></div>
-      <input type="range" min="0" max="5" step="0.1" value="${sc.s[i]}" id="sx${i}"></div>`).join("")}
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px"><span>${a}
+        <button class="axbtn" onclick="window.__axOpen('${v.fid}',${i},this)">🏷 タグ</button></span><b class="mono" id="sv${i}">${fmt1(sc.s[i])}</b></div>
+      <input type="range" min="0" max="5" step="0.1" value="${sc.s[i]}" id="sx${i}">
+      <div id="axobs${i}" style="display:none;margin:2px 0 4px">
+        <div id="axchips${i}"></div>
+        <div style="display:flex;gap:6px;margin-top:5px">
+          <input id="axinp${i}" class="input" style="flex:1;padding:6px 10px;font-size:12px" placeholder="自由タグ（この施設の${a}について）">
+          <button class="btn" style="padding:6px 12px;font-size:12px" onclick="window.__axTagAdd('${v.fid}',${i})">追加</button>
+        </div>
+      </div></div>`).join("")}
     <div style="margin-top:10px;border-top:1.5px dashed var(--line2);padding-top:9px">
       <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>特別加減点</span><b class="mono" id="svx">${sc.x>0?"+":""}${fmt1(sc.x)}</b></div>
       <input type="range" min="-2.5" max="2.5" step="0.1" value="${sc.x}" id="sxx">
@@ -802,6 +900,7 @@ function openScore(vid){
       <span style="font-size:12px;color:var(--muted)">円</span>
     </div>
     <input id="snote" class="input" placeholder="ひとことメモ（任意）" maxlength="120" value="${esc(v.note||"")}" style="margin-top:9px">
+    <p class="settext" style="margin-top:8px;font-size:10.5px">各軸の🏷タグは施設の「わたしの観測」に保存されます（採点とは独立・押すだけで保存済み）</p>
     <p style="text-align:center;margin:10px 0 2px;font-size:12px;color:var(--mid)">合計 <b class="mono" id="stot" style="font-size:24px;color:var(--stamp)">${fmt1(scoreTotal(sc)*4)}</b> <span style="font-size:11px">/100点</span></p>
     <div class="fbtnrow">
       <button class="btn primary" id="scSave">保存</button>
@@ -1318,7 +1417,7 @@ function bkInfo(){
 }
 async function bkExport(){
   const data={app:"totonoi",schema:BK_SCHEMA,exportedAt:new Date().toISOString(),appVersion:APP_VERSION,
-    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported,shioriSeen:state.shioriSeen}};
+    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported,shioriSeen:state.shioriSeen,obs:state.obs}};
   const name=`totonoi-${today()}.json`;
   const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
   const done=()=>{ state.bk={at:new Date().toISOString(),visits:state.visits.length}; save(); bkInfo(); };
@@ -1345,6 +1444,7 @@ function bkImportFile(f){
       state.ufacs=Array.isArray(d.state.ufacs)?d.state.ufacs:[];
       state.imported=d.state.imported||{};
       state.shioriSeen=d.state.shioriSeen||{};
+      state.obs=d.state.obs||{};
       if(d.state.radius){ state.radius=d.state.radius; radEl.value=state.radius; radLabel(); }
       state.bk={at:new Date().toISOString(),visits:state.visits.length};
       reindex(); save(); renderAll(); bkInfo();
