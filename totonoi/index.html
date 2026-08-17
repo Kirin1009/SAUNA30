@@ -137,6 +137,20 @@
   .paper1 .pp-line{font-size:11.5px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .paper1 .pp-line b{font-size:12.5px;color:var(--text)}
   .paper1 .pp-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 年次扉（R3後半）：一年の表紙。既存素材+CSSのみ・最大480px・分析画面にしない */
+  .ydoor{position:relative;background:var(--paper);border:1.5px solid var(--line2);border-radius:13px;
+    margin:12px 2px;padding:20px 14px 12px;text-align:center;max-height:480px;overflow:hidden}
+  .yd-year{font-size:46px;font-weight:800;color:var(--text);letter-spacing:.1em;line-height:1.05;
+    font-family:'Hiragino Mincho ProN','Yu Mincho',serif}
+  .yd-sum{font-size:11.5px;color:var(--mid);letter-spacing:.18em;margin-top:3px}
+  .yd-top{display:flex;align-items:center;justify-content:center;gap:12px;margin:13px auto 0;
+    background:none;border:none;font:inherit;color:inherit;text-align:left;cursor:pointer;padding:0}
+  .yd-topname{font-size:9.5px;color:var(--muted);letter-spacing:.12em;line-height:1.8}
+  .yd-topname b{font-size:13px;color:var(--text);letter-spacing:0}
+  .yd-topname small{font-size:10px;color:var(--mid)}
+  .yd-ph{background:none;border:none;margin-top:10px;cursor:pointer;padding:0}
+  .yd-first{display:block;background:none;border:none;border-top:1.5px dashed var(--line2);width:100%;
+    margin-top:13px;padding:9px 0 2px;font:inherit;font-size:10.5px;color:var(--muted);cursor:pointer;letter-spacing:.05em}
   /* 見本モード（R4）：メモリ上の別モデルを専用オーバーレイに描く。stateには一切触れない */
   #demo{position:fixed;inset:0;z-index:210;display:none;flex-direction:column;background:var(--bg)}
   #demo.on{display:flex}
@@ -381,7 +395,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.22";
+const APP_VERSION = "2.0.0-alpha.23";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -653,6 +667,31 @@ function paperToday(){
   try{ localStorage.setItem(K,JSON.stringify(p?{day:td,vid:p.v.id,label:p.label}:{day:td,vid:null,label:null})); }catch(e){}
   return p&&p.v?p:null;
 }
+/* ---------- 年次扉（R3後半・チャッピー仕様）：閉じた年の境目に常設される一年の表紙。
+   載せるのは年号+訪問◯回◯湯／よく通った湯／この年の一枚（写真ある時だけ）／最初の一印。
+   最高点と地図は載せない（扉を分析画面にしない）。集計はその年の訪問だけ・タイブレークは決定的 ---------- */
+function yearDoor(yr){
+  const ys=state.visits.filter(v=>(v.date||"").startsWith(yr)&&byId[v.fid]);
+  if(!ys.length) return "";
+  const uniq=new Set(ys.map(v=>v.fid));
+  const cnt={}, last={};
+  ys.forEach(v=>{ cnt[v.fid]=(cnt[v.fid]||0)+1; if(!last[v.fid]||v.date>last[v.fid]) last[v.fid]=v.date; });
+  const topFid=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]||(last[b]<last[a]?-1:last[b]>last[a]?1:0)||(a<b?-1:1))[0];
+  const tf=byId[topFid];
+  const byNew=(a,b)=>a.date===b.date?(a.id<b.id?-1:1):(a.date>b.date?-1:1);
+  const phv=ys.filter(v=>v.ph&&v.fid===topFid).sort(byNew)[0]||ys.filter(v=>v.ph).sort(byNew)[0]||null;
+  const first=ys.slice().sort((a,b)=>a.date===b.date?(a.id<b.id?-1:1):(a.date<b.date?-1:1))[0];
+  return `<hr class="pgdiv"><section class="ydoor">
+    <div class="yd-year">${esc(yr)}</div>
+    <div class="yd-sum">訪問${ys.length}回・${uniq.size}湯</div>
+    <button class="yd-top" onclick="window.__fac('${topFid}')">
+      <span style="width:78px;flex-shrink:0">${facSeal(tf,{size:78,gold:visitsOf(topFid).length>=10})}</span>
+      <span class="yd-topname">よく通った湯<br><b>${esc(tf.name)}</b>　<small>${cnt[topFid]}回</small></span>
+    </button>
+    ${phv?`<button class="yd-ph" onclick="window.__visit('${phv.id}')"><span class="pol" style="display:none;width:150px"><span class="win"><img data-ph="${phv.id}" alt=""></span></span></button>`:""}
+    <button class="yd-first" onclick="window.__visit('${first.id}')">最初の一印　${esc(first.date)}　${esc(byId[first.fid].name)}</button>
+  </section>`;
+}
 function renderBook(){
   const yr=String(new Date().getFullYear());
   const yearN=state.visits.filter(v=>(v.date||"").startsWith(yr)).length;
@@ -702,10 +741,14 @@ function renderBook(){
   }else{
     heroHtml=`<div class="heroslot"><div class="heroring">？</div><p>きょうの一印はまだ——行ったら「現在地で押印」</p></div>`;
   }
-  let html="", lastMonth=null, buf="";
-  const flush=()=>{ if(!buf) return; html+=(html?`<hr class="pgdiv">`:"")+`<section class="pg${html?"":" cur"}">${buf}</section>`; buf=""; };
+  let html="", lastMonth=null, buf="", firstPg=true;
+  const flush=()=>{ if(!buf) return; html+=(html?`<hr class="pgdiv">`:"")+`<section class="pg${firstPg?" cur":""}">${buf}</section>`; firstPg=false; buf=""; };
+  /* 年次扉：閉じた年へ入る直前に1枚だけ挟む（現在年には作らない）。今年の訪問がなくても過去年の前には出す */
+  const curYr=td.slice(0,4), doorDone={};
   state.visits.slice(heroV?1:0).forEach((v,i)=>{
     const f=byId[v.fid]; if(!f) return;
+    const vy=(v.date||"").slice(0,4);
+    if(vy&&vy!==curYr&&!doorDone[vy]){ flush(); html+=yearDoor(vy); doorDone[vy]=1; lastMonth=null; }
     const mo=(v.date||"").slice(0,7);
     if(lastMonth!==null && mo!==lastMonth) flush();
     lastMonth=mo;
