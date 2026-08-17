@@ -369,7 +369,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.20";
+const APP_VERSION = "2.0.0-alpha.21";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -417,8 +417,35 @@ const AXES=["サウナ室","水風呂","外気浴・休憩","清潔・雰囲気"
 
 /* ---------- 御朱印（自動生成判子。サ道場facSealの後継） ---------- */
 const sealHash=s=>{ let h=0; for(const c of String(s)) h=(h*31+c.charCodeAt(0))>>>0; return h; };
-/* 観測温度（採点シートで入れた実測。axObsの temps）。自分の帳では観測が勝つ（要件定義§10.3） */
-function obsTemps(fid,i){ return (((state.obs[fid]||{}).ax||{})[i]||{}).temps||[]; }
+/* ---------- 観測ログ（R2a）：1レコード=1部屋1観測 {room:"s1"/"w1"…, temp, at, vid}。
+   履歴で積み、表示・判子は部屋ごとの最新値を採用（自分の帳では観測が勝つ。要件定義§10.3） ---------- */
+function obsLog(fid){ const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""}); return o.ol||(o.ol=[]); }
+function obsLatestByRoom(fid){
+  const m={};
+  for(const r of ((state.obs[fid]||{}).ol||[])) m[r.room]=r;  /* olは追記順＝後勝ち */
+  return m;
+}
+function obsTemps(fid,i){
+  const pre=i===0?"s":"w", m=obsLatestByRoom(fid);
+  return Object.keys(m).filter(k=>k[0]===pre).sort().map(k=>m[k].temp);
+}
+/* 旧形式（obs.ax[i].temps=施設単位の温度配列・alpha.17）→ ol へ移行。カタログの部屋idへ順に割当て。冪等 */
+function migrateObs(){
+  let ch=false;
+  for(const fid of Object.keys(state.obs||{})){
+    const o=state.obs[fid]; if(!o||!o.ax) continue;
+    [0,1].forEach(i=>{
+      const t=(o.ax[i]||{}).temps; if(!t||!t.length) return;
+      const pre=i===0?"s":"w";
+      const rooms=((byId[fid]||{})[i===0?"saunas":"waters"]||[]).map(r=>r.id);
+      t.forEach((v,j)=>obsLog(fid).push({room:rooms[j]||pre+(j+1),temp:v,at:o.at||today(),vid:null}));
+      delete o.ax[i].temps; ch=true;
+    });
+  }
+  if(ch) save();
+}
+/* GPS押印が成れば、その施設の座標は現地で検証されたことになる（スキーマv2 geo検証の自動化） */
+function geoVerify(fid){ const o=state.obs[fid]||(state.obs[fid]={tags:[],memo:""}); o.geo={ok:1,at:today()}; }
 function sealBadges(f){
   const st=obsTemps(f.id,0), wt=obsTemps(f.id,1);
   const smax=st.length?Math.max(...st):f.smax;
@@ -710,8 +737,10 @@ function openFac(fid, showAll){
   const goRows=[["営業時間",f.hours],["定休日",f.off],["注記",f.note]].filter(([,v])=>v);
   const goblk=goRows.length?`<div class="goblk">`+goRows.map(([l,v])=>
     `<div class="gr"><span class="gl">${l}</span><span>${esc(v)}</span></div>`).join("")+`</div>`:"";
-  /* B2. 部屋別データ（カタログ第2版〜）：見出しは数だけ、展開で1室1カード縦積み。旧カタログでは出ない */
+  /* B2. 部屋別データ（カタログ第2版〜）：見出しは数だけ、展開で1室1カード縦積み。旧カタログでは出ない。
+     カード内は公式と私の実測を2行に分ける（R2a・観測の部屋紐付け） */
   const BATH_LABEL={m:"男湯",w:"女湯",mw:"共用"};
+  const om=obsLatestByRoom(fid);
   const sn=(f.saunas||[]).length, wn=(f.waters||[]).length;
   const roomCard=(r,kind,col)=>`<div class="roomcard">
     <div style="display:flex;justify-content:space-between;align-items:baseline">
@@ -719,6 +748,7 @@ function openFac(fid, showAll){
       <b class="mono" style="font-size:15px;color:${col}">${r.temp}°C</b>
     </div>
     ${r.louryu?`<div style="font-size:10px;color:var(--muted);margin-top:1px">ロウリュあり</div>`:""}
+    ${om[r.id]?`<div style="font-size:10px;color:var(--stamp);margin-top:1px">私の実測 <b class="mono">${om[r.id].temp}°C</b>・${esc(om[r.id].at)}</div>`:""}
   </div>`;
   const roomHead=[sn?`サウナ室 ${sn}`:null,wn?`水風呂 ${wn}`:null,
     f.rest&&f.rest.outdoor===true?"外気浴あり":(f.rest&&f.rest.outdoor===false?"外気浴なし":null)].filter(Boolean).join("・");
@@ -810,11 +840,13 @@ function openFac(fid, showAll){
   const OBS_PRESET=["サ室2つ","水風呂2つ","薪ストーブ","セルフロウリュ","オートロウリュ","塩サウナ","スチーム","外気浴なし","ととのいイス多め","混みやすい"];
   const obsBlock=`<div class="sect" style="margin-top:15px;padding-top:12px"><div class="eyebrow">わたしの観測</div>
     <p class="settext" style="margin-top:4px">サウナ室・水風呂の数や設備、気づいたこと。公式データとは別の、自分のカタログです。実測温度（採点シートの🏷から）は判子の勲章にも反映されます</p>
+    ${Object.keys(om).length?`<div style="font-size:11px;color:var(--mid);margin-top:5px"><span style="font-size:9.5px;color:var(--muted);letter-spacing:.1em">実測</span>　${Object.keys(om).sort().map(rm=>
+      `<button class="badge obstag" style="font-family:ui-monospace,monospace" onclick="window.__obsTempDel('${fid}','${rm}')">${rm[0]==="s"?"サ":"水"}${rm.slice(1)} ${om[rm].temp}°C ×</button>`).join("")}</div>`:""}
+    ${obs.geo?`<div style="font-size:10px;color:var(--muted);margin-top:5px">📍 位置はGPS押印で確認済み（${esc(obs.geo.at)}）</div>`:""}
     ${obs.ax?AXES.map((a,i)=>{
-      const ao=obs.ax[i]||{}, at=ao.tags||[], tp=ao.temps||[];
-      if(!at.length&&!tp.length) return "";
-      const tb=tp.map((t,j)=>`<button class="badge obstag" style="font-family:ui-monospace,monospace" onclick="window.__obsTempDel('${fid}',${i},${j})">${t}°C ×</button>`).join("");
-      return `<div style="font-size:11px;color:var(--mid);margin-top:5px"><span style="font-size:9.5px;color:var(--muted);letter-spacing:.1em">${a}</span>　${tb}${at.map((t,j)=>`<button class="badge obstag" onclick="window.__obsAxDel('${fid}',${i},${j})">${esc(t)} ×</button>`).join("")}</div>`;
+      const ao=obs.ax[i]||{}, at=ao.tags||[];
+      if(!at.length) return "";
+      return `<div style="font-size:11px;color:var(--mid);margin-top:5px"><span style="font-size:9.5px;color:var(--muted);letter-spacing:.1em">${a}</span>　${at.map((t,j)=>`<button class="badge obstag" onclick="window.__obsAxDel('${fid}',${i},${j})">${esc(t)} ×</button>`).join("")}</div>`;
     }).join(""):""}
     <div style="margin-top:7px">${obs.tags.map((t,i)=>`<button class="badge obstag" onclick="window.__obsTagDel('${fid}',${i})">${esc(t)} ×</button>`).join("")}</div>
     <div style="display:flex;gap:6px;margin-top:7px">
@@ -871,10 +903,9 @@ window.__obsAxDel=(fid,i,j)=>{
   const o=state.obs[fid]; if(!o||!o.ax||!o.ax[i]) return;
   o.ax[i].tags.splice(j,1); o.at=today(); save(); openFac(fid);
 };
-window.__obsTempDel=(fid,i,j)=>{
-  const o=state.obs[fid]; if(!o||!o.ax||!o.ax[i]||!o.ax[i].temps) return;
-  o.ax[i].temps.splice(j,1);
-  if(!o.ax[i].temps.length) delete o.ax[i].temps;
+window.__obsTempDel=(fid,room)=>{
+  const o=state.obs[fid]; if(!o||!o.ol) return;
+  o.ol=o.ol.filter(r=>r.room!==room);  /* その部屋の観測履歴ごと消す */
   o.at=today(); save(); openFac(fid);
 };
 window.__obsSave=fid=>{
@@ -955,15 +986,19 @@ window.__axOpen=(fid,i,btn)=>{
   if(show) renderAxChips(fid,i);
 };
 /* 実測温度（サ室・水風呂のみ）。カンマ区切りで複数室。観測層に即保存し、判子の勲章が育つ */
-window.__axTemp=(fid,i)=>{
+window.__axTemp=(fid,i,vid)=>{
   const inp=document.getElementById("axtemp"+i); if(!inp) return;
   const ts=(inp.value||"").split(/[,、，\s\/]+/).map(s=>parseFloat(s))
     .filter(t=>isFinite(t)&&t>-30&&t<150).map(t=>Math.round(t*10)/10);
-  const o=axObs(fid,i);
-  if(ts.length) o.temps=ts; else delete o.temps;
-  state.obs[fid].at=today(); save();
+  const pre=i===0?"s":"w", td=today();
+  const rooms=((byId[fid]||{})[i===0?"saunas":"waters"]||[]).map(r=>r.id);
+  const ol=obsLog(fid);
+  /* 同じ日の同じ部屋は置き換え（書き直しでログが膨れない）。カンマ順=部屋の並び（s1,s2…）に割当て */
+  for(let k=ol.length-1;k>=0;k--) if(ol[k].room[0]===pre&&ol[k].at===td) ol.splice(k,1);
+  ts.forEach((v,j)=>ol.push({room:rooms[j]||pre+(j+1),temp:v,at:td,vid:vid||null}));
+  state.obs[fid].at=td; save();
   inp.value=ts.join(",");
-  notify(ts.length?`${i===0?"サ室":"水風呂"}の実測 ${ts.join("・")}°C を観測に保存しました`:"実測温度を消しました");
+  notify(ts.length?`${i===0?"サ室":"水風呂"}の実測 ${ts.join("・")}°C を観測に保存しました`:"きょうの実測温度を消しました");
 };
 
 function openScore(vid){
@@ -986,7 +1021,7 @@ function openScore(vid){
         ${i<2?`<div style="display:flex;gap:6px;margin-top:5px;align-items:center">
           <input id="axtemp${i}" class="input" inputmode="decimal" style="flex:1;padding:6px 10px;font-size:12px" placeholder="実測温度。複数室は 100,85 のように" value="${esc(obsTemps(v.fid,i).join(","))}">
           <span style="font-size:11px;color:var(--muted);flex-shrink:0">°C</span>
-          <button class="btn" style="padding:6px 12px;font-size:12px" onclick="window.__axTemp('${v.fid}',${i})">保存</button>
+          <button class="btn" style="padding:6px 12px;font-size:12px" onclick="window.__axTemp('${v.fid}',${i},'${v.id}')">保存</button>
         </div>`:""}
       </div></div>`).join("")}
     <div style="margin-top:10px;border-top:1.5px dashed var(--line2);padding-top:9px">
@@ -1149,13 +1184,13 @@ document.getElementById("stampBtn").addEventListener("click",()=>{
       openSheet(sheetHead("近くに収録施設がありません")+`
         <p class="settext">半径${state.radius}m以内に施設なし。最寄りは ${esc(nearest.f.name)}（約${Math.round(nearest.d)}m）。</p>
         <button class="btn primary" style="width:100%;margin-top:12px" onclick="window.__regHere(${p.lat},${p.lng})">この場所の施設を新規登録して押印</button>`);
-    }else if(near.length===1){ addVisit(near[0].f.id); }
+    }else if(near.length===1){ geoVerify(near[0].f.id); addVisit(near[0].f.id); }
     else openSheet(sheetHead("どの施設にいますか？")+near.slice(0,6).map(x=>
       `<button class="choosebtn" onclick="window.__gps('${x.f.id}')"><span>${esc(x.f.name)}</span><span class="d">${Math.round(x.d)}m</span></button>`).join(""));
   },err=>{ btn.disabled=false; btn.textContent="現在地で押印"; notify("現在地を取得できませんでした。","err"); },
   {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
 });
-window.__gps=fid=>{ closeSheet(); addVisit(fid); };
+window.__gps=fid=>{ closeSheet(); geoVerify(fid); addVisit(fid); };
 window.__regHere=(lat,lng)=>{
   const name=(prompt("施設名を入力（枠外の湯を自由登録）")||"").trim();
   if(!name) return;
@@ -1637,7 +1672,7 @@ function bkImportFile(f){
       state.obs=d.state.obs||{};
       if(d.state.radius){ state.radius=d.state.radius; radEl.value=state.radius; radLabel(); }
       state.bk={at:new Date().toISOString(),visits:state.visits.length};
-      reindex(); save(); renderAll(); bkInfo();
+      reindex(); migrateObs(); save(); renderAll(); bkInfo();
       notify("バックアップを読み込みました。");
     }catch(e){ notify("読み込みに失敗しました。ファイルを確認してください。","err"); }
   };
@@ -1749,6 +1784,7 @@ radEl.addEventListener("input",()=>{ state.radius=+radEl.value; radLabel(); save
 document.getElementById("edition").textContent=EDITION;
 document.getElementById("verNote").textContent=
   `ととのい帳 v${APP_VERSION}（アルファ版）／ 収録${FACILITIES.length}湯（全国470枠＋東海TOP30、${EDITION}・カタログ第${DATA.catalog}版・サウナイキタイ）。記録はこの端末に保存されます。バックアップはこまめに。写真・栞（ごほうび）は正式版で対応予定。`;
+migrateObs();  /* 旧形式の観測温度（alpha.17〜19）を部屋紐付きログへ。冪等 */
 renderBook(); renderFind(); renderChips(); renderShelf(); renderLog(); bkInfo(); bkphInfo();
 setTimeout(checkShiori,900);
 /* 自動保全（外部依存禁止の枠内でできる最大）：persist要求＋起動時の未保全検知 */
