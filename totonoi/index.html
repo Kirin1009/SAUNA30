@@ -395,7 +395,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.23";
+const APP_VERSION = "2.0.0-alpha.24";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -1902,7 +1902,7 @@ radLabel();
 radEl.addEventListener("input",()=>{ state.radius=+radEl.value; radLabel(); save(); });
 document.getElementById("edition").textContent=EDITION;
 document.getElementById("verNote").textContent=
-  `ととのい帳 v${APP_VERSION}（アルファ版）／ 収録${FACILITIES.length}湯（全国470枠＋東海TOP30、${EDITION}・カタログ第${DATA.catalog}版・サウナイキタイ）。記録はこの端末に保存されます。バックアップはこまめに。写真・栞（ごほうび）は正式版で対応予定。`;
+  `ととのい帳 v${APP_VERSION}（アルファ版）／ 収録${FACILITIES.length}湯（全国470枠＋東海TOP30、${EDITION}・カタログ第${DATA.catalog}版・サウナイキタイ）。記録はこの端末に保存されます。バックアップはこまめに。写真・観測・栞（ごほうび）にも対応しています。`;
 migrateObs();  /* 旧形式の観測温度（alpha.17〜19）を部屋紐付きログへ。冪等 */
 renderBook(); renderFind(); renderChips(); renderShelf(); renderLog(); bkInfo(); bkphInfo();
 setTimeout(checkShiori,900);
