@@ -333,7 +333,7 @@
     <div id="logbox"></div>
     <div class="sect">
       <div class="eyebrow">取り込み（お試し）</div>
-      <p class="settext">この端末のSauna470s／サ道場の記録をワンタップで取り込めます（写真は正式版で対応。元アプリのデータは消えません）。</p>
+      <p class="settext">この端末のSauna470s／サ道場の記録をワンタップで取り込めます（元アプリの写真の取り込みは未対応・元アプリのデータは消えません）。</p>
       <button class="btn" id="importBtn" style="width:100%;margin-top:9px">470s・サ道場から取り込む</button>
     </div>
     <div class="sect">
@@ -395,7 +395,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.24";
+const APP_VERSION = "2.0.0-alpha.25";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -889,6 +889,11 @@ function openFac(fid, showAll){
       <a href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener">Googleマップで行く ↗</a>
       <a href="#" onclick="window.__findFac('${fid}');return false">探すタブで見る</a>
       ${todayV?`<a href="#" onclick="window.__stampHere('${fid}');return false">もう一度押印</a>`:""}
+      <a href="#" onclick="window.__stampPastOpen();return false">過去の日付で記す</a>
+    </div>
+    <div id="pastrow" style="display:none;gap:8px;margin-top:8px;align-items:center">
+      <input id="pastdate" type="date" class="input" max="${today()}" value="${today()}" style="flex:1">
+      <button class="btn" style="flex-shrink:0" onclick="window.__stampPast('${fid}')">この日付で一印</button>
     </div>`;
   /* D. わたしの最新記録：1回目から必ず大判で出す。未採点でもひとこと・写真は独立表示 */
   const latest=vs[0];
@@ -1051,10 +1056,13 @@ window.__udel=fid=>{
 };
 
 /* ---------- 押印（訪問を作る）→採点シート ---------- */
-function addVisit(fid){
-  const v={id:uid(), fid, date:today(), sc:null, paid:null, note:""};
+function addVisit(fid,date){
+  const d=date||today();
+  const v={id:uid(), fid, date:d, sc:null, paid:null, note:""};
   setTimeout(()=>{ if(!overlay.classList.contains("on")) checkShiori(); },3200);
-  state.visits.unshift(v);
+  /* visitsは新しい順を保つ（過去日の記録は日付順の位置へ挿し込む。同日は新しい記録が先） */
+  let i=0; while(i<state.visits.length && (state.visits[i].date||"")>d) i++;
+  state.visits.splice(i,0,v);
   save(); renderAll();
   const f=byId[fid];
   stampFx(f, visitsOf(fid).length);
@@ -1062,6 +1070,17 @@ function addVisit(fid){
   return v;
 }
 window.__stampHere=fid=>{ closeSheet(); addVisit(fid); };
+/* 過去の日付で記す（ペルソナテストP0：「以前の訪問を一件書く」が今日にしか押せなかった問題） */
+window.__stampPastOpen=()=>{
+  const el=document.getElementById("pastrow"); if(!el) return;
+  el.style.display=el.style.display==="none"?"flex":"none";
+};
+window.__stampPast=fid=>{
+  const d=(document.getElementById("pastdate")||{}).value;
+  if(!d) return;
+  if(d>today()){ notify("未来の日付には押せません。","err"); return; }
+  closeSheet(); addVisit(fid,d);
+};
 
 /* ---------- 採点シート（サ道場スタイル：5軸×5点0.1刻み＋特別±2.5、100点換算表示） ---------- */
 window.__score=vid=>openScore(vid);
@@ -1689,7 +1708,7 @@ document.getElementById("importBtn").addEventListener("click",()=>{
   }catch(e){}
   state.visits.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   reindex(); save(); renderAll();
-  notify(added?`${added}件の記録を取り込みました（写真は正式版で対応）`:"新しく取り込める記録はありませんでした");
+  notify(added?`${added}件の記録を取り込みました（元アプリの写真の取り込みは未対応）`:"新しく取り込める記録はありませんでした");
 });
 
 /* ---------- 写真（IndexedDB totonoi/photos。1訪問=1枚、1280px JPEG圧縮） ---------- */
