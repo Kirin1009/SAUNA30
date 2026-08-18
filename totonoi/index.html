@@ -395,7 +395,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.25";
+const APP_VERSION = "2.0.0-alpha.26";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -1066,8 +1066,30 @@ function addVisit(fid,date){
   save(); renderAll();
   const f=byId[fid];
   stampFx(f, visitsOf(fid).length);
-  setTimeout(()=>openScore(v.id), 700);
+  setTimeout(()=>openDone(v.id), 1500);  /* 押印演出（約1.4秒でフェード開始）の終わり際に重ねる */
   return v;
+}
+/* 押印の完了画面（ペルソナテストP0-2）。以前はここで採点シートが自動で開き「宿題を渡された」感があった。
+   一印そのものを完了として見せ、写真・採点は任意の次の一手として並べる（記録ファースト） */
+function openDone(vid){
+  const v=state.visits.find(x=>x.id===vid); if(!v) return;
+  const f=byId[v.fid]; if(!f) return;
+  const n=nthOf(v), total=visitsOf(v.fid).length, gold=total>=10;
+  openSheet(sheetHead("一印、記しました")+`
+    <div style="text-align:center;padding:2px 0 4px">
+      <div style="width:132px;margin:0 auto">${facSeal(f,{size:132,gold,op:0.95})}</div>
+      <p style="font-size:14.5px;font-weight:800;margin-top:6px">${esc(f.name)}</p>
+      <p class="mono" style="font-size:11px;color:var(--muted);margin-top:2px">${esc(v.date)}${n>1?`　${n}回目${gold?"・常連":""}`:""}</p>
+      ${n>1?`<p style="font-size:11px;color:var(--mid);margin-top:6px">この湯に戻ってきました</p>`:""}
+    </div>
+    <div class="fbtnrow">
+      <button class="btn primary" onclick="window.__close()">閉じる</button>
+    </div>
+    <div class="fbtnrow" style="margin-top:8px">
+      <button class="btn" onclick="window.__phAdd('${v.id}')">📷 写真を添える</button>
+      <button class="btn" onclick="window.__score('${v.id}')">採点・ひとことを書く</button>
+    </div>
+    <p class="settext" style="text-align:center;margin-top:9px;font-size:10.5px">採点は後からでも、書かなくても構いません</p>`);
 }
 window.__stampHere=fid=>{ closeSheet(); addVisit(fid); };
 /* 過去の日付で記す（ペルソナテストP0：「以前の訪問を一件書く」が今日にしか押せなかった問題） */
