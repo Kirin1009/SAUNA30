@@ -395,7 +395,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.26";
+const APP_VERSION = "2.0.0-alpha.27";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -1056,7 +1056,7 @@ window.__udel=fid=>{
 };
 
 /* ---------- 押印（訪問を作る）→採点シート ---------- */
-function addVisit(fid,date){
+function addVisit(fid,date,past){
   const d=date||today();
   const v={id:uid(), fid, date:d, sc:null, paid:null, note:""};
   setTimeout(()=>{ if(!overlay.classList.contains("on")) checkShiori(); },3200);
@@ -1066,12 +1066,12 @@ function addVisit(fid,date){
   save(); renderAll();
   const f=byId[fid];
   stampFx(f, visitsOf(fid).length);
-  setTimeout(()=>openDone(v.id), 1500);  /* 押印演出（約1.4秒でフェード開始）の終わり際に重ねる */
+  setTimeout(()=>openDone(v.id,past), 1500);  /* 押印演出（約1.4秒でフェード開始）の終わり際に重ねる */
   return v;
 }
 /* 押印の完了画面（ペルソナテストP0-2）。以前はここで採点シートが自動で開き「宿題を渡された」感があった。
    一印そのものを完了として見せ、写真・採点は任意の次の一手として並べる（記録ファースト） */
-function openDone(vid){
+function openDone(vid,past){
   const v=state.visits.find(x=>x.id===vid); if(!v) return;
   const f=byId[v.fid]; if(!f) return;
   const n=nthOf(v), total=visitsOf(v.fid).length, gold=total>=10;
@@ -1089,6 +1089,7 @@ function openDone(vid){
       <button class="btn" onclick="window.__phAdd('${v.id}')">📷 写真を添える</button>
       <button class="btn" onclick="window.__score('${v.id}')">採点・ひとことを書く</button>
     </div>
+    ${past?`<div class="linkrow" style="justify-content:center;margin-top:9px"><a href="#" onclick="window.__stampAgainPast('${v.fid}','${v.date}');return false">この湯の別の日も記す</a></div>`:""}
     <p class="settext" style="text-align:center;margin-top:9px;font-size:10.5px">採点は後からでも、書かなくても構いません</p>`);
 }
 window.__stampHere=fid=>{ closeSheet(); addVisit(fid); };
@@ -1097,11 +1098,23 @@ window.__stampPastOpen=()=>{
   const el=document.getElementById("pastrow"); if(!el) return;
   el.style.display=el.style.display==="none"?"flex":"none";
 };
+/* 過去日をまとめて書き起こすときの往復を減らす（拓也の2週目P1）。
+   過去日押印の完了画面からだけ出す導線で、施設ページの日付欄を開いた状態に戻す。
+   当日の完了画面は3択のまま＝「終われる感じ」を薄めない */
+window.__stampAgainPast=(fid,d)=>{
+  closeSheet(); openFac(fid);
+  setTimeout(()=>{
+    const row=document.getElementById("pastrow"), inp=document.getElementById("pastdate");
+    if(!row||!inp) return;
+    row.style.display="flex"; if(d) inp.value=d;
+    row.scrollIntoView({block:"center"});
+  },0);
+};
 window.__stampPast=fid=>{
   const d=(document.getElementById("pastdate")||{}).value;
   if(!d) return;
   if(d>today()){ notify("未来の日付には押せません。","err"); return; }
-  closeSheet(); addVisit(fid,d);
+  closeSheet(); addVisit(fid,d,true);
 };
 
 /* ---------- 採点シート（サ道場スタイル：5軸×5点0.1刻み＋特別±2.5、100点換算表示） ---------- */
