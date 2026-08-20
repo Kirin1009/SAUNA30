@@ -332,8 +332,8 @@
     </div>
     <div id="logbox"></div>
     <div class="sect">
-      <div class="eyebrow">取り込み（お試し）</div>
-      <p class="settext">この端末のSauna470s／サ道場の記録をワンタップで取り込めます（元アプリの写真の取り込みは未対応・元アプリのデータは消えません）。</p>
+      <div class="eyebrow">元アプリから引き継ぐ</div>
+      <p class="settext">この端末のSauna470s／サ道場の記録をワンタップで取り込めます。何度押しても重複しません（元アプリの写真は未対応・元アプリのデータは消えません）。</p>
       <button class="btn" id="importBtn" style="width:100%;margin-top:9px">470s・サ道場から取り込む</button>
     </div>
     <div class="sect">
@@ -395,7 +395,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-alpha.27";
+const APP_VERSION = "2.0.0-beta.1";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -1699,7 +1699,7 @@ document.getElementById("manualBtn").addEventListener("click",()=>{
   document.getElementById("mq").addEventListener("input",e=>run(e.target.value));
 });
 
-/* ---------- 取り込み（470s・サ道場の同一オリジンlocalStorageから。お試し・写真はv2.1） ---------- */
+/* ---------- 取り込み（470s・サ道場の同一オリジンlocalStorageから。冪等。写真はv2.1） ---------- */
 document.getElementById("importBtn").addEventListener("click",()=>{
   let added=0;
   try{
@@ -1956,7 +1956,7 @@ radLabel();
 radEl.addEventListener("input",()=>{ state.radius=+radEl.value; radLabel(); save(); });
 document.getElementById("edition").textContent=EDITION;
 document.getElementById("verNote").textContent=
-  `ととのい帳 v${APP_VERSION}（アルファ版）／ 収録${FACILITIES.length}湯（全国470枠＋東海TOP30、${EDITION}・カタログ第${DATA.catalog}版・サウナイキタイ）。記録はこの端末に保存されます。バックアップはこまめに。写真・観測・栞（ごほうび）にも対応しています。`;
+  `ととのい帳 v${APP_VERSION}（ベータ版）／ 収録${FACILITIES.length}湯（全国470枠＋東海TOP30、${EDITION}・カタログ第${DATA.catalog}版・サウナイキタイ）。記録はこの端末に保存されます。バックアップはこまめに。写真・観測・栞（ごほうび）にも対応しています。`;
 migrateObs();  /* 旧形式の観測温度（alpha.17〜19）を部屋紐付きログへ。冪等 */
 renderBook(); renderFind(); renderChips(); renderShelf(); renderLog(); bkInfo(); bkphInfo();
 setTimeout(checkShiori,900);
