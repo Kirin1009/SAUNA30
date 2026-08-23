@@ -338,6 +338,9 @@
       <div class="eyebrow">元アプリから引き継ぐ</div>
       <p class="settext">この端末のSauna470s／サ道場の記録をワンタップで取り込めます。何度押しても重複しません（元アプリの写真は未対応・元アプリのデータは消えません）。</p>
       <button class="btn" id="importBtn" style="width:100%;margin-top:9px">470s・サ道場から取り込む</button>
+      <button class="btn" id="impFileBtn" style="width:100%;margin-top:8px">バックアップファイルから取り込む</button>
+      <input type="file" id="impFile" accept="application/json" style="display:none">
+      <p class="settext" style="margin-top:6px;font-size:10px">別の端末・別のブラウザの記録は上のボタンでは読めません。元アプリで書き出したバックアップJSONを、下のボタンから読み込んでください。</p>
     </div>
     <div class="sect">
       <div class="eyebrow">バックアップ</div>
@@ -398,7 +401,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-beta.3";
+const APP_VERSION = "2.0.0-beta.4";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -2079,64 +2082,106 @@ document.getElementById("manualBtn").addEventListener("click",()=>{
 document.getElementById("pasteBtn").addEventListener("click",()=>window.__paste());
 
 /* ---------- 取り込み（470s・サ道場の同一オリジンlocalStorageから。冪等。写真はv2.1） ---------- */
-document.getElementById("importBtn").addEventListener("click",()=>{
-  let added=0, ufacsAdded=0, skipped=0;
-  try{
-    const raw=localStorage.getItem("sauna30:v2");
-    if(raw){
-      const st=JSON.parse(raw);
-      /* 台帳（枠外の自由登録）を先に取り込み、470s側のidから対応表を作る。
-         これをやらないと台帳での訪問が byId に無くて丸ごと落ちる（beta.3で修正） */
-      const umap={};
-      for(const uf of (st.userFacilities||[])){
-        if(!uf||!uf.name) continue;
-        const nid="u"+sealHash(String(uf.id||uf.name));
-        umap[uf.id]=nid;
-        if(!state.ufacs.some(x=>x.id===nid)){
-          const nf={id:nid, name:uf.name, lat:uf.lat!=null?uf.lat:null, lng:uf.lng!=null?uf.lng:null, u:1};
-          if(uf.city) nf.city=uf.city;
-          state.ufacs.push(nf); ufacsAdded++;
-        }
-      }
-      reindex();
-      for(const v of (st.visits||[]).slice().reverse()){
-        const fid=umap[v.facilityId]||(byId[v.facilityId]?v.facilityId:null);
-        if(!fid){ skipped++; continue; }
-        const sig="470s:"+(v.id||v.facilityId+v.date);
-        if(state.imported[sig]) continue;
-        let sc=null;
-        if(v.axes){ /* 旧4軸25点→5軸換算（サ道場v2.8方式） */
-          const s=["sauna","water","air","clean"].map(k=>r1((v.axes[k]||0)/5)); s.push(2.5);
-          sc={s, x:r1((v.adj||0)/4), why:v.adjReason||"", v:2};
-        }
-        state.visits.push({id:uid(), fid, date:v.date||today(), sc, paid:null, note:v.memo||v.note||""});
-        state.imported[sig]=1; added++;
-      }
-      for(const w of (st.wants||[])) if(byId[w]&&!state.wants[w]) state.wants[w]=today();
+/* 470s／サ道場からの取り込み。同一オリジンのlocalStorageからと、
+   バックアップJSONファイルからの両方に対応する。
+   ファイル経由が要るのは、localStorageは端末・ブラウザごとに別物だから——
+   妻の記録を夫の端末で読む、別ブラウザで使っていた、といった場合に
+   「取り込めない」まま理由も分からなくなる */
+function imp470s(st, r){
+  if(!st||!Array.isArray(st.visits)) return;
+  r.found470s=true; r.src470s=st.visits.length;
+  /* 台帳（枠外の自由登録）を先に取り込み、470s側のidから対応表を作る。
+     これをやらないと台帳での訪問が byId に無くて丸ごと落ちる */
+  const umap={};
+  for(const uf of (st.userFacilities||[])){
+    if(!uf||!uf.name) continue;
+    const nid="u"+sealHash(String(uf.id||uf.name));
+    umap[uf.id]=nid;
+    if(!state.ufacs.some(x=>x.id===nid)){
+      const nf={id:nid, name:uf.name, lat:uf.lat!=null?uf.lat:null, lng:uf.lng!=null?uf.lng:null, u:1};
+      if(uf.city) nf.city=uf.city;
+      state.ufacs.push(nf); r.ufacsAdded++;
     }
-  }catch(e){}
-  try{
-    const raw=localStorage.getItem("sadojo:v1");
-    if(raw){
-      const st=JSON.parse(raw);
-      for(const fid in (st.stamps||{})){
-        if(!byId[fid]) continue;
-        const sig="dojo:"+fid;
-        if(state.imported[sig]) continue;
-        const scr=(st.scores||{})[fid];
-        const sc=scr?{s:scr.s.slice(0,5).map(r1), x:r1(scr.x||0), why:scr.why||"", v:2}:null;
-        const paid=(st.paid||{})[fid];
-        state.visits.push({id:uid(), fid, date:st.stamps[fid], sc, paid:paid??null, note:""});
-        state.imported[sig]=1; added++;
-      }
-      for(const w in (st.wants||{})) if(byId[w]&&!state.wants[w]) state.wants[w]=today();
+  }
+  reindex();
+  for(const v of st.visits.slice().reverse()){
+    const fid=umap[v.facilityId]||(byId[v.facilityId]?v.facilityId:null);
+    if(!fid){ r.skipped++; continue; }
+    const sig="470s:"+(v.id||v.facilityId+v.date);
+    if(state.imported[sig]){ r.dup++; continue; }
+    let sc=null;
+    if(v.axes){ /* 旧4軸25点→5軸換算（サ道場v2.8方式） */
+      const s=["sauna","water","air","clean"].map(k=>r1((v.axes[k]||0)/5)); s.push(2.5);
+      sc={s, x:r1((v.adj||0)/4), why:v.adjReason||"", v:2};
     }
-  }catch(e){}
+    state.visits.push({id:uid(), fid, date:v.date||today(), sc, paid:null, note:v.memo||v.note||""});
+    state.imported[sig]=1; r.added++;
+  }
+  for(const w of (st.wants||[])) if(byId[w]&&!state.wants[w]) state.wants[w]=today();
+}
+function impDojo(st, r){
+  if(!st||!st.stamps) return;
+  r.foundDojo=true; r.srcDojo=Object.keys(st.stamps).length;
+  for(const fid in st.stamps){
+    if(!byId[fid]){ r.skipped++; continue; }
+    const sig="dojo:"+fid;
+    if(state.imported[sig]){ r.dup++; continue; }
+    const scr=(st.scores||{})[fid];
+    const sc=scr?{s:scr.s.slice(0,5).map(r1), x:r1(scr.x||0), why:scr.why||"", v:2}:null;
+    const paid=(st.paid||{})[fid];
+    state.visits.push({id:uid(), fid, date:st.stamps[fid], sc, paid:paid??null, note:""});
+    state.imported[sig]=1; r.added++;
+  }
+  for(const w in (st.wants||{})) if(byId[w]&&!state.wants[w]) state.wants[w]=today();
+}
+function impFinish(r){
   state.visits.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   reindex(); save(); renderAll();
-  notify(added
-    ?`${added}件の記録を取り込みました${ufacsAdded?`／自分で登録した${ufacsAdded}湯も`:""}${skipped?`（${skipped}件はもとの施設が分からず取り込めませんでした）`:""}（元アプリの写真の取り込みは未対応）`
-    :"新しく取り込める記録はありませんでした");
+  if(r.added){
+    notify(`${r.added}件の記録を取り込みました`
+      +(r.ufacsAdded?`／自分で登録した${r.ufacsAdded}湯も`:"")
+      +(r.skipped?`（${r.skipped}件はもとの施設が分からず取り込めませんでした）`:"")
+      +"（元アプリの写真の取り込みは未対応）");
+    return;
+  }
+  /* 0件のときこそ理由を出す。「取り込めない」で止まらせない */
+  if(!r.found470s&&!r.foundDojo){
+    notify("このブラウザに470s・サ道場の記録が見つかりませんでした。別の端末やブラウザの記録は読めません——その場合は下の「バックアップファイルから取り込む」を使ってください。","err");
+  }else if(r.dup&&!r.skipped){
+    notify(`すでに全部取り込み済みです（${r.dup}件）。`);
+  }else if(r.skipped){
+    notify(`${r.skipped}件はもとの施設がカタログに無いため取り込めませんでした。`,"err");
+  }else{
+    notify("元アプリに記録がありませんでした。");
+  }
+}
+const impNew=()=>({added:0,ufacsAdded:0,skipped:0,dup:0,found470s:false,foundDojo:false,src470s:0,srcDojo:0});
+
+document.getElementById("importBtn").addEventListener("click",()=>{
+  const r=impNew();
+  try{ const raw=localStorage.getItem("sauna30:v2"); if(raw) imp470s(JSON.parse(raw), r); }catch(e){}
+  try{ const raw=localStorage.getItem("sadojo:v1"); if(raw) impDojo(JSON.parse(raw), r); }catch(e){}
+  impFinish(r);
+});
+/* バックアップJSONから取り込む。470sは {state:{...},photos:[...]}、
+   サ道場・ととのい帳も state を持つので、中身の形で見分ける */
+document.getElementById("impFileBtn").addEventListener("click",()=>document.getElementById("impFile").click());
+document.getElementById("impFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; e.target.value="";
+  if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let d;
+    try{ d=JSON.parse(rd.result); }catch(err){ notify("読めないファイルでした。","err"); return; }
+    const st=d&&d.state?d.state:d;
+    const r=impNew();
+    if(st&&Array.isArray(st.visits)&&st.visits.some(v=>v&&v.facilityId!==undefined)) imp470s(st,r);
+    else if(st&&st.stamps) impDojo(st,r);
+    else if(st&&Array.isArray(st.visits)){ notify("これはととのい帳のバックアップです。記録タブの「読み込む」から復元してください。","err"); return; }
+    else { notify("470s・サ道場のバックアップではないようです。","err"); return; }
+    impFinish(r);
+  };
+  rd.readAsText(f);
 });
 
 /* ---------- 写真（IndexedDB totonoi/photos。1訪問=1枚、1280px JPEG圧縮） ---------- */
