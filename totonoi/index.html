@@ -330,6 +330,9 @@
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn" id="manualBtn" style="flex:1">手動で記録する（施設を検索）</button>
     </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn" id="pasteBtn" style="flex:1">サウナイキタイのURLから追加</button>
+    </div>
     <div id="logbox"></div>
     <div class="sect">
       <div class="eyebrow">元アプリから引き継ぐ</div>
@@ -395,7 +398,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-beta.1";
+const APP_VERSION = "2.0.0-beta.2";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -434,6 +437,9 @@ if(!state.obs) state.obs={};  /* 観測層：{fid:{tags:[],memo,at}} スキー�
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 let byId={};
 function reindex(){ byId=Object.fromEntries(FACILITIES.concat(state.ufacs).map(f=>[f.id,f])); }
+/* 貼り付け登録の施設は座標が空のことがある（あとで現地のGPSで確定する）。
+   距離計算・地図ピンはこのガードを通してから使う */
+const hasPos=f=>!!f&&typeof f.lat==="number"&&typeof f.lng==="number";
 reindex();
 const visitsOf=fid=>state.visits.filter(v=>v.fid===fid);
 const visited=fid=>visitsOf(fid).length>0;
@@ -1350,13 +1356,14 @@ document.getElementById("stampBtn").addEventListener("click",()=>{
     btn.disabled=false; btn.textContent="現在地で押印";
     const p={lat:pos.coords.latitude,lng:pos.coords.longitude};
     lastPos=p;
-    const all=FACILITIES.concat(state.ufacs);
+    const all=FACILITIES.concat(state.ufacs).filter(hasPos);
     const near=all.map(f=>({f,d:distance(p,f)})).filter(x=>x.d<=state.radius).sort((a,b)=>a.d-b.d);
     if(!near.length){
       const nearest=all.map(f=>({f,d:distance(p,f)})).sort((a,b)=>a.d-b.d)[0];
       openSheet(sheetHead("近くに収録施設がありません")+`
         <p class="settext">半径${state.radius}m以内に施設なし。最寄りは ${esc(nearest.f.name)}（約${Math.round(nearest.d)}m）。</p>
-        <button class="btn primary" style="width:100%;margin-top:12px" onclick="window.__regHere(${p.lat},${p.lng})">この場所の施設を新規登録して押印</button>`);
+        <button class="btn primary" style="width:100%;margin-top:12px" onclick="window.__regHere(${p.lat},${p.lng})">この場所の施設を新規登録して押印</button>
+        <div class="linkrow" style="justify-content:center;margin-top:9px"><a href="#" onclick="window.__paste();return false">サウナイキタイのURLから追加する</a></div>`);
     }else if(near.length===1){ geoVerify(near[0].f.id); addVisit(near[0].f.id); }
     else openSheet(sheetHead("どの施設にいますか？")+near.slice(0,6).map(x=>
       `<button class="choosebtn" onclick="window.__gps('${x.f.id}')"><span>${esc(x.f.name)}</span><span class="d">${Math.round(x.d)}m</span></button>`).join(""));
@@ -1370,6 +1377,126 @@ window.__regHere=(lat,lng)=>{
   const nf={id:"u"+Date.now(), name, lat, lng, u:1};
   state.ufacs.push(nf); reindex(); save();
   closeSheet(); addVisit(nf.id);
+};
+
+/* ---------- サウナイキタイから追加（貼り付け欄） ----------
+   サウナイキタイの前段にAWS WAFのチャレンジが入るので、ブラウザからのfetchでは
+   施設ページを取れない（空の200が返って「取れたように見える」のが最悪なので採らない）。
+   代わりに「貼られたテキストを解釈する」方式にした。URL・ページを全選択したコピペ・
+   Googleマップのリンク・素の座標、どれを貼っても読める。
+   読み取れなかった項目は空のままにして推測で埋めない（実データ主義）。
+   サウナイキタイidを持たせておくので、あとで正式にカタログへ収録しても押印が孤立しない */
+/* PREFのlabelは「岐阜」「東京」など接尾辞なし。住所は「岐阜県」「東京都」と書かれるので両方引けるようにする */
+const PREF_BY_LABEL=(()=>{ const m={}; for(const k in PREF){ const l=PREF[k].label; m[l]=k; m[l+"県"]=k; m[l+"府"]=k; m[l+"都"]=k; } return m; })();
+const PREF_RE="北海道|東京都|大阪府|京都府|[^\\s]{2,3}県";
+let _bySid=null;
+function bySid(){ if(!_bySid){ _bySid={}; for(const f of FACILITIES) if(f.sid!=null) _bySid[f.sid]=f; } return _bySid; }
+
+function parsePaste(txt){
+  const t=String(txt||"").replace(/　/g," ");
+  const out={sid:null,lat:null,lng:null,name:"",pref:"",city:""};
+  const m=t.match(/sauna-ikitai\.com\/saunas\/(\d+)/);
+  if(m) out.sid=+m[1];
+  /* 座標：Googleマップの各URL形と、素の「35.123456, 136.789012」。日本の範囲内だけ採る */
+  for(const re of [/@(-?\d{1,3}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})/,
+                   /[?&]q=(-?\d{1,3}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})/,
+                   /!3d(-?\d{1,3}\.\d{3,})!4d(-?\d{1,3}\.\d{3,})/,
+                   /(?:^|[^\d.\-])(-?\d{1,3}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/m]){
+    const c=t.match(re); if(!c) continue;
+    const la=+c[1], ln=+c[2];
+    if(la>=20&&la<=46&&ln>=122&&ln<=154){ out.lat=la; out.lng=ln; break; }
+  }
+  /* 住所行から都道府県・市区町村（ページのコピペにだけ現れる） */
+  const ad=t.match(new RegExp("("+PREF_RE+")\\s*([^\\s\\d]{1,10}?[市区町村])"));
+  if(ad){ out.pref=PREF_BY_LABEL[ad[1]]||""; out.city=ad[2]; }
+  /* 施設名：住所行の直前の行を採る（サウナイキタイの施設ページの並び） */
+  const lines=t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const i=lines.findIndex(l=>new RegExp("^("+PREF_RE+")").test(l));
+  if(i>0){
+    const cand=lines[i-1];
+    if(cand.length<=40&&!/^https?:/.test(cand)&&!/サウナイキタイ|イキタイ|サ活|検索|ログイン/.test(cand)) out.name=cand;
+  }
+  return out;
+}
+
+window.__paste=pre=>{
+  openSheet(sheetHead("サウナイキタイから追加")+`
+    <p class="settext">施設ページのURLを貼ってください。<b>ページを全選択してコピーしたテキスト</b>や、Googleマップのリンク・座標も一緒に貼ると、名前と場所まで読み取ります。</p>
+    <textarea id="pstx" class="input" rows="4" style="margin-top:9px;resize:vertical;line-height:1.6" placeholder="https://sauna-ikitai.com/saunas/12345"></textarea>
+    <div class="fbtnrow" style="margin-top:9px"><button class="btn primary" onclick="window.__psRead()">読み取る</button></div>
+    <div id="psout" style="margin-top:10px"></div>`);
+  const el=document.getElementById("pstx");
+  if(pre&&el) el.value=pre;
+  if(el) el.focus();
+};
+
+function psRow(f,note){
+  return `<button class="frow" style="margin-top:8px" onclick="window.__fac('${f.id}')">
+    <span class="nm">${esc(f.name)}</span>
+    <span class="ct">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}${note?"<br>"+esc(note):""}</span></button>`;
+}
+
+window.__psRead=()=>{
+  const out=document.getElementById("psout"); if(!out) return;
+  const r=parsePaste((document.getElementById("pstx")||{}).value||"");
+  if(r.sid==null&&!r.name&&r.lat==null){
+    out.innerHTML=`<p class="settext" style="color:var(--stamp)">読み取れませんでした。サウナイキタイの施設ページのURL（<code>.../saunas/12345</code>）を含めて貼ってください。</p>`;
+    return;
+  }
+  /* すでにある湯なら、登録させずにそのページへ送る（重複を作らせない） */
+  if(r.sid!=null){
+    const hit=bySid()[r.sid];
+    if(hit){ out.innerHTML=`<p class="settext">この湯は<b>すでに収録されています</b>。</p>`+psRow(hit); return; }
+    const mine=state.ufacs.find(f=>f.sid===r.sid);
+    if(mine){ out.innerHTML=`<p class="settext">この湯は<b>すでに自分で登録済み</b>です。</p>`+psRow(mine); return; }
+  }
+  const prefOpts=Object.keys(PREF).map(k=>`<option value="${k}"${k===r.pref?" selected":""}>${PREF[k].label}</option>`).join("");
+  out.innerHTML=`
+    <div class="eyebrow">読み取った内容</div>
+    <p class="settext">違うところは直してください。空のままでも登録できます。</p>
+    <input id="psName" class="input" style="margin-top:8px" placeholder="施設名（必須）" value="${esc(r.name)}">
+    <select id="psPref" class="input" style="margin-top:8px"><option value="">都道府県（任意）</option>${prefOpts}</select>
+    <input id="psCity" class="input" style="margin-top:8px" placeholder="市区町村（任意）" value="${esc(r.city)}">
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="psLat" class="input" style="flex:1" inputmode="decimal" placeholder="緯度（任意）" value="${r.lat!=null?r.lat:""}">
+      <input id="psLng" class="input" style="flex:1" inputmode="decimal" placeholder="経度（任意）" value="${r.lng!=null?r.lng:""}">
+    </div>
+    <p class="settext" style="margin-top:6px">${r.lat!=null
+      ?"座標を読み取りました。"
+      :"<b>座標は読み取れていません。</b>コピペには含まれない項目です。空のまま登録しても記録はできます（地図に出ないだけ）。次にその湯へ行ってGPSで押印すれば、そのとき確定できます。"}</p>
+    ${r.sid!=null?`<p class="settext" style="margin-top:6px">サウナイキタイ #${r.sid} として覚えます。あとで正式に収録されても、押した判子は引き継がれます。</p>`:""}
+    <div class="fbtnrow" style="margin-top:10px">
+      <button class="btn primary" onclick="window.__psSave(${r.sid==null?"null":r.sid})">この湯を追加する</button>
+    </div>
+    <div id="pswarn"></div>`;
+};
+
+window.__psSave=(sid,force)=>{
+  const g=id=>(document.getElementById(id)||{}).value||"";
+  const name=g("psName").trim();
+  if(!name){ notify("施設名を入れてください。","err"); return; }
+  const la=parseFloat(g("psLat")), ln=parseFloat(g("psLng"));
+  const pos=(isFinite(la)&&isFinite(ln)&&la>=20&&la<=46&&ln>=122&&ln<=154)?{lat:la,lng:ln}:null;
+  if((g("psLat").trim()||g("psLng").trim())&&!pos){ notify("座標が日本の範囲外です。空にするか直してください。","err"); return; }
+  /* 座標があるなら近接チェック。250m以内に既存があれば、そちらを先に見せる */
+  if(pos&&!force){
+    const near=FACILITIES.concat(state.ufacs).filter(hasPos)
+      .map(f=>({f,d:distance(pos,f)})).filter(x=>x.d<=250).sort((a,b)=>a.d-b.d)[0];
+    if(near){
+      const w=document.getElementById("pswarn");
+      if(w){ w.innerHTML=`<p class="settext" style="margin-top:10px;color:var(--stamp)">約${Math.round(near.d)}m先に<b>${esc(near.f.name)}</b>があります。同じ湯ではありませんか？</p>`
+        +psRow(near.f,"こちらを開く")
+        +`<div class="fbtnrow" style="margin-top:8px"><button class="btn" onclick="window.__psSave(${sid==null?"null":sid},1)">別の湯として追加する</button></div>`; }
+      return;
+    }
+  }
+  const nf={id:"u"+Date.now(), name, lat:pos?pos.lat:null, lng:pos?pos.lng:null, u:1};
+  if(sid!=null) nf.sid=sid;
+  const pf=g("psPref"); if(pf) nf.pref=pf;
+  const ct=g("psCity").trim(); if(ct) nf.city=ct;
+  state.ufacs.push(nf); reindex(); save(); renderAll();
+  closeSheet(); openFac(nf.id);
+  notify("追加しました。ここから押印できます。");
 };
 
 /* ---------- 探す ---------- */
@@ -1527,6 +1654,7 @@ function renderMap(){
     s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(3)}" fill="none" stroke="#6F9A63" stroke-width="${z(1)}"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${z(1.2)}" fill="#6F9A63"/>`;
   }
   for(const f of state.ufacs){
+    if(!hasPos(f)) continue;
     const on=visited(f.id), x=px(f), y=py(f);
     mapPins.push({id:f.id,x,y});
     s+=`<g style="cursor:pointer">`;
@@ -1693,11 +1821,13 @@ document.getElementById("manualBtn").addEventListener("click",()=>{
     if(!q){ res.innerHTML=`<p class="settext">569湯＋自分の登録から探せます。</p>`; return; }
     const hits=FACILITIES.concat(state.ufacs).filter(f=>(f.name+(f.city||"")).includes(q)).slice(0,20);
     res.innerHTML=hits.map(f=>`<button class="frow" onclick="window.__fac('${f.id}')">
-      <span class="nm">${esc(f.name)}</span><span class="ct">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}</span></button>`).join("")||`<p class="settext">見つかりません。</p>`;
+      <span class="nm">${esc(f.name)}</span><span class="ct">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}</span></button>`).join("")
+      ||`<p class="settext">見つかりません。</p><div class="linkrow" style="margin-top:6px"><a href="#" onclick="window.__paste();return false">サウナイキタイのURLから追加する</a></div>`;
   };
   run("");
   document.getElementById("mq").addEventListener("input",e=>run(e.target.value));
 });
+document.getElementById("pasteBtn").addEventListener("click",()=>window.__paste());
 
 /* ---------- 取り込み（470s・サ道場の同一オリジンlocalStorageから。冪等。写真はv2.1） ---------- */
 document.getElementById("importBtn").addEventListener("click",()=>{
