@@ -1483,13 +1483,23 @@ function addrGrain(q){
   if(/[市区町村]/.test(q)) return {lv:"city", label:"市区町村まで", note:"実測では中央値2.7kmずれました。番地まで入れてください"};
   return {lv:"none", label:"", note:""};
 }
-/* 前の住所で引いた概算座標を残したまま「見つかりません」と出すと、
-   別の場所の座標が入ったまま保存されてしまう。自分で打った座標（approx以外）は消さない */
+/* 住所から引いた座標の「出自」を、値そのもので持つ。
+   フラグだけで持つと、手で座標を直したあとも概算のままになる（緯度だけ・経度だけの
+   修正を取りこぼす）。引いたときに入力欄へ書いた文字列と、いまの入力欄を突き合わせて、
+   どちらか一方でも変わっていれば「もう概算ではない＝自分で決めた座標」とみなす */
+let geoGot=null;
+function isApproxNow(){
+  if(!geoGot) return false;
+  const la=(document.getElementById("psLat")||{}).value, ln=(document.getElementById("psLng")||{}).value;
+  return String(la).trim()===geoGot.lat && String(ln).trim()===geoGot.lng;
+}
+/* 前の住所で引いた概算座標を残したまま「見つかりません」と出すと、別の場所の座標が
+   入ったまま保存されてしまう。ただし手で直した座標は消さない */
 function clearApprox(){
-  if((document.getElementById("psApprox")||{}).value!=="1") return;
+  if(!isApproxNow()) return;
   const la=document.getElementById("psLat"), ln=document.getElementById("psLng");
   if(la) la.value=""; if(ln) ln.value="";
-  document.getElementById("psApprox").value="";
+  geoGot=null;
 }
 window.__geoAddr=async ()=>{
   const el=document.getElementById("psAddr"), out=document.getElementById("psgeo");
@@ -1500,9 +1510,10 @@ window.__geoAddr=async ()=>{
   try{
     const g=await geocodeAddr(q);
     if(!g){ clearApprox(); if(out) out.innerHTML=`<p class="settext" style="color:var(--stamp);margin-top:6px">この住所では見つかりませんでした。番地まで入れると当たりやすくなります。</p>`; return; }
-    document.getElementById("psLat").value=g.lat.toFixed(6);
-    document.getElementById("psLng").value=g.lng.toFixed(6);
-    document.getElementById("psApprox").value="1";
+    const la=g.lat.toFixed(6), ln=g.lng.toFixed(6);
+    document.getElementById("psLat").value=la;
+    document.getElementById("psLng").value=ln;
+    geoGot={lat:la, lng:ln};
     const gr=addrGrain(q);
     if(out) out.innerHTML=`<p class="settext" style="margin-top:6px">「${esc(g.title||q)}」の位置を入れました（<b>${gr.label}の住所</b>。${esc(gr.note)}）。<br><b>これはおおよその場所です。</b>地図には破線で出て、GPS押印の判定には使いません。次にその湯へ行って「現在地を登録する」を押せば正確になります。</p>`;
   }catch(e){
@@ -1514,6 +1525,7 @@ window.__geoAddr=async ()=>{
 };
 
 window.__paste=pre=>{
+  geoGot=null;
   openSheet(sheetHead("サウナイキタイから追加")+`
     <p class="settext">施設ページのURLを貼ってください。<b>ページを全選択してコピーしたテキスト</b>や、Googleマップのリンク・座標も一緒に貼ると、名前と場所まで読み取ります。</p>
     <textarea id="pstx" class="input" rows="4" style="margin-top:9px;resize:vertical;line-height:1.6" placeholder="https://sauna-ikitai.com/saunas/12345"></textarea>
@@ -1532,6 +1544,7 @@ function psRow(f,note){
 
 window.__psRead=()=>{
   const out=document.getElementById("psout"); if(!out) return;
+  geoGot=null;
   const r=parsePaste((document.getElementById("pstx")||{}).value||"");
   if(r.sid==null&&!r.name&&r.lat==null){
     out.innerHTML=`<p class="settext" style="color:var(--stamp)">読み取れませんでした。サウナイキタイの施設ページのURL（<code>.../saunas/12345</code>）を含めて貼ってください。</p>`;
@@ -1558,7 +1571,6 @@ window.__psRead=()=>{
       <input id="psLat" class="input" style="flex:1" inputmode="decimal" placeholder="緯度（任意）" value="${r.lat!=null?r.lat:""}">
       <input id="psLng" class="input" style="flex:1" inputmode="decimal" placeholder="経度（任意）" value="${r.lng!=null?r.lng:""}">
     </div>
-    <input type="hidden" id="psApprox" value="">
     <p class="settext" style="margin-top:6px">${r.lat!=null
       ?"座標を読み取りました。"
       :"<b>座標は読み取れていません。</b>上の住所から調べるか、空のままでも登録できます（記録はできて、地図に出ないだけ）。次にその湯へ行ってGPSで押印すれば確定します。"}</p>
@@ -1577,7 +1589,7 @@ window.__psSave=(sid,force)=>{
   const pos=(isFinite(la)&&isFinite(ln)&&la>=20&&la<=46&&ln>=122&&ln<=154)?{lat:la,lng:ln}:null;
   if((g("psLat").trim()||g("psLng").trim())&&!pos){ notify("座標が日本の範囲外です。空にするか直してください。","err"); return; }
   /* 座標があるなら近接チェック。250m以内に既存があれば、そちらを先に見せる */
-  if(pos&&!force&&(document.getElementById("psApprox")||{}).value!=="1"){
+  if(pos&&!force&&!isApproxNow()){
     const near=FACILITIES.concat(state.ufacs).filter(exactPos)
       .map(f=>({f,d:distance(pos,f)})).filter(x=>x.d<=250).sort((a,b)=>a.d-b.d)[0];
     if(near){
@@ -1589,9 +1601,8 @@ window.__psSave=(sid,force)=>{
     }
   }
   const nf={id:"u"+Date.now(), name, lat:pos?pos.lat:null, lng:pos?pos.lng:null, u:1};
-  /* 住所から引いた座標は概算。自分で座標を打ち直したときは approx を落とす */
-  const ap=(document.getElementById("psApprox")||{}).value;
-  if(pos&&ap==="1"&&g("psLat")===String(pos.lat.toFixed(6))) nf.approx=1;
+  /* 住所から引いた座標は概算。緯度・経度どちらか一方でも打ち直されていれば概算ではない */
+  if(pos&&isApproxNow()) nf.approx=1;
   if(sid!=null) nf.sid=sid;
   const pf=g("psPref"); if(pf) nf.pref=pf;
   const ct=g("psCity").trim(); if(ct) nf.city=ct;
