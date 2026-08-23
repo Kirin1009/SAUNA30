@@ -1591,7 +1591,7 @@ window.__geoAddr=async ()=>{
 };
 
 window.__paste=pre=>{
-  geoGot=null; psR=null; psForceName=false;
+  geoGot=null; psR=null; psForceKey=null;
   openSheet(sheetHead("リストにない湯を追加")+`
     <p class="settext"><b>湯の名前だけでも登録できます。</b>サウナイキタイのURL・ページを全選択したコピペ・Googleマップのリンク・住所や座標を一緒に貼れば、そのぶん自動で埋まります。</p>
     <textarea id="pstx" class="input" rows="4" style="margin-top:9px;resize:vertical;line-height:1.6" placeholder="例）大垣サウナ&#10;https://sauna-ikitai.com/saunas/12345"></textarea>
@@ -1622,7 +1622,10 @@ function nameMatches(name){
     return m===n || m.includes(n) || n.includes(m);
   }).slice(0,6);
 }
-let psR=null, psForceName=false;
+/* 「別の湯として追加する」は、そのとき見せた名前に対する承認。真偽値で持つと、
+   承認後にフォームで別名へ書き換えたときまで検査を素通りしてしまう。
+   承認した正規化名だけを覚えて、保存時の名前が変わっていたら検査をやり直す */
+let psR=null, psForceKey=null;
 
 function psFormHTML(r){
   const prefOpts=Object.keys(PREF).map(k=>`<option value="${k}"${k===r.pref?" selected":""}>${PREF[k].label}</option>`).join("");
@@ -1648,20 +1651,29 @@ function psFormHTML(r){
     </div>
     <div id="pswarn"></div>`;
 }
-/* 同名候補の提示。既存を開くのが主で、追加は明示操作にする */
-function psCandHTML(cands, msg){
+/* 同名候補の提示。既存を開くのが主で、追加は明示操作にする。
+   fromForm=true は保存時の警告（入力済みのフォームを壊さずに承認だけ受ける） */
+function psCandHTML(cands, msg, fromForm){
   return `<p class="settext">${msg}</p>`+cands.map(f=>psRow(f)).join("")
-    +`<div class="fbtnrow" style="margin-top:9px"><button class="btn" onclick="window.__psAnyway()">別の湯として追加する</button></div>`;
+    +`<div class="fbtnrow" style="margin-top:9px"><button class="btn" onclick="window.__psAnyway(${fromForm?1:0})">別の湯として追加する</button></div>`;
 }
-window.__psAnyway=()=>{
-  psForceName=true;
+window.__psAnyway=fromForm=>{
+  if(fromForm){
+    /* いま入力されている名前に対する承認。フォームは描き直さない */
+    const nm=((document.getElementById("psName")||{}).value||"").trim();
+    psForceKey=normName(nm);
+    const w=document.getElementById("pswarn"); if(w) w.innerHTML="";
+    notify("別の湯として追加します。もう一度「この湯を追加する」を押してください。");
+    return;
+  }
+  psForceKey=normName((psR&&psR.name)||"");
   const out=document.getElementById("psout");
   if(out&&psR) out.innerHTML=psFormHTML(psR);
 };
 
 window.__psRead=()=>{
   const out=document.getElementById("psout"); if(!out) return;
-  geoGot=null; psForceName=false;
+  geoGot=null; psForceKey=null;
   const raw=(document.getElementById("pstx")||{}).value||"";
   const r=parsePaste(raw);
   if(!raw.trim()){
@@ -1696,12 +1708,12 @@ window.__psSave=(sid,force)=>{
   const g=id=>(document.getElementById(id)||{}).value||"";
   const name=g("psName").trim();
   if(!name){ notify("施設名を入れてください。","err"); return; }
-  /* フォームで名前を書き換えた場合もここで拾う */
-  if(!psForceName){
+  /* 承認は「そのとき見せた名前」に対してのみ有効。書き換えられていたら検査し直す */
+  if(psForceKey===null||normName(name)!==psForceKey){
     const c=nameMatches(name);
     if(c.length){
       const w=document.getElementById("pswarn");
-      if(w) w.innerHTML=`<div style="margin-top:10px">`+psCandHTML(c,`<b style="color:var(--stamp)">同じ名前の湯がすでにあります。</b>こちらではありませんか？`)+`</div>`;
+      if(w) w.innerHTML=`<div style="margin-top:10px">`+psCandHTML(c,`<b style="color:var(--stamp)">同じ名前の湯がすでにあります。</b>こちらではありませんか？`,1)+`</div>`;
       return;
     }
   }
