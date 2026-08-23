@@ -833,6 +833,14 @@ function openVisit(vid){
       <p style="text-align:center"><button class="btn" style="padding:6px 12px;font-size:11px" onclick="window.__phAdd('${v.id}')">写真を差し替え</button>
       <button class="btn" style="padding:6px 12px;font-size:11px;color:var(--stamp)" onclick="window.__phDel('${v.id}')">写真を削除</button></p>`
       :`<p style="text-align:center;margin:10px 0 2px"><button class="btn" onclick="window.__phAdd('${v.id}')">📷 写真を添える</button></p>`}
+    ${v.ax?`<div style="margin:10px 4px 0;border-top:1.5px dashed var(--line2);padding-top:9px">
+      ${AXES.map((a,i)=>{ const c=v.ax[i]; if(!c||(!c.p&&!c.m)) return "";
+        return `<div style="margin-bottom:7px">
+          <div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em">${a}</div>
+          ${c.p?`<div style="font-size:12.5px;line-height:1.75"><span style="color:var(--ok);font-weight:700">＋</span> ${esc(c.p)}</div>`:""}
+          ${c.m?`<div style="font-size:12.5px;line-height:1.75"><span style="color:var(--stamp);font-weight:700">−</span> ${esc(c.m)}</div>`:""}
+        </div>`; }).join("")}
+    </div>`:""}
     ${v.note?`<p style="font-size:13px;color:var(--mid);line-height:1.9;margin:10px 4px 0;border-top:1.5px dashed var(--line2);padding-top:10px">${esc(v.note)}</p>`:""}
     <div class="fbtnrow">
       <button class="btn" onclick="window.__score('${v.id}')">${v.sc?"採点・メモを編集":"採点・メモを書く"}</button>
@@ -1261,6 +1269,15 @@ function openScore(vid){
         <button class="axbtn" onclick="window.__axOpen('${v.fid}',${i},this)">🏷 タグ</button></span><b class="mono" id="sv${i}">${fmt1(sc.s[i])}</b></div>
       <input type="range" min="0" max="5" step="0.1" value="${sc.s[i]}" id="sx${i}">
       <div id="axobs${i}" style="display:none;margin:2px 0 4px">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="axp${i}" class="input" style="flex:1;padding:6px 10px;font-size:12px" maxlength="80"
+                 placeholder="＋ よかったこと" value="${esc((v.ax&&v.ax[i]&&v.ax[i].p)||"")}">
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="axm${i}" class="input" style="flex:1;padding:6px 10px;font-size:12px" maxlength="80"
+                 placeholder="− 気になったこと" value="${esc((v.ax&&v.ax[i]&&v.ax[i].m)||"")}">
+        </div>
+        <p class="settext" style="font-size:9.5px;margin:-2px 0 6px">上の2つは<b>この日の記録</b>。下のタグと温度は<b>施設の観測</b>（訪問をまたいで残る）</p>
         <div id="axchips${i}"></div>
         <div style="display:flex;gap:6px;margin-top:5px">
           <input id="axinp${i}" class="input" style="flex:1;padding:6px 10px;font-size:12px" placeholder="自由タグ（この施設の${a}について）">
@@ -1290,6 +1307,19 @@ function openScore(vid){
       <button class="btn" id="scSkip">${v.sc?"閉じる":"採点せず閉じる"}</button>
     </div>`);
   const cur=()=>({ s:AXES.map((_,i)=>r1(+document.getElementById("sx"+i).value)), x:r1(+document.getElementById("sxx").value), why:document.getElementById("swhy").value.trim(), v:2 });
+  /* 軸ごとの＋/−は「その日の感想」なので訪問に持たせる（v.ax）。
+     採点そのものとは別扱いにして、採点せず閉じても消えないようにする。
+     空の軸は入れない＝バックアップも太らせない */
+  const axCur=()=>{
+    const out={};
+    AXES.forEach((_,i)=>{
+      const pe=document.getElementById("axp"+i), me=document.getElementById("axm"+i);
+      const pv=pe?pe.value.trim():((v.ax&&v.ax[i]&&v.ax[i].p)||"");
+      const mv=me?me.value.trim():((v.ax&&v.ax[i]&&v.ax[i].m)||"");
+      if(pv||mv){ out[i]={}; if(pv) out[i].p=pv; if(mv) out[i].m=mv; }
+    });
+    return Object.keys(out).length?out:null;
+  };
   const upd=()=>{ const c=cur();
     AXES.forEach((_,i)=>document.getElementById("sv"+i).textContent=fmt1(c.s[i]));
     document.getElementById("svx").textContent=(c.x>0?"+":"")+fmt1(c.x);
@@ -1300,16 +1330,18 @@ function openScore(vid){
     const c=cur();
     if(c.x!==0&&!c.why){ notify("特別加減点の理由を書いてください。","err"); return; }
     v.sc=c;
+    const ax=axCur(); if(ax) v.ax=ax; else delete v.ax;
     const yen=parseInt(document.getElementById("spaid").value,10);
     v.paid=(yen>=0&&isFinite(yen))?yen:null;
     v.note=document.getElementById("snote").value.trim();
     save(); renderAll(); closeSheet(); notify("帳に書き込みました");
   });
   document.getElementById("scSkip").addEventListener("click",()=>{
-    /* 採点は飛ばしてもメモと支払は拾う */
+    /* 採点は飛ばしてもメモ・支払・軸ごとの＋/−は拾う */
     const yen=parseInt(document.getElementById("spaid").value,10);
     if(yen>=0&&isFinite(yen)) v.paid=yen;
     const nt=document.getElementById("snote").value.trim(); if(nt) v.note=nt;
+    const ax=axCur(); if(ax) v.ax=ax;
     save(); renderAll(); closeSheet();
   });
 }
