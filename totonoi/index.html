@@ -331,7 +331,7 @@
       <button class="btn" id="manualBtn" style="flex:1">手動で記録する（施設を検索）</button>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn" id="pasteBtn" style="flex:1">サウナイキタイのURLから追加</button>
+      <button class="btn" id="pasteBtn" style="flex:1">リストにない湯を追加する</button>
     </div>
     <div id="logbox"></div>
     <div class="sect">
@@ -398,7 +398,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-beta.2";
+const APP_VERSION = "2.0.0-beta.3";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -440,6 +440,12 @@ function reindex(){ byId=Object.fromEntries(FACILITIES.concat(state.ufacs).map(f
 /* 貼り付け登録の施設は座標が空のことがある（あとで現地のGPSで確定する）。
    距離計算・地図ピンはこのガードを通してから使う */
 const hasPos=f=>!!f&&typeof f.lat==="number"&&typeof f.lng==="number";
+/* 住所から引いた概算座標（approx）は「だいたいの場所」でしかない。
+   実測（国土地理院・カタログの実座標との比較）で、番地まで入った住所なら数十m、
+   町丁目どまりだと中央値628m・最大14kmずれた。押印半径は既定300mなので、
+   概算をGPS押印の判定に使うと現地にいるのに拾えない／隣を拾う。
+   だから地図には出すが、GPS判定と近接重複チェックからは外す */
+const exactPos=f=>hasPos(f)&&!f.approx;
 reindex();
 const visitsOf=fid=>state.visits.filter(v=>v.fid===fid);
 const visited=fid=>visitsOf(fid).length>0;
@@ -827,6 +833,14 @@ function openVisit(vid){
       <p style="text-align:center"><button class="btn" style="padding:6px 12px;font-size:11px" onclick="window.__phAdd('${v.id}')">写真を差し替え</button>
       <button class="btn" style="padding:6px 12px;font-size:11px;color:var(--stamp)" onclick="window.__phDel('${v.id}')">写真を削除</button></p>`
       :`<p style="text-align:center;margin:10px 0 2px"><button class="btn" onclick="window.__phAdd('${v.id}')">📷 写真を添える</button></p>`}
+    ${v.ax?`<div style="margin:10px 4px 0;border-top:1.5px dashed var(--line2);padding-top:9px">
+      ${AXES.map((a,i)=>{ const c=v.ax[i]; if(!c||(!c.p&&!c.m)) return "";
+        return `<div style="margin-bottom:7px">
+          <div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em">${a}</div>
+          ${c.p?`<div style="font-size:12.5px;line-height:1.75"><span style="color:var(--ok);font-weight:700">＋</span> ${esc(c.p)}</div>`:""}
+          ${c.m?`<div style="font-size:12.5px;line-height:1.75"><span style="color:var(--stamp);font-weight:700">−</span> ${esc(c.m)}</div>`:""}
+        </div>`; }).join("")}
+    </div>`:""}
     ${v.note?`<p style="font-size:13px;color:var(--mid);line-height:1.9;margin:10px 4px 0;border-top:1.5px dashed var(--line2);padding-top:10px">${esc(v.note)}</p>`:""}
     <div class="fbtnrow">
       <button class="btn" onclick="window.__score('${v.id}')">${v.sc?"採点・メモを編集":"採点・メモを書く"}</button>
@@ -888,6 +902,7 @@ function openFac(fid, showAll){
   /* 貼り付けで登録した施設は座標が空のことがある。その状態では地図に出せないので、
      現地で座標を確定する導線を主役にし、行き先リンク（地図・探す）は座標が入るまで出さない */
   const noPos=!!f.u&&!hasPos(f);
+  const approx=!!f.u&&hasPos(f)&&!!f.approx;   /* 住所から引いた概算の場所 */
   const actions=`
     <div class="fbtnrow" style="margin-top:12px">
       ${todayV?`<button class="btn primary" onclick="window.__visit('${todayV.id}')">きょうの記録をひらく</button>`
@@ -895,8 +910,10 @@ function openFac(fid, showAll){
               :`<button class="btn primary" onclick="window.__stampHere('${fid}')">ここで押印</button>`}
       <button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>
     </div>
-    ${noPos&&todayV?`<div class="fbtnrow" style="margin-top:8px"><button class="btn" id="posbtn" onclick="window.__fixPos('${fid}',0)">現在地を登録する</button></div>`:""}
+    ${(noPos&&todayV)||approx?`<div class="fbtnrow" style="margin-top:8px"><button class="btn" id="posbtn" onclick="window.__fixPos('${fid}',0)">現在地を登録する</button></div>`:""}
     ${noPos?`<p class="settext" style="margin-top:8px">この湯はまだ場所が入っていません。<b>その湯にいるときに${todayV?"「現在地を登録する」":"上のボタン"}を押すと、場所が決まります</b>（地図とGPS押印にも出るようになります）。</p>`:""}
+    ${approx?`<p class="settext" style="margin-top:8px">場所は<b>住所から調べたおおよその位置</b>です（地図では破線）。<b>その湯にいるときに「現在地を登録する」を押すと正確になり、GPS押印でも拾えるようになります。</b></p>`:""}
+    ${(noPos||approx)?`<div class="linkrow" style="margin-top:8px"><a href="#" onclick="window.__addrPos('${fid}');return false">住所から場所を入れる</a></div>`:""}
     <div class="linkrow" style="margin-top:9px">
       ${noPos?"":`<a href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener">Googleマップで行く ↗</a>
       <a href="#" onclick="window.__findFac('${fid}');return false">探すタブで見る</a>`}
@@ -1108,6 +1125,39 @@ function openDone(vid,past){
 window.__stampHere=fid=>{ closeSheet(); addVisit(fid); };
 /* 座標なしで登録した自分の施設を、現地で確定する（チャッピー実装レビューP1）。
    ufacs の同じ1件を更新する＝新規登録にはしないので、重複が生まれない */
+/* 現地にいなくても、あとから住所で場所を埋められるようにする。
+   登録時の貼り付け欄だけだと「その場に行かないと座標が入らない」ままになる。
+   ここで入る座標も概算（approx）なので、GPS押印の判定には使わない */
+window.__addrPos=fid=>{
+  const uf=state.ufacs.find(x=>x.id===fid);
+  if(!uf){ notify("この施設は見つかりませんでした。","err"); return; }
+  openSheet(sheetHead("住所から場所を入れる",`<button class="backbtn" onclick="window.__fac('${fid}')">‹ ${esc(uf.name)} のページ</button>`)+`
+    <p class="settext"><b>番地まで入れると正確に出ます。</b>ここで入る場所は「おおよその位置」として扱い、地図には破線で出ます。GPS押印の判定には使いません（その湯で「現在地を登録する」を押すと正確になります）。</p>
+    <input id="apAddr" class="input" style="margin-top:9px" placeholder="例）岐阜県大垣市南頬町3-7-1" value="${esc(uf.addr||"")}">
+    <div class="fbtnrow" style="margin-top:9px"><button class="btn primary" id="apbtn" onclick="window.__addrPosGo('${fid}')">住所から調べて入れる</button></div>
+    <div id="apout"></div>`);
+  const el=document.getElementById("apAddr"); if(el) el.focus();
+};
+window.__addrPosGo=async fid=>{
+  const uf=state.ufacs.find(x=>x.id===fid); if(!uf) return;
+  const q=((document.getElementById("apAddr")||{}).value||"").trim();
+  const out=document.getElementById("apout"), btn=document.getElementById("apbtn");
+  if(!q){ notify("住所を入れてください。","err"); return; }
+  if(btn){ btn.disabled=true; btn.textContent="調べています…"; }
+  try{
+    const g=await geocodeAddr(q);
+    if(!g){ if(out) out.innerHTML=`<p class="settext" style="color:var(--stamp);margin-top:8px">この住所では見つかりませんでした。番地まで入れると当たりやすくなります。</p>`; return; }
+    const gr=addrGrain(q);
+    uf.lat=g.lat; uf.lng=g.lng; uf.approx=1; uf.addr=q;
+    reindex(); save(); renderAll();
+    openFac(fid);
+    notify(`「${g.title||q}」の位置を入れました（${gr.label}）。`);
+  }catch(e){
+    if(out) out.innerHTML=`<p class="settext" style="color:var(--stamp);margin-top:8px">住所を調べられませんでした（圏外かもしれません）。</p>`;
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent="住所から調べて入れる"; }
+  }
+};
 window.__fixPos=(fid,stamp)=>{
   const uf=state.ufacs.find(x=>x.id===fid);
   if(!uf){ notify("この施設は見つかりませんでした。","err"); return; }
@@ -1115,6 +1165,7 @@ window.__fixPos=(fid,stamp)=>{
   if(btn){ btn.disabled=true; btn.textContent="測位中…"; }
   navigator.geolocation.getCurrentPosition(pos=>{
     uf.lat=pos.coords.latitude; uf.lng=pos.coords.longitude;
+    delete uf.approx;   /* 実測で上書きしたので概算フラグは落とす */
     lastPos={lat:uf.lat,lng:uf.lng};
     reindex(); geoVerify(fid); save(); renderAll();
     if(stamp){ closeSheet(); addVisit(fid); }
@@ -1218,6 +1269,15 @@ function openScore(vid){
         <button class="axbtn" onclick="window.__axOpen('${v.fid}',${i},this)">🏷 タグ</button></span><b class="mono" id="sv${i}">${fmt1(sc.s[i])}</b></div>
       <input type="range" min="0" max="5" step="0.1" value="${sc.s[i]}" id="sx${i}">
       <div id="axobs${i}" style="display:none;margin:2px 0 4px">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="axp${i}" class="input" style="flex:1;padding:6px 10px;font-size:12px" maxlength="80"
+                 placeholder="＋ よかったこと" value="${esc((v.ax&&v.ax[i]&&v.ax[i].p)||"")}">
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="axm${i}" class="input" style="flex:1;padding:6px 10px;font-size:12px" maxlength="80"
+                 placeholder="− 気になったこと" value="${esc((v.ax&&v.ax[i]&&v.ax[i].m)||"")}">
+        </div>
+        <p class="settext" style="font-size:9.5px;margin:-2px 0 6px">上の2つは<b>この日の記録</b>。下のタグと温度は<b>施設の観測</b>（訪問をまたいで残る）</p>
         <div id="axchips${i}"></div>
         <div style="display:flex;gap:6px;margin-top:5px">
           <input id="axinp${i}" class="input" style="flex:1;padding:6px 10px;font-size:12px" placeholder="自由タグ（この施設の${a}について）">
@@ -1247,6 +1307,19 @@ function openScore(vid){
       <button class="btn" id="scSkip">${v.sc?"閉じる":"採点せず閉じる"}</button>
     </div>`);
   const cur=()=>({ s:AXES.map((_,i)=>r1(+document.getElementById("sx"+i).value)), x:r1(+document.getElementById("sxx").value), why:document.getElementById("swhy").value.trim(), v:2 });
+  /* 軸ごとの＋/−は「その日の感想」なので訪問に持たせる（v.ax）。
+     採点そのものとは別扱いにして、採点せず閉じても消えないようにする。
+     空の軸は入れない＝バックアップも太らせない */
+  const axCur=()=>{
+    const out={};
+    AXES.forEach((_,i)=>{
+      const pe=document.getElementById("axp"+i), me=document.getElementById("axm"+i);
+      const pv=pe?pe.value.trim():((v.ax&&v.ax[i]&&v.ax[i].p)||"");
+      const mv=me?me.value.trim():((v.ax&&v.ax[i]&&v.ax[i].m)||"");
+      if(pv||mv){ out[i]={}; if(pv) out[i].p=pv; if(mv) out[i].m=mv; }
+    });
+    return Object.keys(out).length?out:null;
+  };
   const upd=()=>{ const c=cur();
     AXES.forEach((_,i)=>document.getElementById("sv"+i).textContent=fmt1(c.s[i]));
     document.getElementById("svx").textContent=(c.x>0?"+":"")+fmt1(c.x);
@@ -1257,16 +1330,18 @@ function openScore(vid){
     const c=cur();
     if(c.x!==0&&!c.why){ notify("特別加減点の理由を書いてください。","err"); return; }
     v.sc=c;
+    const ax=axCur(); if(ax) v.ax=ax; else delete v.ax;
     const yen=parseInt(document.getElementById("spaid").value,10);
     v.paid=(yen>=0&&isFinite(yen))?yen:null;
     v.note=document.getElementById("snote").value.trim();
     save(); renderAll(); closeSheet(); notify("帳に書き込みました");
   });
   document.getElementById("scSkip").addEventListener("click",()=>{
-    /* 採点は飛ばしてもメモと支払は拾う */
+    /* 採点は飛ばしてもメモ・支払・軸ごとの＋/−は拾う */
     const yen=parseInt(document.getElementById("spaid").value,10);
     if(yen>=0&&isFinite(yen)) v.paid=yen;
     const nt=document.getElementById("snote").value.trim(); if(nt) v.note=nt;
+    const ax=axCur(); if(ax) v.ax=ax;
     save(); renderAll(); closeSheet();
   });
 }
@@ -1382,14 +1457,14 @@ document.getElementById("stampBtn").addEventListener("click",()=>{
     btn.disabled=false; btn.textContent="現在地で押印";
     const p={lat:pos.coords.latitude,lng:pos.coords.longitude};
     lastPos=p;
-    const all=FACILITIES.concat(state.ufacs).filter(hasPos);
+    const all=FACILITIES.concat(state.ufacs).filter(exactPos);
     const near=all.map(f=>({f,d:distance(p,f)})).filter(x=>x.d<=state.radius).sort((a,b)=>a.d-b.d);
     if(!near.length){
       const nearest=all.map(f=>({f,d:distance(p,f)})).sort((a,b)=>a.d-b.d)[0];
       openSheet(sheetHead("近くに収録施設がありません")+`
         <p class="settext">半径${state.radius}m以内に施設なし。最寄りは ${esc(nearest.f.name)}（約${Math.round(nearest.d)}m）。</p>
         <button class="btn primary" style="width:100%;margin-top:12px" onclick="window.__regHere(${p.lat},${p.lng})">この場所の施設を新規登録して押印</button>
-        <div class="linkrow" style="justify-content:center;margin-top:9px"><a href="#" onclick="window.__paste();return false">サウナイキタイのURLから追加する</a></div>`);
+        <div class="linkrow" style="justify-content:center;margin-top:9px"><a href="#" onclick="window.__paste();return false">リストにない湯を追加する</a></div>`);
     }else if(near.length===1){ geoVerify(near[0].f.id); addVisit(near[0].f.id); }
     else openSheet(sheetHead("どの施設にいますか？")+near.slice(0,6).map(x=>
       `<button class="choosebtn" onclick="window.__gps('${x.f.id}')"><span>${esc(x.f.name)}</span><span class="d">${Math.round(x.d)}m</span></button>`).join(""));
@@ -1420,7 +1495,7 @@ function bySid(){ if(!_bySid){ _bySid={}; for(const f of FACILITIES) if(f.sid!=n
 
 function parsePaste(txt){
   const t=String(txt||"").replace(/　/g," ");
-  const out={sid:null,lat:null,lng:null,name:"",pref:"",city:""};
+  const out={sid:null,lat:null,lng:null,name:"",pref:"",city:"",addr:""};
   const m=t.match(/sauna-ikitai\.com\/saunas\/(\d+)/);
   if(m) out.sid=+m[1];
   /* 座標：Googleマップの各URL形と、素の「35.123456, 136.789012」。日本の範囲内だけ採る */
@@ -1435,6 +1510,10 @@ function parsePaste(txt){
   /* 住所行から都道府県・市区町村（ページのコピペにだけ現れる） */
   const ad=t.match(new RegExp("("+PREF_RE+")\\s*([^\\s\\d]{1,10}?[市区町村])"));
   if(ad){ out.pref=PREF_BY_LABEL[ad[1]]||""; out.city=ad[2]; }
+  /* 番地まで入った住所行をそのまま拾う。ジオコーディングの精度は住所の細かさで決まるので、
+     町丁目・番地まで取れるかどうかが分かれ目になる */
+  const full=t.match(new RegExp("("+PREF_RE+")[^\\n]{2,60}"));
+  if(full) out.addr=full[0].replace(/\s+/g," ").trim();
   /* 施設名：住所行の直前の行を採る（サウナイキタイの施設ページの並び） */
   const lines=t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   const i=lines.findIndex(l=>new RegExp("^("+PREF_RE+")").test(l));
@@ -1445,10 +1524,77 @@ function parsePaste(txt){
   return out;
 }
 
+/* 住所→座標（国土地理院のジオコーダ。CORS許可あり・キーもライブラリも不要）。
+   ここで得た座標は必ず approx=1 を付ける。実測した精度：
+     都道府県＋市区町村 … 中央値2706m（30件中300m以内は2件）
+     ＋町丁目          … 中央値628m（25件中300m以内は6件・最大14km）
+     ＋番地            … 8m（実データ1件）
+   つまり番地まで入っていないと使い物にならない。だから「概算」と明示し、
+   GPS押印の判定には使わない */
+async function geocodeAddr(q){
+  const r=await fetch("https://msearch.gsi.go.jp/address-search/AddressSearch?q="+encodeURIComponent(q));
+  if(!r.ok) throw new Error("http "+r.status);
+  const j=await r.json();
+  if(!Array.isArray(j)||!j.length) return null;
+  const c=j[0].geometry&&j[0].geometry.coordinates;
+  if(!c) return null;
+  const lat=+c[1], lng=+c[0];
+  if(!(lat>=20&&lat<=46&&lng>=122&&lng<=154)) return null;
+  return {lat, lng, title:(j[0].properties||{}).title||""};
+}
+/* 住所がどれくらい細かいか。番地まであるかで精度がまるで違うので、貼り付け欄で正直に出す */
+function addrGrain(q){
+  if(/\d+\s*[-−ー]\s*\d+|\d+番/.test(q)) return {lv:"banchi", label:"番地まで", note:"実測では数十mの精度でした"};
+  if(/丁目|[^\s]{2,}(町|条|通)/.test(q)) return {lv:"chome", label:"町丁目まで", note:"実測では中央値600mほどずれました"};
+  if(/[市区町村]/.test(q)) return {lv:"city", label:"市区町村まで", note:"実測では中央値2.7kmずれました。番地まで入れてください"};
+  return {lv:"none", label:"", note:""};
+}
+/* 住所から引いた座標の「出自」を、値そのもので持つ。
+   フラグだけで持つと、手で座標を直したあとも概算のままになる（緯度だけ・経度だけの
+   修正を取りこぼす）。引いたときに入力欄へ書いた文字列と、いまの入力欄を突き合わせて、
+   どちらか一方でも変わっていれば「もう概算ではない＝自分で決めた座標」とみなす */
+let geoGot=null;
+function isApproxNow(){
+  if(!geoGot) return false;
+  const la=(document.getElementById("psLat")||{}).value, ln=(document.getElementById("psLng")||{}).value;
+  return String(la).trim()===geoGot.lat && String(ln).trim()===geoGot.lng;
+}
+/* 前の住所で引いた概算座標を残したまま「見つかりません」と出すと、別の場所の座標が
+   入ったまま保存されてしまう。ただし手で直した座標は消さない */
+function clearApprox(){
+  if(!isApproxNow()) return;
+  const la=document.getElementById("psLat"), ln=document.getElementById("psLng");
+  if(la) la.value=""; if(ln) ln.value="";
+  geoGot=null;
+}
+window.__geoAddr=async ()=>{
+  const el=document.getElementById("psAddr"), out=document.getElementById("psgeo");
+  const q=(el&&el.value||"").trim();
+  if(!q){ notify("住所を入れてください。","err"); return; }
+  const btn=document.getElementById("geobtn");
+  if(btn){ btn.disabled=true; btn.textContent="調べています…"; }
+  try{
+    const g=await geocodeAddr(q);
+    if(!g){ clearApprox(); if(out) out.innerHTML=`<p class="settext" style="color:var(--stamp);margin-top:6px">この住所では見つかりませんでした。番地まで入れると当たりやすくなります。</p>`; return; }
+    const la=g.lat.toFixed(6), ln=g.lng.toFixed(6);
+    document.getElementById("psLat").value=la;
+    document.getElementById("psLng").value=ln;
+    geoGot={lat:la, lng:ln};
+    const gr=addrGrain(q);
+    if(out) out.innerHTML=`<p class="settext" style="margin-top:6px">「${esc(g.title||q)}」の位置を入れました（<b>${gr.label}の住所</b>。${esc(gr.note)}）。<br><b>これはおおよその場所です。</b>地図には破線で出て、GPS押印の判定には使いません。次にその湯へ行って「現在地を登録する」を押せば正確になります。</p>`;
+  }catch(e){
+    clearApprox();
+    if(out) out.innerHTML=`<p class="settext" style="color:var(--stamp);margin-top:6px">住所を調べられませんでした（圏外かもしれません）。空のままでも登録できます。</p>`;
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent="住所から場所を調べる"; }
+  }
+};
+
 window.__paste=pre=>{
-  openSheet(sheetHead("サウナイキタイから追加")+`
-    <p class="settext">施設ページのURLを貼ってください。<b>ページを全選択してコピーしたテキスト</b>や、Googleマップのリンク・座標も一緒に貼ると、名前と場所まで読み取ります。</p>
-    <textarea id="pstx" class="input" rows="4" style="margin-top:9px;resize:vertical;line-height:1.6" placeholder="https://sauna-ikitai.com/saunas/12345"></textarea>
+  geoGot=null; psR=null; psForceKey=null;
+  openSheet(sheetHead("リストにない湯を追加")+`
+    <p class="settext"><b>湯の名前だけでも登録できます。</b>サウナイキタイのURL・ページを全選択したコピペ・Googleマップのリンク・住所や座標を一緒に貼れば、そのぶん自動で埋まります。</p>
+    <textarea id="pstx" class="input" rows="4" style="margin-top:9px;resize:vertical;line-height:1.6" placeholder="例）大垣サウナ&#10;https://sauna-ikitai.com/saunas/12345"></textarea>
     <div class="fbtnrow" style="margin-top:9px"><button class="btn primary" onclick="window.__psRead()">読み取る</button></div>
     <div id="psout" style="margin-top:10px"></div>`);
   const el=document.getElementById("pstx");
@@ -1462,13 +1608,86 @@ function psRow(f,note){
     <span class="ct">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}${note?"<br>"+esc(note):""}</span></button>`;
 }
 
-window.__psRead=()=>{
-  const out=document.getElementById("psout"); if(!out) return;
-  const r=parsePaste((document.getElementById("pstx")||{}).value||"");
-  if(r.sid==null&&!r.name&&r.lat==null){
-    out.innerHTML=`<p class="settext" style="color:var(--stamp)">読み取れませんでした。サウナイキタイの施設ページのURL（<code>.../saunas/12345</code>）を含めて貼ってください。</p>`;
+/* 名前の突き合わせ用の正規化。表記ゆれ（空白・中黒・全角半角・大小文字）を吸収する。
+   同名の別施設は現実にあるので自動統合はしない——候補を見せて、人に決めてもらう */
+function normName(x){
+  return String(x||"").normalize("NFKC").toLowerCase().replace(/[\s・（）()\-−ー–—.,／\/]/g,"");
+}
+function nameMatches(name){
+  const n=normName(name);
+  if(n.length<2) return [];
+  return FACILITIES.concat(state.ufacs).filter(f=>{
+    const m=normName(f.name);
+    if(m.length<2) return false;
+    return m===n || m.includes(n) || n.includes(m);
+  }).slice(0,6);
+}
+/* 「別の湯として追加する」は、そのとき見せた名前に対する承認。真偽値で持つと、
+   承認後にフォームで別名へ書き換えたときまで検査を素通りしてしまう。
+   承認した正規化名だけを覚えて、保存時の名前が変わっていたら検査をやり直す */
+let psR=null, psForceKey=null;
+
+function psFormHTML(r){
+  const prefOpts=Object.keys(PREF).map(k=>`<option value="${k}"${k===r.pref?" selected":""}>${PREF[k].label}</option>`).join("");
+  return `
+    <div class="eyebrow">読み取った内容</div>
+    <p class="settext">違うところは直してください。空のままでも登録できます。</p>
+    <input id="psName" class="input" style="margin-top:8px" placeholder="施設名（必須）" value="${esc(r.name)}">
+    <select id="psPref" class="input" style="margin-top:8px"><option value="">都道府県（任意）</option>${prefOpts}</select>
+    <input id="psCity" class="input" style="margin-top:8px" placeholder="市区町村（任意）" value="${esc(r.city)}">
+    <input id="psAddr" class="input" style="margin-top:8px" placeholder="住所（番地まで入れると正確に出ます）" value="${esc(r.addr||"")}">
+    <div class="fbtnrow" style="margin-top:8px"><button class="btn" id="geobtn" onclick="window.__geoAddr()">住所から場所を調べる</button></div>
+    <div id="psgeo"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="psLat" class="input" style="flex:1" inputmode="decimal" placeholder="緯度（任意）" value="${r.lat!=null?r.lat:""}">
+      <input id="psLng" class="input" style="flex:1" inputmode="decimal" placeholder="経度（任意）" value="${r.lng!=null?r.lng:""}">
+    </div>
+    <p class="settext" style="margin-top:6px">${r.lat!=null
+      ?"座標を読み取りました。"
+      :"<b>座標は読み取れていません。</b>上の住所から調べるか、空のままでも登録できます（記録はできて、地図に出ないだけ）。次にその湯へ行ってGPSで押印すれば確定します。"}</p>
+    ${r.sid!=null?`<p class="settext" style="margin-top:6px">サウナイキタイ #${r.sid} として覚えます。あとで正式に収録されても、押した判子は引き継がれます。</p>`:""}
+    <div class="fbtnrow" style="margin-top:10px">
+      <button class="btn primary" onclick="window.__psSave(${r.sid==null?"null":r.sid})">この湯を追加する</button>
+    </div>
+    <div id="pswarn"></div>`;
+}
+/* 同名候補の提示。既存を開くのが主で、追加は明示操作にする。
+   fromForm=true は保存時の警告（入力済みのフォームを壊さずに承認だけ受ける） */
+function psCandHTML(cands, msg, fromForm){
+  return `<p class="settext">${msg}</p>`+cands.map(f=>psRow(f)).join("")
+    +`<div class="fbtnrow" style="margin-top:9px"><button class="btn" onclick="window.__psAnyway(${fromForm?1:0})">別の湯として追加する</button></div>`;
+}
+window.__psAnyway=fromForm=>{
+  if(fromForm){
+    /* いま入力されている名前に対する承認。フォームは描き直さない */
+    const nm=((document.getElementById("psName")||{}).value||"").trim();
+    psForceKey=normName(nm);
+    const w=document.getElementById("pswarn"); if(w) w.innerHTML="";
+    notify("別の湯として追加します。もう一度「この湯を追加する」を押してください。");
     return;
   }
+  psForceKey=normName((psR&&psR.name)||"");
+  const out=document.getElementById("psout");
+  if(out&&psR) out.innerHTML=psFormHTML(psR);
+};
+
+window.__psRead=()=>{
+  const out=document.getElementById("psout"); if(!out) return;
+  geoGot=null; psForceKey=null;
+  const raw=(document.getElementById("pstx")||{}).value||"";
+  const r=parsePaste(raw);
+  if(!raw.trim()){
+    out.innerHTML=`<p class="settext" style="color:var(--stamp)">湯の名前を入れるか、サウナイキタイのURLを貼ってください。</p>`;
+    return;
+  }
+  /* URLも住所もなくても、書かれた名前だけで登録できる。
+     サウナイキタイを開かずに「名前は覚えている」だけで記録を始められるようにする */
+  if(!r.name){
+    const first=raw.split(/\r?\n/).map(x=>x.trim())
+      .find(x=>x&&!/^https?:/.test(x)&&x.length<=40&&!/サウナイキタイ|イキタイ|サ活|検索|ログイン/.test(x));
+    if(first) r.name=first;
+  }
+  psR=r;
   /* すでにある湯なら、登録させずにそのページへ送る（重複を作らせない） */
   if(r.sid!=null){
     const hit=bySid()[r.sid];
@@ -1476,37 +1695,34 @@ window.__psRead=()=>{
     const mine=state.ufacs.find(f=>f.sid===r.sid);
     if(mine){ out.innerHTML=`<p class="settext">この湯は<b>すでに自分で登録済み</b>です。</p>`+psRow(mine); return; }
   }
-  const prefOpts=Object.keys(PREF).map(k=>`<option value="${k}"${k===r.pref?" selected":""}>${PREF[k].label}</option>`).join("");
-  out.innerHTML=`
-    <div class="eyebrow">読み取った内容</div>
-    <p class="settext">違うところは直してください。空のままでも登録できます。</p>
-    <input id="psName" class="input" style="margin-top:8px" placeholder="施設名（必須）" value="${esc(r.name)}">
-    <select id="psPref" class="input" style="margin-top:8px"><option value="">都道府県（任意）</option>${prefOpts}</select>
-    <input id="psCity" class="input" style="margin-top:8px" placeholder="市区町村（任意）" value="${esc(r.city)}">
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <input id="psLat" class="input" style="flex:1" inputmode="decimal" placeholder="緯度（任意）" value="${r.lat!=null?r.lat:""}">
-      <input id="psLng" class="input" style="flex:1" inputmode="decimal" placeholder="経度（任意）" value="${r.lng!=null?r.lng:""}">
-    </div>
-    <p class="settext" style="margin-top:6px">${r.lat!=null
-      ?"座標を読み取りました。"
-      :"<b>座標は読み取れていません。</b>コピペには含まれない項目です。空のまま登録しても記録はできます（地図に出ないだけ）。次にその湯へ行ってGPSで押印すれば、そのとき確定できます。"}</p>
-    ${r.sid!=null?`<p class="settext" style="margin-top:6px">サウナイキタイ #${r.sid} として覚えます。あとで正式に収録されても、押した判子は引き継がれます。</p>`:""}
-    <div class="fbtnrow" style="margin-top:10px">
-      <button class="btn primary" onclick="window.__psSave(${r.sid==null?"null":r.sid})">この湯を追加する</button>
-    </div>
-    <div id="pswarn"></div>`;
+  /* URLが無いときは名前で照合する。ここを素通りすると、収録済みの湯が
+     別idで二重に増えて判子・訪問・行きたいが分裂する */
+  const cands=r.name?nameMatches(r.name):[];
+  if(cands.length){
+    out.innerHTML=psCandHTML(cands, `同じ名前の湯が<b>すでにあります</b>。こちらではありませんか？`);
+    return;
+  }
+  out.innerHTML=psFormHTML(r);
 };
-
 window.__psSave=(sid,force)=>{
   const g=id=>(document.getElementById(id)||{}).value||"";
   const name=g("psName").trim();
   if(!name){ notify("施設名を入れてください。","err"); return; }
+  /* 承認は「そのとき見せた名前」に対してのみ有効。書き換えられていたら検査し直す */
+  if(psForceKey===null||normName(name)!==psForceKey){
+    const c=nameMatches(name);
+    if(c.length){
+      const w=document.getElementById("pswarn");
+      if(w) w.innerHTML=`<div style="margin-top:10px">`+psCandHTML(c,`<b style="color:var(--stamp)">同じ名前の湯がすでにあります。</b>こちらではありませんか？`,1)+`</div>`;
+      return;
+    }
+  }
   const la=parseFloat(g("psLat")), ln=parseFloat(g("psLng"));
   const pos=(isFinite(la)&&isFinite(ln)&&la>=20&&la<=46&&ln>=122&&ln<=154)?{lat:la,lng:ln}:null;
   if((g("psLat").trim()||g("psLng").trim())&&!pos){ notify("座標が日本の範囲外です。空にするか直してください。","err"); return; }
   /* 座標があるなら近接チェック。250m以内に既存があれば、そちらを先に見せる */
-  if(pos&&!force){
-    const near=FACILITIES.concat(state.ufacs).filter(hasPos)
+  if(pos&&!force&&!isApproxNow()){
+    const near=FACILITIES.concat(state.ufacs).filter(exactPos)
       .map(f=>({f,d:distance(pos,f)})).filter(x=>x.d<=250).sort((a,b)=>a.d-b.d)[0];
     if(near){
       const w=document.getElementById("pswarn");
@@ -1517,7 +1733,10 @@ window.__psSave=(sid,force)=>{
     }
   }
   const nf={id:"u"+Date.now(), name, lat:pos?pos.lat:null, lng:pos?pos.lng:null, u:1};
+  /* 住所から引いた座標は概算。緯度・経度どちらか一方でも打ち直されていれば概算ではない */
+  if(pos&&isApproxNow()) nf.approx=1;
   if(sid!=null) nf.sid=sid;
+  const ad=g("psAddr").trim(); if(ad) nf.addr=ad;
   const pf=g("psPref"); if(pf) nf.pref=pf;
   const ct=g("psCity").trim(); if(ct) nf.city=ct;
   state.ufacs.push(nf); reindex(); save(); renderAll();
@@ -1684,8 +1903,12 @@ function renderMap(){
     const on=visited(f.id), x=px(f), y=py(f);
     mapPins.push({id:f.id,x,y});
     s+=`<g style="cursor:pointer">`;
-    s+= on?`<rect x="${(x-zm(2.6)).toFixed(1)}" y="${(y-zm(2.6)).toFixed(1)}" width="${zm(5.2)}" height="${zm(5.2)}" rx="${zm(0.7)}" fill="#C8402F" transform="rotate(-8 ${x.toFixed(1)} ${y.toFixed(1)})"/>`
-          :`<rect x="${(x-zm(2.2)).toFixed(1)}" y="${(y-zm(2.2)).toFixed(1)}" width="${zm(4.4)}" height="${zm(4.4)}" fill="#FFFDF4" stroke="#A69374" stroke-width="${zm(1)}"/>`;
+    if(f.approx){   /* 概算＝破線。だいたいの場所であることを見た目でも言う */
+      s+=`<rect x="${(x-zm(2.4)).toFixed(1)}" y="${(y-zm(2.4)).toFixed(1)}" width="${zm(4.8)}" height="${zm(4.8)}" fill="none" stroke="${on?"#C8402F":"#A69374"}" stroke-width="${zm(0.9)}" stroke-dasharray="${zm(1.6)} ${zm(1.2)}"/>`;
+    }else{
+      s+= on?`<rect x="${(x-zm(2.6)).toFixed(1)}" y="${(y-zm(2.6)).toFixed(1)}" width="${zm(5.2)}" height="${zm(5.2)}" rx="${zm(0.7)}" fill="#C8402F" transform="rotate(-8 ${x.toFixed(1)} ${y.toFixed(1)})"/>`
+            :`<rect x="${(x-zm(2.2)).toFixed(1)}" y="${(y-zm(2.2)).toFixed(1)}" width="${zm(4.4)}" height="${zm(4.4)}" fill="#FFFDF4" stroke="#A69374" stroke-width="${zm(1)}"/>`;
+    }
     s+=`</g>`;
   }
   const pass=f=>(chipOn.size===0||chipPass(f))&&areaPass(f);
@@ -1848,7 +2071,7 @@ document.getElementById("manualBtn").addEventListener("click",()=>{
     const hits=FACILITIES.concat(state.ufacs).filter(f=>(f.name+(f.city||"")).includes(q)).slice(0,20);
     res.innerHTML=hits.map(f=>`<button class="frow" onclick="window.__fac('${f.id}')">
       <span class="nm">${esc(f.name)}</span><span class="ct">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}</span></button>`).join("")
-      ||`<p class="settext">見つかりません。</p><div class="linkrow" style="margin-top:6px"><a href="#" onclick="window.__paste();return false">サウナイキタイのURLから追加する</a></div>`;
+      ||`<p class="settext">見つかりません。</p><div class="linkrow" style="margin-top:6px"><a href="#" data-q="${esc(q)}" onclick="window.__paste(this.dataset.q);return false">「${esc(q)}」を登録する</a></div>`;
   };
   run("");
   document.getElementById("mq").addEventListener("input",e=>run(e.target.value));
@@ -1857,13 +2080,28 @@ document.getElementById("pasteBtn").addEventListener("click",()=>window.__paste(
 
 /* ---------- 取り込み（470s・サ道場の同一オリジンlocalStorageから。冪等。写真はv2.1） ---------- */
 document.getElementById("importBtn").addEventListener("click",()=>{
-  let added=0;
+  let added=0, ufacsAdded=0, skipped=0;
   try{
     const raw=localStorage.getItem("sauna30:v2");
     if(raw){
       const st=JSON.parse(raw);
+      /* 台帳（枠外の自由登録）を先に取り込み、470s側のidから対応表を作る。
+         これをやらないと台帳での訪問が byId に無くて丸ごと落ちる（beta.3で修正） */
+      const umap={};
+      for(const uf of (st.userFacilities||[])){
+        if(!uf||!uf.name) continue;
+        const nid="u"+sealHash(String(uf.id||uf.name));
+        umap[uf.id]=nid;
+        if(!state.ufacs.some(x=>x.id===nid)){
+          const nf={id:nid, name:uf.name, lat:uf.lat!=null?uf.lat:null, lng:uf.lng!=null?uf.lng:null, u:1};
+          if(uf.city) nf.city=uf.city;
+          state.ufacs.push(nf); ufacsAdded++;
+        }
+      }
+      reindex();
       for(const v of (st.visits||[]).slice().reverse()){
-        if(!byId[v.facilityId]) continue;
+        const fid=umap[v.facilityId]||(byId[v.facilityId]?v.facilityId:null);
+        if(!fid){ skipped++; continue; }
         const sig="470s:"+(v.id||v.facilityId+v.date);
         if(state.imported[sig]) continue;
         let sc=null;
@@ -1871,11 +2109,8 @@ document.getElementById("importBtn").addEventListener("click",()=>{
           const s=["sauna","water","air","clean"].map(k=>r1((v.axes[k]||0)/5)); s.push(2.5);
           sc={s, x:r1((v.adj||0)/4), why:v.adjReason||"", v:2};
         }
-        state.visits.push({id:uid(), fid:v.facilityId, date:v.date||today(), sc, paid:null, note:v.memo||v.note||""});
+        state.visits.push({id:uid(), fid, date:v.date||today(), sc, paid:null, note:v.memo||v.note||""});
         state.imported[sig]=1; added++;
-      }
-      for(const uf of (st.userFacilities||[])){
-        if(!state.ufacs.some(x=>x.name===uf.name)&&uf.lat!=null){ state.ufacs.push({id:"u"+sealHash(uf.id||uf.name), name:uf.name, lat:uf.lat, lng:uf.lng, u:1}); }
       }
       for(const w of (st.wants||[])) if(byId[w]&&!state.wants[w]) state.wants[w]=today();
     }
@@ -1899,7 +2134,9 @@ document.getElementById("importBtn").addEventListener("click",()=>{
   }catch(e){}
   state.visits.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   reindex(); save(); renderAll();
-  notify(added?`${added}件の記録を取り込みました（元アプリの写真の取り込みは未対応）`:"新しく取り込める記録はありませんでした");
+  notify(added
+    ?`${added}件の記録を取り込みました${ufacsAdded?`／自分で登録した${ufacsAdded}湯も`:""}${skipped?`（${skipped}件はもとの施設が分からず取り込めませんでした）`:""}（元アプリの写真の取り込みは未対応）`
+    :"新しく取り込める記録はありませんでした");
 });
 
 /* ---------- 写真（IndexedDB totonoi/photos。1訪問=1枚、1280px JPEG圧縮） ---------- */
