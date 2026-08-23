@@ -1559,7 +1559,7 @@ window.__geoAddr=async ()=>{
 };
 
 window.__paste=pre=>{
-  geoGot=null;
+  geoGot=null; psR=null; psForceName=false;
   openSheet(sheetHead("リストにない湯を追加")+`
     <p class="settext"><b>湯の名前だけでも登録できます。</b>サウナイキタイのURL・ページを全選択したコピペ・Googleマップのリンク・住所や座標を一緒に貼れば、そのぶん自動で埋まります。</p>
     <textarea id="pstx" class="input" rows="4" style="margin-top:9px;resize:vertical;line-height:1.6" placeholder="例）大垣サウナ&#10;https://sauna-ikitai.com/saunas/12345"></textarea>
@@ -1576,31 +1576,25 @@ function psRow(f,note){
     <span class="ct">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}${note?"<br>"+esc(note):""}</span></button>`;
 }
 
-window.__psRead=()=>{
-  const out=document.getElementById("psout"); if(!out) return;
-  geoGot=null;
-  const raw=(document.getElementById("pstx")||{}).value||"";
-  const r=parsePaste(raw);
-  if(!raw.trim()){
-    out.innerHTML=`<p class="settext" style="color:var(--stamp)">湯の名前を入れるか、サウナイキタイのURLを貼ってください。</p>`;
-    return;
-  }
-  /* URLも住所もなくても、書かれた名前だけで登録できる。
-     サウナイキタイを開かずに「名前は覚えている」だけで記録を始められるようにする */
-  if(!r.name){
-    const first=raw.split(/\r?\n/).map(x=>x.trim())
-      .find(x=>x&&!/^https?:/.test(x)&&x.length<=40&&!/サウナイキタイ|イキタイ|サ活|検索|ログイン/.test(x));
-    if(first) r.name=first;
-  }
-  /* すでにある湯なら、登録させずにそのページへ送る（重複を作らせない） */
-  if(r.sid!=null){
-    const hit=bySid()[r.sid];
-    if(hit){ out.innerHTML=`<p class="settext">この湯は<b>すでに収録されています</b>。</p>`+psRow(hit); return; }
-    const mine=state.ufacs.find(f=>f.sid===r.sid);
-    if(mine){ out.innerHTML=`<p class="settext">この湯は<b>すでに自分で登録済み</b>です。</p>`+psRow(mine); return; }
-  }
+/* 名前の突き合わせ用の正規化。表記ゆれ（空白・中黒・全角半角・大小文字）を吸収する。
+   同名の別施設は現実にあるので自動統合はしない——候補を見せて、人に決めてもらう */
+function normName(x){
+  return String(x||"").normalize("NFKC").toLowerCase().replace(/[\s・（）()\-−ー–—.,／\/]/g,"");
+}
+function nameMatches(name){
+  const n=normName(name);
+  if(n.length<2) return [];
+  return FACILITIES.concat(state.ufacs).filter(f=>{
+    const m=normName(f.name);
+    if(m.length<2) return false;
+    return m===n || m.includes(n) || n.includes(m);
+  }).slice(0,6);
+}
+let psR=null, psForceName=false;
+
+function psFormHTML(r){
   const prefOpts=Object.keys(PREF).map(k=>`<option value="${k}"${k===r.pref?" selected":""}>${PREF[k].label}</option>`).join("");
-  out.innerHTML=`
+  return `
     <div class="eyebrow">読み取った内容</div>
     <p class="settext">違うところは直してください。空のままでも登録できます。</p>
     <input id="psName" class="input" style="margin-top:8px" placeholder="施設名（必須）" value="${esc(r.name)}">
@@ -1621,12 +1615,64 @@ window.__psRead=()=>{
       <button class="btn primary" onclick="window.__psSave(${r.sid==null?"null":r.sid})">この湯を追加する</button>
     </div>
     <div id="pswarn"></div>`;
+}
+/* 同名候補の提示。既存を開くのが主で、追加は明示操作にする */
+function psCandHTML(cands, msg){
+  return `<p class="settext">${msg}</p>`+cands.map(f=>psRow(f)).join("")
+    +`<div class="fbtnrow" style="margin-top:9px"><button class="btn" onclick="window.__psAnyway()">別の湯として追加する</button></div>`;
+}
+window.__psAnyway=()=>{
+  psForceName=true;
+  const out=document.getElementById("psout");
+  if(out&&psR) out.innerHTML=psFormHTML(psR);
 };
 
+window.__psRead=()=>{
+  const out=document.getElementById("psout"); if(!out) return;
+  geoGot=null; psForceName=false;
+  const raw=(document.getElementById("pstx")||{}).value||"";
+  const r=parsePaste(raw);
+  if(!raw.trim()){
+    out.innerHTML=`<p class="settext" style="color:var(--stamp)">湯の名前を入れるか、サウナイキタイのURLを貼ってください。</p>`;
+    return;
+  }
+  /* URLも住所もなくても、書かれた名前だけで登録できる。
+     サウナイキタイを開かずに「名前は覚えている」だけで記録を始められるようにする */
+  if(!r.name){
+    const first=raw.split(/\r?\n/).map(x=>x.trim())
+      .find(x=>x&&!/^https?:/.test(x)&&x.length<=40&&!/サウナイキタイ|イキタイ|サ活|検索|ログイン/.test(x));
+    if(first) r.name=first;
+  }
+  psR=r;
+  /* すでにある湯なら、登録させずにそのページへ送る（重複を作らせない） */
+  if(r.sid!=null){
+    const hit=bySid()[r.sid];
+    if(hit){ out.innerHTML=`<p class="settext">この湯は<b>すでに収録されています</b>。</p>`+psRow(hit); return; }
+    const mine=state.ufacs.find(f=>f.sid===r.sid);
+    if(mine){ out.innerHTML=`<p class="settext">この湯は<b>すでに自分で登録済み</b>です。</p>`+psRow(mine); return; }
+  }
+  /* URLが無いときは名前で照合する。ここを素通りすると、収録済みの湯が
+     別idで二重に増えて判子・訪問・行きたいが分裂する */
+  const cands=r.name?nameMatches(r.name):[];
+  if(cands.length){
+    out.innerHTML=psCandHTML(cands, `同じ名前の湯が<b>すでにあります</b>。こちらではありませんか？`);
+    return;
+  }
+  out.innerHTML=psFormHTML(r);
+};
 window.__psSave=(sid,force)=>{
   const g=id=>(document.getElementById(id)||{}).value||"";
   const name=g("psName").trim();
   if(!name){ notify("施設名を入れてください。","err"); return; }
+  /* フォームで名前を書き換えた場合もここで拾う */
+  if(!psForceName){
+    const c=nameMatches(name);
+    if(c.length){
+      const w=document.getElementById("pswarn");
+      if(w) w.innerHTML=`<div style="margin-top:10px">`+psCandHTML(c,`<b style="color:var(--stamp)">同じ名前の湯がすでにあります。</b>こちらではありませんか？`)+`</div>`;
+      return;
+    }
+  }
   const la=parseFloat(g("psLat")), ln=parseFloat(g("psLng"));
   const pos=(isFinite(la)&&isFinite(ln)&&la>=20&&la<=46&&ln>=122&&ln<=154)?{lat:la,lng:ln}:null;
   if((g("psLat").trim()||g("psLng").trim())&&!pos){ notify("座標が日本の範囲外です。空にするか直してください。","err"); return; }
