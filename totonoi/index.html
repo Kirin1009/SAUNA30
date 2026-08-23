@@ -891,11 +891,12 @@ function openFac(fid, showAll){
   const actions=`
     <div class="fbtnrow" style="margin-top:12px">
       ${todayV?`<button class="btn primary" onclick="window.__visit('${todayV.id}')">きょうの記録をひらく</button>`
-        :noPos?`<button class="btn primary" onclick="window.__fixPos('${fid}')">現在地を登録して押印</button>`
+        :noPos?`<button class="btn primary" id="posbtn" onclick="window.__fixPos('${fid}',1)">現在地を登録して押印</button>`
               :`<button class="btn primary" onclick="window.__stampHere('${fid}')">ここで押印</button>`}
       <button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>
     </div>
-    ${noPos?`<p class="settext" style="margin-top:8px">この湯はまだ場所が入っていません。<b>その湯にいるときに上のボタンを押すと、場所が決まって押印できます</b>（地図とGPS押印にも出るようになります）。</p>`:""}
+    ${noPos&&todayV?`<div class="fbtnrow" style="margin-top:8px"><button class="btn" id="posbtn" onclick="window.__fixPos('${fid}',0)">現在地を登録する</button></div>`:""}
+    ${noPos?`<p class="settext" style="margin-top:8px">この湯はまだ場所が入っていません。<b>その湯にいるときに${todayV?"「現在地を登録する」":"上のボタン"}を押すと、場所が決まります</b>（地図とGPS押印にも出るようになります）。</p>`:""}
     <div class="linkrow" style="margin-top:9px">
       ${noPos?"":`<a href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener">Googleマップで行く ↗</a>
       <a href="#" onclick="window.__findFac('${fid}');return false">探すタブで見る</a>`}
@@ -1107,19 +1108,20 @@ function openDone(vid,past){
 window.__stampHere=fid=>{ closeSheet(); addVisit(fid); };
 /* 座標なしで登録した自分の施設を、現地で確定する（チャッピー実装レビューP1）。
    ufacs の同じ1件を更新する＝新規登録にはしないので、重複が生まれない */
-window.__fixPos=fid=>{
+window.__fixPos=(fid,stamp)=>{
   const uf=state.ufacs.find(x=>x.id===fid);
   if(!uf){ notify("この施設は見つかりませんでした。","err"); return; }
-  const btn=document.querySelector("#sheet .btn.primary");
+  const btn=document.getElementById("posbtn"), label=btn?btn.textContent:"";
   if(btn){ btn.disabled=true; btn.textContent="測位中…"; }
   navigator.geolocation.getCurrentPosition(pos=>{
     uf.lat=pos.coords.latitude; uf.lng=pos.coords.longitude;
     lastPos={lat:uf.lat,lng:uf.lng};
     reindex(); geoVerify(fid); save(); renderAll();
-    closeSheet(); addVisit(fid);
+    if(stamp){ closeSheet(); addVisit(fid); }
+    else openFac(fid);   /* その日すでに押している場合は座標だけ確定して施設ページを描き直す */
     notify("場所を登録しました。");
   },err=>{
-    if(btn){ btn.disabled=false; btn.textContent="現在地を登録して押印"; }
+    if(btn){ btn.disabled=false; btn.textContent=label; }
     notify("現在地を取得できませんでした。","err");
   },{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
 };
