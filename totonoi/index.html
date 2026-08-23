@@ -885,17 +885,23 @@ function openFac(fid, showAll){
     <p class="settext" style="margin-top:6px;font-size:9.5px">公式データ（${esc(EDITION)}時点）。あなたの実測は採点シートの🏷から観測に残せます</p>
   </details>`:"";
   const todayV=vs.find(v=>v.date===today());
+  /* 貼り付けで登録した施設は座標が空のことがある。その状態では地図に出せないので、
+     現地で座標を確定する導線を主役にし、行き先リンク（地図・探す）は座標が入るまで出さない */
+  const noPos=!!f.u&&!hasPos(f);
   const actions=`
     <div class="fbtnrow" style="margin-top:12px">
       ${todayV?`<button class="btn primary" onclick="window.__visit('${todayV.id}')">きょうの記録をひらく</button>`
+        :noPos?`<button class="btn primary" onclick="window.__fixPos('${fid}')">現在地を登録して押印</button>`
               :`<button class="btn primary" onclick="window.__stampHere('${fid}')">ここで押印</button>`}
       <button class="btn" style="${want?"border-color:var(--gold);color:var(--gold)":""}" onclick="window.__want('${fid}')">${want?"★ 行きたい済":"☆ 行きたい"}</button>
     </div>
+    ${noPos?`<p class="settext" style="margin-top:8px">この湯はまだ場所が入っていません。<b>その湯にいるときに上のボタンを押すと、場所が決まって押印できます</b>（地図とGPS押印にも出るようになります）。</p>`:""}
     <div class="linkrow" style="margin-top:9px">
-      <a href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener">Googleマップで行く ↗</a>
-      <a href="#" onclick="window.__findFac('${fid}');return false">探すタブで見る</a>
+      ${noPos?"":`<a href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener">Googleマップで行く ↗</a>
+      <a href="#" onclick="window.__findFac('${fid}');return false">探すタブで見る</a>`}
       ${todayV?`<a href="#" onclick="window.__stampHere('${fid}');return false">もう一度押印</a>`:""}
       <a href="#" onclick="window.__stampPastOpen();return false">過去の日付で記す</a>
+      ${noPos&&!todayV?`<a href="#" onclick="window.__stampHere('${fid}');return false">場所を入れずに押印する</a>`:""}
     </div>
     <div id="pastrow" style="display:none;gap:8px;margin-top:8px;align-items:center">
       <input id="pastdate" type="date" class="input" max="${today()}" value="${today()}" style="flex:1">
@@ -1099,6 +1105,24 @@ function openDone(vid,past){
     <p class="settext" style="text-align:center;margin-top:9px;font-size:10.5px">採点は後からでも、書かなくても構いません</p>`);
 }
 window.__stampHere=fid=>{ closeSheet(); addVisit(fid); };
+/* 座標なしで登録した自分の施設を、現地で確定する（チャッピー実装レビューP1）。
+   ufacs の同じ1件を更新する＝新規登録にはしないので、重複が生まれない */
+window.__fixPos=fid=>{
+  const uf=state.ufacs.find(x=>x.id===fid);
+  if(!uf){ notify("この施設は見つかりませんでした。","err"); return; }
+  const btn=document.querySelector("#sheet .btn.primary");
+  if(btn){ btn.disabled=true; btn.textContent="測位中…"; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    uf.lat=pos.coords.latitude; uf.lng=pos.coords.longitude;
+    lastPos={lat:uf.lat,lng:uf.lng};
+    reindex(); geoVerify(fid); save(); renderAll();
+    closeSheet(); addVisit(fid);
+    notify("場所を登録しました。");
+  },err=>{
+    if(btn){ btn.disabled=false; btn.textContent="現在地を登録して押印"; }
+    notify("現在地を取得できませんでした。","err");
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+};
 /* 過去の日付で記す（ペルソナテストP0：「以前の訪問を一件書く」が今日にしか押せなかった問題） */
 window.__stampPastOpen=()=>{
   const el=document.getElementById("pastrow"); if(!el) return;
