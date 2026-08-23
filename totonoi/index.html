@@ -905,6 +905,7 @@ function openFac(fid, showAll){
     ${(noPos&&todayV)||approx?`<div class="fbtnrow" style="margin-top:8px"><button class="btn" id="posbtn" onclick="window.__fixPos('${fid}',0)">現在地を登録する</button></div>`:""}
     ${noPos?`<p class="settext" style="margin-top:8px">この湯はまだ場所が入っていません。<b>その湯にいるときに${todayV?"「現在地を登録する」":"上のボタン"}を押すと、場所が決まります</b>（地図とGPS押印にも出るようになります）。</p>`:""}
     ${approx?`<p class="settext" style="margin-top:8px">場所は<b>住所から調べたおおよその位置</b>です（地図では破線）。<b>その湯にいるときに「現在地を登録する」を押すと正確になり、GPS押印でも拾えるようになります。</b></p>`:""}
+    ${(noPos||approx)?`<div class="linkrow" style="margin-top:8px"><a href="#" onclick="window.__addrPos('${fid}');return false">住所から場所を入れる</a></div>`:""}
     <div class="linkrow" style="margin-top:9px">
       ${noPos?"":`<a href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener">Googleマップで行く ↗</a>
       <a href="#" onclick="window.__findFac('${fid}');return false">探すタブで見る</a>`}
@@ -1116,6 +1117,39 @@ function openDone(vid,past){
 window.__stampHere=fid=>{ closeSheet(); addVisit(fid); };
 /* 座標なしで登録した自分の施設を、現地で確定する（チャッピー実装レビューP1）。
    ufacs の同じ1件を更新する＝新規登録にはしないので、重複が生まれない */
+/* 現地にいなくても、あとから住所で場所を埋められるようにする。
+   登録時の貼り付け欄だけだと「その場に行かないと座標が入らない」ままになる。
+   ここで入る座標も概算（approx）なので、GPS押印の判定には使わない */
+window.__addrPos=fid=>{
+  const uf=state.ufacs.find(x=>x.id===fid);
+  if(!uf){ notify("この施設は見つかりませんでした。","err"); return; }
+  openSheet(sheetHead("住所から場所を入れる",`<button class="backbtn" onclick="window.__fac('${fid}')">‹ ${esc(uf.name)} のページ</button>`)+`
+    <p class="settext"><b>番地まで入れると正確に出ます。</b>ここで入る場所は「おおよその位置」として扱い、地図には破線で出ます。GPS押印の判定には使いません（その湯で「現在地を登録する」を押すと正確になります）。</p>
+    <input id="apAddr" class="input" style="margin-top:9px" placeholder="例）岐阜県大垣市南頬町3-7-1" value="${esc(uf.addr||"")}">
+    <div class="fbtnrow" style="margin-top:9px"><button class="btn primary" id="apbtn" onclick="window.__addrPosGo('${fid}')">住所から調べて入れる</button></div>
+    <div id="apout"></div>`);
+  const el=document.getElementById("apAddr"); if(el) el.focus();
+};
+window.__addrPosGo=async fid=>{
+  const uf=state.ufacs.find(x=>x.id===fid); if(!uf) return;
+  const q=((document.getElementById("apAddr")||{}).value||"").trim();
+  const out=document.getElementById("apout"), btn=document.getElementById("apbtn");
+  if(!q){ notify("住所を入れてください。","err"); return; }
+  if(btn){ btn.disabled=true; btn.textContent="調べています…"; }
+  try{
+    const g=await geocodeAddr(q);
+    if(!g){ if(out) out.innerHTML=`<p class="settext" style="color:var(--stamp);margin-top:8px">この住所では見つかりませんでした。番地まで入れると当たりやすくなります。</p>`; return; }
+    const gr=addrGrain(q);
+    uf.lat=g.lat; uf.lng=g.lng; uf.approx=1; uf.addr=q;
+    reindex(); save(); renderAll();
+    openFac(fid);
+    notify(`「${g.title||q}」の位置を入れました（${gr.label}）。`);
+  }catch(e){
+    if(out) out.innerHTML=`<p class="settext" style="color:var(--stamp);margin-top:8px">住所を調べられませんでした（圏外かもしれません）。</p>`;
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent="住所から調べて入れる"; }
+  }
+};
 window.__fixPos=(fid,stamp)=>{
   const uf=state.ufacs.find(x=>x.id===fid);
   if(!uf){ notify("この施設は見つかりませんでした。","err"); return; }
@@ -1612,6 +1646,7 @@ window.__psSave=(sid,force)=>{
   /* 住所から引いた座標は概算。緯度・経度どちらか一方でも打ち直されていれば概算ではない */
   if(pos&&isApproxNow()) nf.approx=1;
   if(sid!=null) nf.sid=sid;
+  const ad=g("psAddr").trim(); if(ad) nf.addr=ad;
   const pf=g("psPref"); if(pf) nf.pref=pf;
   const ct=g("psCity").trim(); if(ct) nf.city=ct;
   state.ufacs.push(nf); reindex(); save(); renderAll();
@@ -1955,13 +1990,28 @@ document.getElementById("pasteBtn").addEventListener("click",()=>window.__paste(
 
 /* ---------- 取り込み（470s・サ道場の同一オリジンlocalStorageから。冪等。写真はv2.1） ---------- */
 document.getElementById("importBtn").addEventListener("click",()=>{
-  let added=0;
+  let added=0, ufacsAdded=0, skipped=0;
   try{
     const raw=localStorage.getItem("sauna30:v2");
     if(raw){
       const st=JSON.parse(raw);
+      /* 台帳（枠外の自由登録）を先に取り込み、470s側のidから対応表を作る。
+         これをやらないと台帳での訪問が byId に無くて丸ごと落ちる（beta.3で修正） */
+      const umap={};
+      for(const uf of (st.userFacilities||[])){
+        if(!uf||!uf.name) continue;
+        const nid="u"+sealHash(String(uf.id||uf.name));
+        umap[uf.id]=nid;
+        if(!state.ufacs.some(x=>x.id===nid)){
+          const nf={id:nid, name:uf.name, lat:uf.lat!=null?uf.lat:null, lng:uf.lng!=null?uf.lng:null, u:1};
+          if(uf.city) nf.city=uf.city;
+          state.ufacs.push(nf); ufacsAdded++;
+        }
+      }
+      reindex();
       for(const v of (st.visits||[]).slice().reverse()){
-        if(!byId[v.facilityId]) continue;
+        const fid=umap[v.facilityId]||(byId[v.facilityId]?v.facilityId:null);
+        if(!fid){ skipped++; continue; }
         const sig="470s:"+(v.id||v.facilityId+v.date);
         if(state.imported[sig]) continue;
         let sc=null;
@@ -1969,11 +2019,8 @@ document.getElementById("importBtn").addEventListener("click",()=>{
           const s=["sauna","water","air","clean"].map(k=>r1((v.axes[k]||0)/5)); s.push(2.5);
           sc={s, x:r1((v.adj||0)/4), why:v.adjReason||"", v:2};
         }
-        state.visits.push({id:uid(), fid:v.facilityId, date:v.date||today(), sc, paid:null, note:v.memo||v.note||""});
+        state.visits.push({id:uid(), fid, date:v.date||today(), sc, paid:null, note:v.memo||v.note||""});
         state.imported[sig]=1; added++;
-      }
-      for(const uf of (st.userFacilities||[])){
-        if(!state.ufacs.some(x=>x.name===uf.name)&&uf.lat!=null){ state.ufacs.push({id:"u"+sealHash(uf.id||uf.name), name:uf.name, lat:uf.lat, lng:uf.lng, u:1}); }
       }
       for(const w of (st.wants||[])) if(byId[w]&&!state.wants[w]) state.wants[w]=today();
     }
@@ -1997,7 +2044,9 @@ document.getElementById("importBtn").addEventListener("click",()=>{
   }catch(e){}
   state.visits.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   reindex(); save(); renderAll();
-  notify(added?`${added}件の記録を取り込みました（元アプリの写真の取り込みは未対応）`:"新しく取り込める記録はありませんでした");
+  notify(added
+    ?`${added}件の記録を取り込みました${ufacsAdded?`／自分で登録した${ufacsAdded}湯も`:""}${skipped?`（${skipped}件はもとの施設が分からず取り込めませんでした）`:""}（元アプリの写真の取り込みは未対応）`
+    :"新しく取り込める記録はありませんでした");
 });
 
 /* ---------- 写真（IndexedDB totonoi/photos。1訪問=1枚、1280px JPEG圧縮） ---------- */
