@@ -331,7 +331,7 @@
       <button class="btn" id="manualBtn" style="flex:1">手動で記録する（施設を検索）</button>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn" id="pasteBtn" style="flex:1">サウナイキタイのURLから追加</button>
+      <button class="btn" id="pasteBtn" style="flex:1">リストにない湯を追加する</button>
     </div>
     <div id="logbox"></div>
     <div class="sect">
@@ -1398,7 +1398,7 @@ document.getElementById("stampBtn").addEventListener("click",()=>{
       openSheet(sheetHead("近くに収録施設がありません")+`
         <p class="settext">半径${state.radius}m以内に施設なし。最寄りは ${esc(nearest.f.name)}（約${Math.round(nearest.d)}m）。</p>
         <button class="btn primary" style="width:100%;margin-top:12px" onclick="window.__regHere(${p.lat},${p.lng})">この場所の施設を新規登録して押印</button>
-        <div class="linkrow" style="justify-content:center;margin-top:9px"><a href="#" onclick="window.__paste();return false">サウナイキタイのURLから追加する</a></div>`);
+        <div class="linkrow" style="justify-content:center;margin-top:9px"><a href="#" onclick="window.__paste();return false">リストにない湯を追加する</a></div>`);
     }else if(near.length===1){ geoVerify(near[0].f.id); addVisit(near[0].f.id); }
     else openSheet(sheetHead("どの施設にいますか？")+near.slice(0,6).map(x=>
       `<button class="choosebtn" onclick="window.__gps('${x.f.id}')"><span>${esc(x.f.name)}</span><span class="d">${Math.round(x.d)}m</span></button>`).join(""));
@@ -1526,9 +1526,9 @@ window.__geoAddr=async ()=>{
 
 window.__paste=pre=>{
   geoGot=null;
-  openSheet(sheetHead("サウナイキタイから追加")+`
-    <p class="settext">施設ページのURLを貼ってください。<b>ページを全選択してコピーしたテキスト</b>や、Googleマップのリンク・座標も一緒に貼ると、名前と場所まで読み取ります。</p>
-    <textarea id="pstx" class="input" rows="4" style="margin-top:9px;resize:vertical;line-height:1.6" placeholder="https://sauna-ikitai.com/saunas/12345"></textarea>
+  openSheet(sheetHead("リストにない湯を追加")+`
+    <p class="settext"><b>湯の名前だけでも登録できます。</b>サウナイキタイのURL・ページを全選択したコピペ・Googleマップのリンク・住所や座標を一緒に貼れば、そのぶん自動で埋まります。</p>
+    <textarea id="pstx" class="input" rows="4" style="margin-top:9px;resize:vertical;line-height:1.6" placeholder="例）大垣サウナ&#10;https://sauna-ikitai.com/saunas/12345"></textarea>
     <div class="fbtnrow" style="margin-top:9px"><button class="btn primary" onclick="window.__psRead()">読み取る</button></div>
     <div id="psout" style="margin-top:10px"></div>`);
   const el=document.getElementById("pstx");
@@ -1545,10 +1545,18 @@ function psRow(f,note){
 window.__psRead=()=>{
   const out=document.getElementById("psout"); if(!out) return;
   geoGot=null;
-  const r=parsePaste((document.getElementById("pstx")||{}).value||"");
-  if(r.sid==null&&!r.name&&r.lat==null){
-    out.innerHTML=`<p class="settext" style="color:var(--stamp)">読み取れませんでした。サウナイキタイの施設ページのURL（<code>.../saunas/12345</code>）を含めて貼ってください。</p>`;
+  const raw=(document.getElementById("pstx")||{}).value||"";
+  const r=parsePaste(raw);
+  if(!raw.trim()){
+    out.innerHTML=`<p class="settext" style="color:var(--stamp)">湯の名前を入れるか、サウナイキタイのURLを貼ってください。</p>`;
     return;
+  }
+  /* URLも住所もなくても、書かれた名前だけで登録できる。
+     サウナイキタイを開かずに「名前は覚えている」だけで記録を始められるようにする */
+  if(!r.name){
+    const first=raw.split(/\r?\n/).map(x=>x.trim())
+      .find(x=>x&&!/^https?:/.test(x)&&x.length<=40&&!/サウナイキタイ|イキタイ|サ活|検索|ログイン/.test(x));
+    if(first) r.name=first;
   }
   /* すでにある湯なら、登録させずにそのページへ送る（重複を作らせない） */
   if(r.sid!=null){
@@ -1938,7 +1946,7 @@ document.getElementById("manualBtn").addEventListener("click",()=>{
     const hits=FACILITIES.concat(state.ufacs).filter(f=>(f.name+(f.city||"")).includes(q)).slice(0,20);
     res.innerHTML=hits.map(f=>`<button class="frow" onclick="window.__fac('${f.id}')">
       <span class="nm">${esc(f.name)}</span><span class="ct">${esc(PREF[f.pref]?.label||"")}${esc(f.city?"・"+f.city:"")}</span></button>`).join("")
-      ||`<p class="settext">見つかりません。</p><div class="linkrow" style="margin-top:6px"><a href="#" onclick="window.__paste();return false">サウナイキタイのURLから追加する</a></div>`;
+      ||`<p class="settext">見つかりません。</p><div class="linkrow" style="margin-top:6px"><a href="#" data-q="${esc(q)}" onclick="window.__paste(this.dataset.q);return false">「${esc(q)}」を登録する</a></div>`;
   };
   run("");
   document.getElementById("mq").addEventListener("input",e=>run(e.target.value));
