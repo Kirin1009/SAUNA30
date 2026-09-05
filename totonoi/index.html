@@ -401,7 +401,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-beta.4";
+const APP_VERSION = "2.0.0-beta.5";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -845,12 +845,37 @@ function openVisit(vid){
         </div>`; }).join("")}
     </div>`:""}
     ${v.note?`<p style="font-size:13px;color:var(--mid);line-height:1.9;margin:10px 4px 0;border-top:1.5px dashed var(--line2);padding-top:10px">${esc(v.note)}</p>`:""}
+    <div class="linkrow" style="margin-top:10px">
+      <a href="#" onclick="window.__dateOpen();return false">日付を直す</a>
+    </div>
+    <div id="vdrow" style="display:none;gap:8px;margin-top:8px;align-items:center">
+      <input id="vdate" type="date" class="input" max="${today()}" value="${esc(v.date||"")}" style="flex:1">
+      <button class="btn" style="flex-shrink:0" onclick="window.__setDate('${v.id}')">この日付にする</button>
+    </div>
     <div class="fbtnrow">
       <button class="btn" onclick="window.__score('${v.id}')">${v.sc?"採点・メモを編集":"採点・メモを書く"}</button>
       <button class="btn" style="color:var(--stamp)" onclick="window.__delVisit('${v.id}')">この記録を削除</button>
     </div>`);
   hydratePhotos();
 }
+/* 押した日を後から直す。押印は今日で入るので、行った日と押した日がずれると
+   これまでは消して入れ直すしかなかった（採点・写真・ひとことも道連れになる） */
+window.__dateOpen=()=>{
+  const el=document.getElementById("vdrow"); if(!el) return;
+  el.style.display=el.style.display==="none"?"flex":"none";
+};
+window.__setDate=vid=>{
+  const v=state.visits.find(x=>x.id===vid); if(!v) return;
+  const d=((document.getElementById("vdate")||{}).value||"").trim();
+  if(!d){ notify("日付を選んでください。","err"); return; }
+  if(d>today()){ notify("未来の日付には記せません。","err"); return; }
+  if(d===v.date){ document.getElementById("vdrow").style.display="none"; return; }
+  v.date=d;
+  /* 新しい順を保つ。同じ日の中の並びは崩さない（sortは安定） */
+  state.visits.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  save(); renderAll(); openVisit(vid);
+  notify(`${d} に直しました。`);
+};
 window.__delVisit=vid=>{
   const v=state.visits.find(x=>x.id===vid); if(!v) return;
   const f=byId[v.fid];
