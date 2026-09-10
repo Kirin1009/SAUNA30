@@ -235,6 +235,20 @@
   .cntb{position:absolute;top:-2px;right:-2px;min-width:17px;height:17px;border-radius:9px;border:1.2px solid var(--text);
     background:var(--paper);font-family:ui-monospace,monospace;font-size:10px;font-weight:700;line-height:14px;padding:0 2px}
   .cntb.g{border-color:var(--gold);color:var(--gold)}
+  /* 印章（家紋）：黒/透過の印影をマスクにして currentColor で染める（サ道場と同方式） */
+  .km{display:block;width:100%;height:100%;background:currentColor;
+    -webkit-mask:var(--km) center/contain no-repeat;mask:var(--km) center/contain no-repeat}
+  .sealrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 8px;margin:8px 0 14px}
+  .sealcell{background:var(--paper);border-radius:8px;padding:8px 4px 6px;text-align:center;color:var(--stamp);
+    box-shadow:0 2px 3px rgba(74,59,46,.2);min-width:0}
+  .sealcell.new{box-shadow:0 0 0 1.5px var(--stamp),0 2px 3px rgba(74,59,46,.2)}
+  .sealcell .kmw{width:44px;height:44px;margin:0 auto}
+  .sealcell .sn{display:block;font-size:9.5px;color:var(--text);margin-top:4px;font-weight:700}
+  .sealcell .sc2{display:block;font-family:ui-monospace,monospace;font-size:9px;color:var(--muted)}
+  .stillrow{font-size:10px;color:var(--muted);line-height:2;margin:0 2px 8px}
+  .stillrow button{background:none;border:none;color:var(--mid);font-family:inherit;font-size:10px;text-decoration:underline;padding:0 3px}
+  .morebtn{width:100%;background:none;border:1px dashed var(--line2);border-radius:8px;color:var(--muted);
+    font-family:inherit;font-size:10px;padding:6px;margin-top:8px}
   /* ---------- 記録 ---------- */
   .lrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--paper);border:1.5px solid var(--line);
     border-radius:12px;padding:10px 13px;margin-top:9px;color:var(--text)}
@@ -401,7 +415,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-beta.5";
+const APP_VERSION = "2.0.0-beta.6";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -1133,12 +1147,30 @@ function openDone(vid,past){
   const v=state.visits.find(x=>x.id===vid); if(!v) return;
   const f=byId[v.fid]; if(!f) return;
   const n=nthOf(v), total=visitsOf(v.fid).length, gold=total>=10;
+  /* ② 今日は何が増えたか。初訪問＝湯が増えた／初めての県／3・5・10回＝常連の段。
+     押すたびに「コレクションが育った」と分かるようにする。カウントアップだけで、あと何湯とは言わない */
+  const others=state.visits.filter(x=>x.id!==vid);
+  const nFac=new Set(state.visits.map(x=>x.fid)).size;
+  const firstPref=!!f.pref&&PREF[f.pref]&&!others.some(x=>(byId[x.fid]||{}).pref===f.pref);
+  let mile="";
+  if(n===1) mile=`はじめての湯　<b>${nFac}湯目</b>`+(firstPref?`　・　はじめての${esc(PREF[f.pref].label)}`:"");
+  else if(n===3) mile="3回目　常連への道";
+  else if(n===5) mile="5回目　すっかり馴染み";
+  else if(n===10) mile="10回目　<b>金の常連判</b>";
+  else mile="この湯に戻ってきました";
+  /* ③ この一印でひらいた印章 */
+  const before=calcSeals(others), after=calcSeals(state.visits);
+  const newSeals=SEALS.filter(sl=>after[sl.id]&&!before[sl.id]);
+  const upSeals=SEALS.filter(sl=>after[sl.id]&&before[sl.id]&&after[sl.id]>before[sl.id]);
   openSheet(sheetHead("一印、記しました")+`
     <div style="text-align:center;padding:2px 0 4px">
       <div style="width:132px;margin:0 auto">${facSeal(f,{size:132,gold,op:0.95})}</div>
       <p style="font-size:14.5px;font-weight:800;margin-top:6px">${esc(f.name)}</p>
       <p class="mono" style="font-size:11px;color:var(--muted);margin-top:2px">${esc(v.date)}${n>1?`　${n}回目${gold?"・常連":""}`:""}</p>
-      ${n>1?`<p style="font-size:11px;color:var(--mid);margin-top:6px">この湯に戻ってきました</p>`:""}
+      <p style="font-size:11.5px;color:var(--mid);margin-top:6px">${mile}</p>
+      ${newSeals.length?`<div class="sealrow" style="grid-template-columns:repeat(${Math.min(4,newSeals.length)},72px);justify-content:center;margin:10px auto 0">`
+        +newSeals.map(sl=>sealCellHTML(sl,after[sl.id],"new")).join("")+`</div><p class="settext" style="text-align:center;margin-top:4px;font-size:10px">印章がひらきました</p>`:""}
+      ${!newSeals.length&&upSeals.length?`<p class="settext" style="text-align:center;margin-top:4px;font-size:10px">${upSeals.map(sl=>`${sl.name} ${after[sl.id]}湯`).join("　")}</p>`:""}
     </div>
     <div class="fbtnrow">
       <button class="btn primary" onclick="window.__close()">閉じる</button>
@@ -2038,9 +2070,60 @@ document.getElementById("mapReset").addEventListener("click",()=>{
 
 /* ---------- 棚 ---------- */
 let openReg=null;
+/* ---------- 印章（家紋）：湯の性格で集まるトロフィー ----------
+   サ道場の「お題」の移植。汎用バッジ（100回達成）ではなく、行った湯の実データから生まれる。
+   実測温度は公式値に勝つ（要件定義§10.3）。取ったものだけ見せ、未取得は出さない（伏せ原則）。
+   数はカウントアップだけ——「あと◯湯で次の段」は出さない（宿題にしない） */
+const effSmax=f=>{ const t=obsTemps(f.id,0); return t.length?Math.max(...t):f.smax; };
+const effWmin=f=>{ const t=obsTemps(f.id,1); return t.length?Math.min(...t):f.wmin; };
+const SEALS=[
+  {id:"shaku",  name:"灼熱",    desc:"サ室100°C以上の湯", test:f=>{ const x=effSmax(f); return x!=null&&x>=100; }},
+  {id:"single", name:"シングル", desc:"水風呂10°C未満の湯", test:f=>{ const x=effWmin(f); return x!=null&&x<10; }},
+  {id:"night",  name:"深夜",    desc:"深夜まで開く湯",     test:f=>!!f.n},
+  {id:"sento",  name:"銭湯",    desc:"町の銭湯サウナ",     test:f=>f.k==="sento"},
+  {id:"private",name:"貸切",    desc:"貸切の一室",         test:f=>f.k==="private"},
+  {id:"luxe",   name:"贅沢",    desc:"¥3,000以上の湯",     test:f=>f.fee!=null&&f.fee>=3000},
+  {id:"yoyaku", name:"予約",    desc:"事前予約制の名店",   test:f=>!!f.y},
+];
+/* 訪問配列から、印章ごとの「該当した湯の数」を返す純粋関数。0は含めない */
+function calcSeals(visits){
+  const fids=[...new Set(visits.map(v=>v.fid))].map(id=>byId[id]).filter(Boolean);
+  const out={};
+  for(const sl of SEALS){ const n=fids.filter(sl.test).length; if(n) out[sl.id]=n; }
+  return out;
+}
+function sealCellHTML(sl,n,extra){
+  return `<div class="sealcell${extra?" "+extra:""}"><div class="kmw"><i class="km" style="--km:url(art/km-${sl.id}.webp)"></i></div><span class="sn">${sl.name}</span><span class="sc2">${n}湯</span></div>`;
+}
+
+/* ---------- 棚：持っているものの棚 ----------
+   分母（/150 のような未達の壁）は見せない。カウントアップだけ。
+   持っている判子を先頭に大きく、まだの湯は県ごとに畳んで「まだの湯 N」から開く。
+   1湯もない県は一行にまとめる。最初に開く地方は、いちばん判子の多い地方 */
+let shelfMore={}, shelfInit=false;   /* 描画中だけの状態。保存しない */
 function renderShelf(){
   const box=document.getElementById("shelfbox");
-  box.innerHTML=REGIONS.map(([name,keys])=>{
+  const seals=calcSeals(state.visits);
+  const got=SEALS.filter(sl=>seals[sl.id]);
+  let head="";
+  if(got.length){
+    head=`<div class="eyebrow" style="margin:2px 2px 0">あなたの印章</div><div class="sealrow">`+got.map(sl=>sealCellHTML(sl,seals[sl.id])).join("")+`</div>`;
+  }else if(state.visits.length){
+    head=`<p class="settext" style="margin:0 2px 12px;font-size:10px">印章は、行った湯の性格で集まります——灼熱・シングル・深夜・銭湯・貸切・贅沢・予約。</p>`;
+  }
+  /* 記録が入って最初に棚を描くとき一度だけ、いちばん判子の多い地方を開いておく（空帳の描画では消費しない） */
+  if(!shelfInit&&openReg===null&&state.visits.length){
+    let best=null,bn=0;
+    for(const [name,keys] of REGIONS){ const n=FACILITIES.filter(f=>keys.includes(f.pref)&&visited(f.id)).length; if(n>bn){bn=n;best=name;} }
+    if(best) openReg=best;
+    shelfInit=true;
+  }
+  const cell=f=>{ const c=visitsOf(f.id).length, gold=c>=10;
+    return `<button class="bcell" onclick="window.__fac('${f.id}')"><span class="cnt">
+      ${c?facSeal(f,{gold}):facSeal(f,{hidden:true})}
+      ${c>1?`<span class="cntb${gold?" g":""}">${c}</span>`:""}</span>
+      <span class="bnm${c?"":" off"}">${esc(f.name)}</span></button>`; };
+  box.innerHTML=head+REGIONS.map(([name,keys])=>{
     const fs=FACILITIES.filter(f=>keys.includes(f.pref));
     const n=fs.filter(f=>visited(f.id)).length;
     const open=openReg===name;
@@ -2048,24 +2131,25 @@ function renderShelf(){
     if(open){
       /* 最下段は飾り棚：しつらえ小物（盆栽/一輪挿し/湯呑み）を地方ごとに1点、決め打ちで置く */
       const oki=[["bonsai",52],["vase",44],["yunomi",34]][REGIONS.findIndex(r=>r[0]===name)%3];
+      const still=[];
       inner=`<div class="shelf">`+keys.map(pk=>{
         const pfs=FACILITIES.filter(f=>f.pref===pk);
         if(!pfs.length) return "";
-        const pn=pfs.filter(f=>visited(f.id)).length;
-        return `<div style="font-size:10px;color:#6E5D4B;letter-spacing:.15em;margin:2px 2px 7px">${PREF[pk].label}　${pn}<span style="opacity:.6">/${pfs.length}</span></div>
-          <div class="bgrid">`+pfs.map(f=>{
-            const c=visitsOf(f.id).length, gold=c>=10;
-            return `<button class="bcell" onclick="window.__fac('${f.id}')"><span class="cnt">
-              ${c?facSeal(f,{gold}):facSeal(f,{hidden:true})}
-              ${c>1?`<span class="cntb${gold?" g":""}">${c}</span>`:""}</span>
-              <span class="bnm${c?"":" off"}">${esc(f.name)}</span></button>`;
-          }).join("")+`</div><div class="plank"></div>`;
-      }).join("")+`<div class="okirow"><img src="art/deco-${oki[0]}.webp" height="${oki[1]}" alt=""></div><div class="plank" style="margin-bottom:0"></div></div>`;
+        const done=pfs.filter(f=>visited(f.id)), rest=pfs.filter(f=>!visited(f.id));
+        const more=!!shelfMore[pk];
+        if(!done.length&&!more){ still.push(pk); return ""; }
+        return `<div style="font-size:10px;color:#6E5D4B;letter-spacing:.15em;margin:2px 2px 7px">${PREF[pk].label}${done.length?`　${done.length}湯`:""}</div>
+          <div class="bgrid">`+done.map(cell).join("")+(more?rest.map(cell).join(""):"")+`</div>`
+          +(rest.length?`<button class="morebtn" onclick="window.__shelfMore('${pk}')">${more?"まだの湯をとじる":`まだの湯 ${rest.length}`}</button>`:"")
+          +`<div class="plank"></div>`;
+      }).join("")
+      +(still.length?`<div class="stillrow">まだ：${still.map(pk=>`<button onclick="window.__shelfMore('${pk}')">${PREF[pk].label}</button>`).join("")}</div>`:"")
+      +`<div class="okirow"><img src="art/deco-${oki[0]}.webp" height="${oki[1]}" alt=""></div><div class="plank" style="margin-bottom:0"></div></div>`;
     }
     return `<div class="regbox">
-      <button class="reghead" data-r="${esc(name)}">${esc(name)}<span class="num">${n}/${fs.length}</span><span>${open?"−":"＋"}</span></button>
+      <button class="reghead" data-r="${esc(name)}">${esc(name)}<span class="num">${n?n+"湯":""}</span><span>${open?"−":"＋"}</span></button>
       ${inner}</div>`;
-  }).join("")+(state.ufacs.length?`<div class="regbox"><button class="reghead" data-r="__u">じぶんの湯<span class="num">${state.ufacs.length}</span><span>${openReg==="__u"?"−":"＋"}</span></button>
+  }).join("")+(state.ufacs.length?`<div class="regbox"><button class="reghead" data-r="__u">じぶんの湯<span class="num">${state.ufacs.length}湯</span><span>${openReg==="__u"?"−":"＋"}</span></button>
     ${openReg==="__u"?`<div class="shelf"><div class="bgrid">`+state.ufacs.map(f=>{
       const c=visitsOf(f.id).length;
       return `<button class="bcell" onclick="window.__fac('${f.id}')"><span class="cnt">${facSeal(f,{gold:c>=10})}${c>1?`<span class="cntb">${c}</span>`:""}</span><span class="bnm">${esc(f.name)}</span></button>`;
@@ -2074,6 +2158,7 @@ function renderShelf(){
     openReg=openReg===b.dataset.r?null:b.dataset.r; renderShelf();
   }));
 }
+window.__shelfMore=pk=>{ shelfMore[pk]=!shelfMore[pk]; renderShelf(); };
 
 /* ---------- 記録 ---------- */
 function renderLog(){
