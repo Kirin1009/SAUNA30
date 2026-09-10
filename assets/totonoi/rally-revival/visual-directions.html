@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ととのい帳 スタンプラリー復活案</title>
+<style>
+/* Hallmark · redesign · genre: editorial · system: ととのい帳 style reference v1
+ * Pre-emit critique: Philosophy 5 · Hierarchy 5 · Execution 4 · Specificity 5 · Restraint 5 · Variety 5
+ * Audience: 紗也乃さん / Shun / ココ · use: rally placement decision · tone: 静かな蒐集
+ */
+:root {
+  --bg: #F5EEDF;
+  --paper: #FBF6EA;
+  --paper2: #F3ECDA;
+  --paper-hi: #FFFEF8;
+  --ink: #4A3B2E;
+  --ink-mid: #6E5D4B;
+  --ink-mute: #A08C72;
+  --rule: #E4D9C0;
+  --rule2: #D3C5A4;
+  --stamp: #C8402F;
+  --stamp-wash: rgba(200, 64, 47, .09);
+  --stamp-ghost: rgba(200, 64, 47, .45);
+  --gold: #C7973F;
+  --plank: #C29055;
+  --plank-dark: #815D36;
+  --leaf: #6F7E58;
+  --paper-wash: rgba(251, 246, 234, .9);
+  --ink-wash: rgba(74, 59, 46, .08);
+  --font-mincho: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  --font-round: ui-rounded, "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --t-micro: 9px;
+  --t-caption: 10.5px;
+  --t-body-sm: 12px;
+  --t-body: 13.5px;
+  --t-lead: 15px;
+  --t-heading-sm: 22px;
+  --t-heading: 32px;
+  --sp-xs: 3px;
+  --sp-sm: 6px;
+  --sp-md: 9px;
+  --sp-lg: 15px;
+  --sp-xl: 24px;
+  --sp-2xl: 36px;
+  --r-paper: 10px;
+  --r-control: 8px;
+  --r-chip: 999px;
+  --sh-paper: 0 1px 3px rgba(74, 59, 46, .15);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; overflow-x: clip; }
+body {
+  background: var(--ink);
+  color: var(--ink);
+  font-family: var(--font-round);
+  font-size: var(--t-body);
+  line-height: 1.7;
+}
+button { color: inherit; font: inherit; }
+.artboard { width: min(1320px, 100%); margin: 0 auto; padding: var(--sp-2xl) var(--sp-xl) 72px; }
+.board-head { color: var(--paper); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-xl); align-items: end; margin-bottom: var(--sp-2xl); }
+.board-head h1 { margin: 0; font-family: var(--font-mincho); font-size: var(--t-heading); font-style: normal; line-height: 1.3; }
+.board-head p { margin: var(--sp-sm) 0 0; color: var(--rule2); font-size: var(--t-body-sm); }
+.board-head aside { color: var(--rule2); font-family: var(--font-mono); font-size: var(--t-caption); text-align: right; }
+.cuts { display: grid; grid-template-columns: repeat(3, minmax(0, 390px)); gap: 42px 30px; justify-content: center; }
+.target { min-width: 0; }
+.target-head { color: var(--paper); display: flex; justify-content: space-between; gap: var(--sp-md); margin-bottom: var(--sp-sm); }
+.target-head b { font-size: var(--t-lead); }
+.target-head span { color: var(--rule2); font-family: var(--font-mono); font-size: var(--t-caption); }
+.target-note { color: var(--rule2); font-size: var(--t-caption); line-height: 1.6; margin: var(--sp-md) 0 0; }
+.cut { position: relative; width: min(390px, calc(100vw - 24px)); height: 844px; overflow: hidden; background: var(--bg); border: 1px solid var(--rule2); box-shadow: var(--sh-paper); }
+.cut::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .16; border: 1px solid var(--ink-wash); }
+.screen { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }
+.app-head { height: 58px; flex: 0 0 58px; display: flex; align-items: center; justify-content: center; background: var(--paper-wash); border-bottom: 1px solid var(--rule); }
+.wordmark { margin: 0; font-size: var(--t-lead); font-weight: 800; letter-spacing: .32em; }
+.wordmark small { display: block; margin-top: -2px; color: var(--ink-mute); font-family: var(--font-mono); font-size: var(--t-micro); font-weight: 400; letter-spacing: .05em; text-align: center; }
+.content { flex: 1; min-height: 0; overflow: hidden; padding: var(--sp-lg) 16px 82px; }
+.page-kicker { display: block; color: var(--ink-mute); font-size: var(--t-micro); font-weight: 700; letter-spacing: .18em; }
+.page-title { margin: var(--sp-xs) 0 0; font-family: var(--font-mincho); font-size: var(--t-heading-sm); font-style: normal; line-height: 1.4; overflow-wrap: anywhere; }
+.lede { margin: var(--sp-md) 0 var(--sp-lg); color: var(--ink-mid); font-size: var(--t-body-sm); }
+.mono { font-family: var(--font-mono); letter-spacing: .05em; }
+.paper { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-paper); box-shadow: var(--sh-paper); padding: var(--sp-lg); }
+.eyebrow { color: var(--ink-mute); font-size: var(--t-micro); font-weight: 700; letter-spacing: .18em; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-md); }
+.btn { min-height: 42px; border: 1px solid var(--rule2); border-radius: var(--r-control); background: var(--paper); padding: var(--sp-md) var(--sp-lg); font-weight: 700; }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.btn.full { width: 100%; }
+.text-link { color: var(--ink-mid); font-size: var(--t-caption); text-decoration: underline; }
+.nav { position: absolute; inset: auto 0 0; height: 66px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--paper); border-top: 1px solid var(--rule2); }
+.nav span { display: grid; place-items: center; border-top: 3px solid transparent; color: var(--ink-mute); font-size: var(--t-caption); font-weight: 700; }
+.nav .active { border-top-color: var(--ink); color: var(--ink); }
+.shelf-cap { margin-top: var(--sp-lg); padding: var(--sp-md) var(--sp-lg); color: var(--paper-hi); background: var(--plank-dark); border-radius: var(--r-control) var(--r-control) 0 0; font-family: var(--font-mincho); font-size: var(--t-lead); font-weight: 700; }
+.shelf { padding: var(--sp-lg); background: var(--plank); border: 1px solid var(--plank-dark); border-top: 0; border-radius: 0 0 var(--r-paper) var(--r-paper); }
+.stamp-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-md); }
+.seal { position: relative; aspect-ratio: 1; display: grid; place-items: center; color: var(--stamp); border: 2px solid currentColor; background: var(--stamp-wash); font-family: var(--font-mincho); font-size: var(--t-lead); font-weight: 700; transform: rotate(var(--tilt, -3deg)); }
+.seal::after { content: ""; position: absolute; inset: 4px; border: 1px solid currentColor; opacity: .7; }
+.seal:nth-child(2n) { --tilt: 4deg; border-radius: 50%; }
+.seal:nth-child(3n) { --tilt: -6deg; }
+.seal.miss { color: var(--ink-mute); background: var(--paper2); border-style: dashed; font-family: var(--font-round); }
+.seal.miss::after { display: none; }
+.progress { margin: var(--sp-lg) 0 var(--sp-md); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-md); align-items: end; }
+.progress strong { font-family: var(--font-mono); font-size: var(--t-heading-sm); line-height: 1; }
+.track { height: 4px; margin-bottom: 4px; background: var(--rule); }
+.track span { display: block; width: 60%; height: 100%; background: var(--ink); }
+.quiet-note { margin: var(--sp-md) 0 0; color: var(--ink-mid); font-size: var(--t-caption); }
+.bird-card { position: relative; margin-top: var(--sp-lg); overflow: hidden; background: var(--paper-hi); }
+.bird-card::after { content: "水戸の梅と鶯"; position: absolute; right: 14px; bottom: 10px; color: var(--ink-mute); font-family: var(--font-mincho); font-size: var(--t-caption); writing-mode: vertical-rl; }
+.bird-stage { position: relative; height: 278px; margin-top: var(--sp-md); border-bottom: 1px solid var(--ink-wash); }
+.bird { position: absolute; left: 66px; top: 53px; width: 185px; height: 132px; color: var(--leaf); }
+.bird .body { position: absolute; left: 38px; top: 38px; width: 122px; height: 70px; border-radius: 58% 52% 44% 56%; background: currentColor; transform: rotate(-9deg); }
+.bird .head { position: absolute; right: 3px; top: 22px; width: 52px; height: 52px; border-radius: 50%; background: currentColor; }
+.bird .beak { position: absolute; right: -24px; top: 40px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 28px solid var(--gold); }
+.bird .tail { position: absolute; left: 0; top: 73px; width: 76px; height: 27px; background: currentColor; clip-path: polygon(0 34%, 100% 0, 87% 100%); transform: rotate(13deg); }
+.bird .eye { position: absolute; right: 19px; top: 37px; width: 5px; height: 5px; border-radius: 50%; background: var(--paper-hi); }
+.tiles { position: absolute; inset: 18px 30px 38px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.tile { border: 1px solid rgba(255, 254, 248, .7); }
+.tile.hidden { background: var(--paper2); opacity: .94; }
+.bird-label { position: absolute; left: 15px; bottom: 12px; font-family: var(--font-mono); font-size: var(--t-caption); color: var(--ink-mid); }
+.moment { margin-top: var(--sp-lg); padding: var(--sp-md) var(--sp-lg); border-left: 3px solid var(--stamp); background: var(--stamp-wash); font-size: var(--t-body-sm); }
+.settings-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: var(--sp-md); align-items: center; margin-top: var(--sp-lg); }
+.book-icon { width: 42px; height: 54px; border: 2px solid var(--ink); border-radius: 2px 6px 6px 2px; background: var(--paper2); position: relative; }
+.book-icon::before { content: "四七〇"; position: absolute; inset: 5px; display: grid; place-items: center; border: 1px solid var(--stamp-ghost); color: var(--stamp); font-family: var(--font-mincho); font-size: var(--t-caption); writing-mode: vertical-rl; }
+.settings-row h3 { margin: 0; font-family: var(--font-mincho); font-size: var(--t-lead); }
+.settings-row p { margin: 2px 0 0; color: var(--ink-mid); font-size: var(--t-caption); line-height: 1.5; }
+.arrow { color: var(--ink-mid); font-size: var(--t-heading-sm); }
+.ledger { margin-top: var(--sp-xl); border-top: 1px solid var(--rule2); }
+.ledger-row { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: var(--sp-md); align-items: center; padding: var(--sp-lg) 0; border-bottom: 1px solid var(--rule); }
+.ledger-row time { color: var(--ink-mid); font-family: var(--font-mono); font-size: var(--t-caption); }
+.ledger-row b { font-size: var(--t-body-sm); }
+.ledger-row span { color: var(--stamp); font-family: var(--font-mincho); font-weight: 700; }
+.rule-note { margin-top: var(--sp-xl); color: var(--ink-mid); font-size: var(--t-caption); text-align: center; }
+@media (max-width: 900px) {
+  .artboard { padding: var(--sp-xl) var(--sp-md) 60px; }
+  .board-head { grid-template-columns: minmax(0, 1fr); }
+  .board-head aside { text-align: left; }
+  .cuts { grid-template-columns: minmax(0, 390px); }
+}
+body[data-cut] { background: var(--bg); }
+body[data-cut] .artboard { width: 390px; padding: 0; }
+body[data-cut] .board-head,
+body[data-cut] .target-head,
+body[data-cut] .target-note { display: none; }
+body[data-cut] .cuts { display: block; }
+body[data-cut] .target { display: none; }
+body[data-cut="direction-a"] .target:nth-child(1),
+body[data-cut="direction-b"] .target:nth-child(2),
+body[data-cut="direction-c"] .target:nth-child(3) { display: block; }
+body[data-cut] .cut { width: 390px; border: 0; }
+</style>
+</head>
+<body>
+<main class="artboard">
+  <header class="board-head">
+    <div>
+      <h1>記録を宿題にしない、三つの戻し方</h1>
+      <p>帳には未達を置かない。ラリーを見たい人だけが、棚の奥か別冊へ進む。</p>
+    </div>
+    <aside>390 × 844 / 3 DIRECTIONS<br>2026.08.23</aside>
+  </header>
+
+  <section class="cuts">
+    <article class="target">
+      <div class="target-head"><b>A　棚の奥に、めぐり帳</b><span>RECOMMENDED</span></div>
+      <div class="cut" id="direction-a">
+        <div class="screen">
+          <header class="app-head"><h2 class="wordmark">ととのい帳<small>2026.08</small></h2></header>
+          <div class="content">
+            <span class="page-kicker">棚　›　関東　›　茨城</span>
+            <h2 class="page-title">茨城の湯めぐり</h2>
+            <p class="lede">自分でひらいた県だけ、残りの枠が見える。帳にはこの数字を持ち出さない。</p>
+            <div class="shelf-cap row"><span>めぐり帳</span><span class="mono">6 / 10</span></div>
+            <div class="shelf">
+              <div class="stamp-grid" aria-label="10湯中6湯訪問済み">
+                <span class="seal">湯</span><span class="seal">森</span><span class="seal">蒸</span><span class="seal">水</span><span class="seal">空</span>
+                <span class="seal">風</span><span class="seal miss">?</span><span class="seal miss">?</span><span class="seal miss">?</span><span class="seal miss">?</span>
+              </div>
+              <div class="progress"><strong>あと 4湯</strong><div><div class="track"><span></span></div><div class="eyebrow">この県の収録枠</div></div></div>
+              <button class="btn primary full">次の湯を棚から探す</button>
+              <p class="quiet-note">金の栞と制覇証は、十印が揃うまで見せません。</p>
+            </div>
+          </div>
+          <nav class="nav"><span>帳</span><span>探す</span><span class="active">棚</span><span>記録</span></nav>
+        </div>
+      </div>
+      <p class="target-note">県棚だけで明示opt-in。数字は墨、未踏は伏せ判、金は達成まで不在。470sの「埋める」を最小の境界で戻す。</p>
+    </article>
+
+    <article class="target">
+      <div class="target-head"><b>B　県鳥がほどける</b><span>QUIET DISCOVERY</span></div>
+      <div class="cut" id="direction-b">
+        <div class="screen">
+          <header class="app-head"><h2 class="wordmark">ととのい帳<small>2026.08</small></h2></header>
+          <div class="content">
+            <span class="page-kicker">棚　›　関東　›　茨城</span>
+            <h2 class="page-title">判子の奥の一羽</h2>
+            <p class="lede">残り数は言わない。訪問が増えるたび、和紙の伏せ片が一枚ずつほどける。</p>
+            <section class="paper bird-card">
+              <div class="eyebrow">茨城県鳥　未詳</div>
+              <div class="bird-stage">
+                <div class="bird" aria-hidden="true"><span class="tail"></span><span class="body"></span><span class="head"></span><span class="beak"></span><span class="eye"></span></div>
+                <div class="tiles" aria-hidden="true">
+                  <i class="tile"></i><i class="tile hidden"></i><i class="tile"></i><i class="tile hidden"></i>
+                  <i class="tile hidden"></i><i class="tile"></i><i class="tile"></i><i class="tile hidden"></i>
+                  <i class="tile"></i><i class="tile hidden"></i><i class="tile"></i><i class="tile hidden"></i>
+                </div>
+                <span class="bird-label">六つの記録が、絵になりました</span>
+              </div>
+            </section>
+            <div class="moment"><b>きょうの一印で、羽が一枚ひらきました。</b><br>次を急かさず、増えたものだけを知らせます。</div>
+            <p class="rule-note">全片が揃った瞬間だけ、鳥名・金の栞・制覇証をひらく</p>
+          </div>
+          <nav class="nav"><span>帳</span><span>探す</span><span class="active">棚</span><span>記録</span></nav>
+        </div>
+      </div>
+      <p class="target-note">47県鳥を「進捗率」ではなく、記録が生んだ絵へ転換。課題感は最小だが、枠を数えて埋めたい欲求にはAより弱い。</p>
+    </article>
+
+    <article class="target">
+      <div class="target-head"><b>C　別冊470sを残す</b><span>SEPARATE COMPANION</span></div>
+      <div class="cut" id="direction-c">
+        <div class="screen">
+          <header class="app-head"><h2 class="wordmark">ととのい帳<small>2026.08</small></h2></header>
+          <div class="content">
+            <span class="page-kicker">記録　›　この帳について</span>
+            <h2 class="page-title">帳と別冊</h2>
+            <p class="lede">ととのい帳は訪問の記録。全国の枠を追う日は、専用の別冊へ移る。</p>
+            <section class="paper settings-row">
+              <div class="book-icon" aria-hidden="true"></div>
+              <div><h3>Sauna470s</h3><p>県鳥・制覇証・残り数を<br>これまでどおり楽しむ</p></div>
+              <span class="arrow">›</span>
+            </section>
+            <p class="quiet-note">別冊を開かない限り、未達や残り数は現れません。</p>
+            <div class="ledger">
+              <div class="eyebrow" style="margin-top:24px">ととのい帳に残るもの</div>
+              <div class="ledger-row"><time>2026.08.22</time><b>大垣サウナ</b><span>印</span></div>
+              <div class="ledger-row"><time>2026.08.16</time><b>湯どころ みのり</b><span>印</span></div>
+              <div class="ledger-row"><time>2026.08.09</time><b>田辺温熱保養所</b><span>印</span></div>
+            </div>
+            <section class="paper" style="margin-top:24px">
+              <div class="eyebrow">ふたりの記録</div>
+              <div class="row" style="margin-top:9px"><b>同じ湯の記憶を比べる</b><span class="arrow">›</span></div>
+              <p class="quiet-note">夫婦比較は勝敗にせず、ラリーとは分離します。</p>
+            </section>
+          </div>
+          <nav class="nav"><span>帳</span><span>探す</span><span>棚</span><span class="active">記録</span></nav>
+        </div>
+      </div>
+      <p class="target-note">記録ファーストを最も強く守る比較案。既存470sを再利用できる一方、アプリ間移動と二重保守を受け入れる。</p>
+    </article>
+  </section>
+</main>
+<script>
+const selectCut = () => {
+  const cut = new URLSearchParams(location.search).get("cut") || location.hash.slice(1);
+  if (/^direction-[abc]$/.test(cut)) document.body.dataset.cut = cut;
+  else delete document.body.dataset.cut;
+};
+selectCut();
+addEventListener("hashchange", selectCut);
+</script>
+</body>
+</html>
