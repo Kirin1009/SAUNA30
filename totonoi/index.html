@@ -249,6 +249,30 @@
   .stillrow button{background:none;border:none;color:var(--mid);font-family:inherit;font-size:10px;text-decoration:underline;padding:0 3px}
   .morebtn{width:100%;background:none;border:1px dashed var(--line2);border-radius:8px;color:var(--muted);
     font-family:inherit;font-size:10px;padding:6px;margin-top:8px}
+  .mrow{display:flex;gap:6px;align-items:stretch}
+  .mrow .morebtn{flex:1}
+  .mrow .rlink{flex:0 0 auto;margin-top:8px;background:none;border:1px dashed var(--line2);border-radius:8px;color:var(--mid);
+    font-family:inherit;font-size:10px;padding:6px 10px}
+  /* めぐり帳（A案）：県の中だけ・本人がひらいた県だけ。数字は墨、未踏は伏せ判、金は満願まで不在 */
+  .rally{background:var(--paper);border-radius:10px;padding:10px 10px 9px;margin-top:8px;box-shadow:0 2px 3px rgba(74,59,46,.2)}
+  .rally .rhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .rally .rhead .n{font-family:ui-monospace,monospace;font-size:15px;font-weight:700;color:var(--text)}
+  .rally .rhead .n.g{color:var(--gold)}
+  .rgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px 5px}
+  .rgrid .bcell{background:var(--paper2);padding:4px 2px 3px}
+  .rgrid .bnm{font-size:7px}
+  .rprog{display:flex;align-items:center;gap:10px;margin:10px 0 8px}
+  .rprog b{font-size:14px;flex-shrink:0}
+  .rprog b.g{color:var(--gold)}
+  .rtrack{flex:1;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+  .rtrack span{display:block;height:100%;background:var(--text);border-radius:3px}
+  .rtrack span.g{background:var(--gold)}
+  .btn.ink{background:var(--text);color:var(--paper);border-color:var(--text);width:100%}
+  .rnote{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6}
+  .rnote button{background:none;border:none;color:var(--mid);font-family:inherit;font-size:10px;text-decoration:underline;padding:0;flex-shrink:0}
+  .bathrow{display:flex;gap:6px;margin-top:8px}
+  .bathrow .btn{flex:1;padding:9px 4px;font-size:12.5px}
+  .bathrow .btn.on{background:var(--text);color:var(--paper);border-color:var(--text)}
   /* ---------- 記録 ---------- */
   .lrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--paper);border:1.5px solid var(--line);
     border-radius:12px;padding:10px 13px;margin-top:9px;color:var(--text)}
@@ -377,6 +401,11 @@
       <input type="range" min="100" max="1000" step="50" id="radius">
     </div>
     <div class="sect">
+      <div class="eyebrow">利用する浴室</div>
+      <div class="bathrow" id="bathrow"></div>
+      <p class="settext">男湯・女湯の片方にしかサウナがない枠があります。選ぶと、めぐり帳と金の栞の数え方が「その人が入れる枠」になります。押した判子は消えません。</p>
+    </div>
+    <div class="sect">
       <div class="eyebrow">この帳について</div>
       <p class="settext" id="verNote"></p>
       <p style="margin-top:8px"><a href="#" onclick="window.__demoOpen();return false" style="font-size:11.5px;color:var(--muted)">見本をもう一度めくる</a></p>
@@ -415,7 +444,7 @@
 <script src="./catalog.js"></script>
 <script>
 "use strict";
-const APP_VERSION = "2.0.0-beta.6";
+const APP_VERSION = "2.0.0-beta.7";
 
 /* ---------- 施設マスタ（catalog.js が静的配信。アプリ本体と独立にカタログだけ版を上げられる） ---------- */
 if(!window.CATALOG){
@@ -451,6 +480,8 @@ if(!Array.isArray(state.ufacs)) state.ufacs=[];
 if(!state.imported) state.imported={};
 if(!state.shioriSeen) state.shioriSeen={};
 if(!state.obs) state.obs={};  /* 観測層：{fid:{tags:[],memo,at}} スキーマv2 §5の第一歩 */
+if(!state.rally) state.rally={};  /* めぐり帳をひらいた県 {pref:1}（A案・県ごとopt-in） */
+if(state.bath!=="m"&&state.bath!=="w") state.bath=null;  /* 利用する浴室。null=指定なし（470sと同じ考え方） */
 const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ notify("保存に失敗しました。","err"); } };
 let byId={};
 function reindex(){ byId=Object.fromEntries(FACILITIES.concat(state.ufacs).map(f=>[f.id,f])); }
@@ -577,12 +608,21 @@ const sheetHead=(t,back)=>`<div class="shead">${back||`<span class="eyebrow">${e
 /* ---------- 栞（達成リワード） ----------
    原則：進捗を先に見せない。達成した瞬間に祝い、帳のそのページに金の栞が挟まる。
    対象＝県制覇（その県の470枠を全訪問）→地方制覇→全国。判定は枠（f.rank持ち）のみ */
+/* 利用する浴室で「入れる枠」を絞る（470sの bathOK と同じ思想）。判定はカタログの部屋データ（saunas/waters の bath）。
+   部屋データが無い枠は除外しない。枠以外（東海99湯・自分の湯）は問わない。男468枠／女410枠 */
+function bathOK(f){
+  if(!state.bath||!f.rank) return true;
+  const rooms=(f.saunas||[]).concat(f.waters||[]);
+  if(!rooms.length) return true;
+  return rooms.some(r=>r.bath==="mw"||r.bath===state.bath);
+}
+const framesOf=pk=>FACILITIES.filter(f=>f.pref===pk&&f.rank&&bathOK(f)).sort((a,b)=>a.rank-b.rank);
 function calcShiori(){
   const first={};  /* fid→最初の訪問（古い側から走査） */
   for(let i=state.visits.length-1;i>=0;i--){ const v=state.visits[i]; if(!first[v.fid]) first[v.fid]=v; }
   const out=[], doneP={};
   for(const pk in PREF){
-    const fr=FACILITIES.filter(f=>f.pref===pk&&f.rank);
+    const fr=framesOf(pk);
     if(!fr.length||!fr.every(f=>first[f.id])) continue;
     let lastV=null;
     for(const f of fr){ const fv=first[f.id]; if(!lastV||fv.date>lastV.date) lastV=fv; }
@@ -1158,6 +1198,12 @@ function openDone(vid,past){
   else if(n===5) mile="5回目　すっかり馴染み";
   else if(n===10) mile="10回目　<b>金の常連判</b>";
   else mile="この湯に戻ってきました";
+  /* めぐり帳をひらいている県で、この一印が最後の枠だったとき——金はこの瞬間だけ */
+  if(f.rank&&state.rally[f.pref]){
+    const fr=framesOf(f.pref), was=new Set(others.map(x=>x.fid));
+    if(fr.length&&fr.every(x=>visited(x.id))&&!fr.every(x=>was.has(x.id)))
+      mile+=`<br><b style="color:var(--gold)">${esc(PREF[f.pref].label)}の湯めぐり、満願</b>`;
+  }
   /* ③ この一印でひらいた印章 */
   const before=calcSeals(others), after=calcSeals(state.visits);
   const newSeals=SEALS.filter(sl=>after[sl.id]&&!before[sl.id]);
@@ -2138,10 +2184,14 @@ function renderShelf(){
         const done=pfs.filter(f=>visited(f.id)), rest=pfs.filter(f=>!visited(f.id));
         const more=!!shelfMore[pk];
         if(!done.length&&!more){ still.push(pk); return ""; }
+        const fr=framesOf(pk), ral=fr.length&&state.rally[pk];
         return `<div style="font-size:10px;color:#6E5D4B;letter-spacing:.15em;margin:2px 2px 7px">${PREF[pk].label}${done.length?`　${done.length}湯`:""}</div>
           <div class="bgrid">`+done.map(cell).join("")+(more?rest.map(cell).join(""):"")+`</div>`
+          +(ral?rallyHTML(pk,fr,cell):"")
+          +`<div class="mrow">`
           +(rest.length?`<button class="morebtn" onclick="window.__shelfMore('${pk}')">${more?"まだの湯をとじる":`まだの湯 ${rest.length}`}</button>`:"")
-          +`<div class="plank"></div>`;
+          +(fr.length&&!ral?`<button class="rlink" onclick="window.__rally('${pk}',1)">めぐりをひらく</button>`:"")
+          +`</div><div class="plank"></div>`;
       }).join("")
       +(still.length?`<div class="stillrow">まだ：${still.map(pk=>`<button onclick="window.__shelfMore('${pk}')">${PREF[pk].label}</button>`).join("")}</div>`:"")
       +`<div class="okirow"><img src="art/deco-${oki[0]}.webp" height="${oki[1]}" alt=""></div><div class="plank" style="margin-bottom:0"></div></div>`;
@@ -2159,6 +2209,29 @@ function renderShelf(){
   }));
 }
 window.__shelfMore=pk=>{ shelfMore[pk]=!shelfMore[pk]; renderShelf(); };
+
+/* ---------- めぐり帳（チャッピーA案「棚の奥に、めぐり帳」） ----------
+   470sの「枠を埋める」を最小の境界で戻す。置き場所は棚の県の中だけ、本人が「めぐりをひらく」を選んだ県だけ常設。
+   帳・探す・記録には残り数を持ち出さない。数字は墨、未踏は伏せ判、金は満願の瞬間から */
+function rallyHTML(pk,fr,cell){
+  const n=fr.filter(f=>visited(f.id)).length, all=n===fr.length;
+  const menOnly=!state.bath?FACILITIES.filter(f=>f.pref===pk&&f.rank).filter(f=>{ const r=(f.saunas||[]).concat(f.waters||[]); return r.length&&!r.some(x=>x.bath==="mw"||x.bath==="w"); }).length:0;
+  return `<div class="rally">
+    <div class="rhead"><span class="eyebrow">めぐり帳</span><span class="n${all?" g":""}">${n} / ${fr.length}${all?"　満願":""}</span></div>
+    <div class="rgrid">${fr.map(cell).join("")}</div>
+    <div class="rprog">${all?`<b class="g">この県の枠、すべて踏みました</b>`:`<b>あと ${fr.length-n}湯</b>`}<div class="rtrack"><span class="${all?"g":""}" style="width:${Math.round(n/fr.length*100)}%"></span></div></div>
+    ${all?"":`<button class="btn ink" onclick="window.__rallyFind('${pk}')">次の湯を探す</button>`}
+    ${menOnly?`<p class="rnote" style="justify-content:flex-start">うち男湯だけの枠が${menOnly}。記録の設定で浴室を選ぶと数えから外れます。</p>`:""}
+    <div class="rnote"><span>${all?"金の栞は帳のそのページに挟まります。":"金の栞は、枠が揃うまで出ません。"}</span><button onclick="window.__rally('${pk}',0)">めぐりをとじる</button></div>
+  </div>`;
+}
+window.__rally=(pk,on)=>{ if(on) state.rally[pk]=1; else delete state.rally[pk]; save(); renderShelf(); };
+window.__rallyFind=pk=>{
+  const reg=(REGIONS.find(([,keys])=>keys.includes(pk))||[null])[0];
+  findReg=reg; selReg.value=reg||""; fillPrefSel(); findPref=pk; selPref.value=pk;
+  document.querySelector('nav button[data-v="find"]').click();
+  areaZoom(); renderFind();
+};
 
 /* ---------- 記録 ---------- */
 function renderLog(){
@@ -2363,7 +2436,7 @@ function bkInfo(){
 }
 async function bkExport(){
   const data={app:"totonoi",schema:BK_SCHEMA,exportedAt:new Date().toISOString(),appVersion:APP_VERSION,
-    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported,shioriSeen:state.shioriSeen,obs:state.obs}};
+    state:{visits:state.visits,wants:state.wants,ufacs:state.ufacs,radius:state.radius,imported:state.imported,shioriSeen:state.shioriSeen,obs:state.obs,rally:state.rally,bath:state.bath}};
   const name=`totonoi-${today()}.json`;
   const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
   const done=()=>{ state.bk={at:new Date().toISOString(),visits:state.visits.length}; save(); bkInfo(); };
@@ -2391,6 +2464,9 @@ function bkImportFile(f){
       state.imported=d.state.imported||{};
       state.shioriSeen=d.state.shioriSeen||{};
       state.obs=d.state.obs||{};
+      state.rally=d.state.rally||{};
+      state.bath=(d.state.bath==="m"||d.state.bath==="w")?d.state.bath:null;
+      bathRow();
       if(d.state.radius){ state.radius=d.state.radius; radEl.value=state.radius; radLabel(); }
       state.bk={at:new Date().toISOString(),visits:state.visits.length};
       reindex(); migrateObs(); save(); renderAll(); bkInfo();
@@ -2500,6 +2576,12 @@ function renderAll(){
 const radEl=document.getElementById("radius");
 radEl.value=state.radius;
 const radLabel=()=>document.getElementById("radlabel").textContent=`GPS判定半径 — ${state.radius}m`;
+function bathRow(){
+  document.getElementById("bathrow").innerHTML=[["m","男湯"],["w","女湯"],[null,"指定なし"]].map(([v,l])=>
+    `<button class="btn${state.bath===v?" on":""}" onclick="window.__bath(${v?`'${v}'`:"null"})">${l}</button>`).join("");
+}
+window.__bath=v=>{ state.bath=v; save(); bathRow(); renderAll(); };
+bathRow();
 radLabel();
 radEl.addEventListener("input",()=>{ state.radius=+radEl.value; radLabel(); save(); });
 document.getElementById("edition").textContent=EDITION;
