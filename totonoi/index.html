@@ -269,7 +269,8 @@
   .rtrack span.g{background:var(--gold)}
   .btn.ink{background:var(--text);color:var(--paper);border-color:var(--text);width:100%}
   .rnote{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6}
-  .rnote button{background:none;border:none;color:var(--mid);font-family:inherit;font-size:10px;text-decoration:underline;padding:0;flex-shrink:0}
+  .rnote button{background:none;border:none;color:var(--mid);font-family:inherit;font-size:10px;text-decoration:underline;flex-shrink:0;
+    display:inline-flex;align-items:center;min-height:44px;padding:0 4px 0 14px;margin:-14px -4px -14px 0}  /* 見た目は静かなリンクのまま、タップ領域は44px（チャッピー検品） */
   .bathrow{display:flex;gap:6px;margin-top:8px}
   .bathrow .btn{flex:1;padding:9px 4px;font-size:12.5px}
   .bathrow .btn.on{background:var(--text);color:var(--paper);border-color:var(--text)}
@@ -1855,6 +1856,10 @@ const CHIPS=[["single","シングル",f=>f.wmin!=null&&f.wmin<10],["night","深�
   ["private","貸切",f=>f.k==="private"||f.k==="capsule"],["yoyaku","予約制",f=>f.y],["luxe","¥3,000以上",f=>f.fee!=null&&f.fee>=3000],
   ["want","★行きたい",f=>!!state.wants[f.id]]];
 let chipOn=new Set(), findPos=null, findReg=null, findPref=null;
+/* めぐり帳の「次の湯を探す」だけが立てる一時フィルタ：その県の未訪問の枠（入れる枠）だけ。
+   チップ「めぐり対象」で外せる。地方・県を変える／地図をリセットしても外れる（通常の探すに戻る） */
+let findRally=null;
+function rallyPass(f){ return !findRally||(f.pref===findRally&&!!f.rank&&bathOK(f)&&!visited(f.id)); }
 function chipPass(f){ for(const [k,,fn] of CHIPS) if(chipOn.has(k)&&!fn(f)) return false; return true; }
 function regKeys(name){ const r=REGIONS.find(r=>r[0]===name); return r?r[1]:[]; }
 function areaPass(f){ return findPref? f.pref===findPref : findReg? regKeys(findReg).includes(f.pref) : true; }
@@ -1872,22 +1877,26 @@ function areaZoom(){
   else if(findReg) zoomTo(regKeys(findReg));
   else { view=null; renderMap(); }
 }
-selReg.addEventListener("change",()=>{ findReg=selReg.value||null; findPref=null; fillPrefSel(); areaZoom(); renderFind(); });
-selPref.addEventListener("change",()=>{ findPref=selPref.value||null; areaZoom(); renderFind(); });
+selReg.addEventListener("change",()=>{ findReg=selReg.value||null; findPref=null; findRally=null; renderChips(); fillPrefSel(); areaZoom(); renderFind(); });
+selPref.addEventListener("change",()=>{ findPref=selPref.value||null; findRally=null; renderChips(); areaZoom(); renderFind(); });
 const FTICON={single:"ft-snow",night:"ft-moon",sento:"ft-oke",yoyaku:"ft-key"};
 function renderChips(){
-  document.getElementById("chips").innerHTML=CHIPS.map(([k,l])=>
+  document.getElementById("chips").innerHTML=(findRally?`<button class="chip on" data-c="__rally">めぐり対象 ×</button>`:"")+CHIPS.map(([k,l])=>
     `<button class="chip ${chipOn.has(k)?"on":""}" data-c="${k}">${FTICON[k]?`<span class="ft" style="--ft:url(art/${FTICON[k]}.webp)"></span>`:""}${l}</button>`).join("");
   document.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.c;
-    chipOn.has(k)?chipOn.delete(k):chipOn.add(k);
+    if(k==="__rally") findRally=null;
+    else chipOn.has(k)?chipOn.delete(k):chipOn.add(k);
     renderChips(); renderFind(); renderMap();
   }));
 }
 function renderFind(){
-  const pool=FACILITIES.filter(f=>chipPass(f)&&areaPass(f));
+  const pool=FACILITIES.filter(f=>chipPass(f)&&areaPass(f)&&rallyPass(f));
   let items, title;
-  if(findPos){
+  if(findRally&&!findPos){
+    items=pool.map(f=>({f,d:null})).sort((a,b)=>a.f.rank-b.f.rank).slice(0,30);
+    title=`めぐり対象　あと${pool.length}湯`;
+  }else if(findPos){
     items=pool.map(f=>({f,d:distance(findPos,f)})).sort((a,b)=>a.d-b.d).slice(0,30);
     title="近い順";
   }else{
@@ -1895,7 +1904,7 @@ function renderFind(){
     title="イキタイ順（現在地で並べ替え可）";
   }
   const area=findPref?(PREF[findPref]?.label||""):findReg||"";
-  document.getElementById("findTitle").textContent=(area?area+"・":"")+title+`　${pool.length}湯`;
+  document.getElementById("findTitle").textContent=(area?area+"・":"")+title+(findRally&&!findPos?"":`　${pool.length}湯`);
   document.getElementById("findlist").innerHTML=items.map(({f,d})=>{
     const on=visited(f.id);
     const at=[f.wmin!=null&&f.wmin<10?"snow":null,f.n?"moon":null,f.k==="sento"?"oke":null,f.y?"key":null]
@@ -2017,7 +2026,7 @@ function renderMap(){
     }
     s+=`</g>`;
   }
-  const pass=f=>(chipOn.size===0||chipPass(f))&&areaPass(f);
+  const pass=f=>(chipOn.size===0||chipPass(f))&&areaPass(f)&&rallyPass(f);
   for(const f of FACILITIES){
     if(!pass(f)) continue;
     const on=visited(f.id), want=!!state.wants[f.id], x=px(f), y=py(f);
@@ -2110,7 +2119,7 @@ function pickPin(e,svg){
   }).join(""));
 }
 document.getElementById("mapReset").addEventListener("click",()=>{
-  findReg=null; findPref=null; selReg.value=""; fillPrefSel();
+  findReg=null; findPref=null; findRally=null; renderChips(); selReg.value=""; fillPrefSel();
   view=null; renderMap(); renderFind();
 });
 
@@ -2229,8 +2238,9 @@ window.__rally=(pk,on)=>{ if(on) state.rally[pk]=1; else delete state.rally[pk];
 window.__rallyFind=pk=>{
   const reg=(REGIONS.find(([,keys])=>keys.includes(pk))||[null])[0];
   findReg=reg; selReg.value=reg||""; fillPrefSel(); findPref=pk; selPref.value=pk;
+  findRally=pk; renderChips();   /* 未訪問の枠だけに絞る一時フィルタ（チップで外せる） */
   document.querySelector('nav button[data-v="find"]').click();
-  areaZoom(); renderFind();
+  areaZoom(); renderFind(); renderMap();
 };
 
 /* ---------- 記録 ---------- */
