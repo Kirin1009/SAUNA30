@@ -1,0 +1,18 @@
+/* Existing constitution v1.2. No new product tokens proposed. */
+:root {
+  --bg:#F5EEDF; --paper:#FBF6EA; --paper2:#F3ECDA; --paper-hi:#FFFEF8;
+  --ink:#4A3B2E; --ink-mid:#6E5D4B; --ink-mute:#A08C72;
+  --rule:#E4D9C0; --rule2:#D3C5A4; --stamp:#C8402F;
+  --stamp-ghost:rgba(200,64,47,.5); --gold:#C7973F;
+  --water:#5E88A0; --sauna:#C75B47; --ok:#6F9A63;
+  --map-paper:#FBF1DC; --map-land:#C7A876; --lake:#C6DCDF; --plank:#C29055;
+  --font-mincho:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+  --font-round:ui-rounded,"Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
+  --font-mono:ui-monospace,monospace;
+  --t-micro:9px; --t-caption:10.5px; --t-body-sm:12px; --t-body:13.5px;
+  --t-lead:15px; --t-heading-sm:22px; --t-heading:32px; --t-display:46px;
+  --sp-xs:3px; --sp-sm:6px; --sp-md:9px; --sp-lg:15px; --sp-xl:24px; --sp-2xl:36px;
+  --r-paper:10px; --r-control:8px; --r-chip:999px;
+  --sh-paper:0 1px 3px rgba(74,59,46,.15);
+  --sh-stamp:0 3px 10px rgba(74,59,46,.3);
+}

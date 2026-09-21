@@ -1,0 +1,42 @@
+{
+  "viewports": [
+    {
+      "id": "01-stamp",
+      "width": 390,
+      "height": 692,
+      "scroll": 692
+    },
+    {
+      "id": "02-shelf",
+      "width": 390,
+      "height": 692,
+      "scroll": 692
+    },
+    {
+      "id": "03-ranking",
+      "width": 390,
+      "height": 692,
+      "scroll": 692
+    },
+    {
+      "id": "04-find",
+      "width": 390,
+      "height": 692,
+      "scroll": 692
+    },
+    {
+      "id": "05-facility",
+      "width": 390,
+      "height": 692,
+      "scroll": 692
+    }
+  ],
+  "interactions": [
+    "wellness: 0, 5, half-step and unset are independent",
+    "ranking: five rows, axis changes winner, old scores isolated",
+    "find: name, empty result, outdoor filter",
+    "no localStorage or IndexedDB writes"
+  ],
+  "externalRequests": [],
+  "errors": []
+}
