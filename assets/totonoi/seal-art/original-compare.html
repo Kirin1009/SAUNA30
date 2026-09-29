@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>原寸と縮小 / 施設印比較</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f0e6;color:#302c26;font-family:"Hiragino Mincho ProN","Yu Mincho",serif}main{padding:0 24px;width:2146px;position:relative}header{position:absolute;left:1310px;top:400px;width:812px;border-top:3px solid #302c26}h1{font-size:24px;margin:14px 0 12px}p,figcaption{font-family:"Hiragino Kaku Gothic ProN",sans-serif;font-size:14px}p{margin:0;line-height:1.8}.row{display:flex;gap:32px;align-items:flex-start}figure{margin:0}figcaption{height:32px}figure:first-child figcaption{display:none}img{display:block;object-fit:contain}nav{position:absolute;left:1310px;top:560px;padding:12px 0}a{color:inherit;margin-right:24px}
+</style>
+<main><header><h1 id="name"></h1><p>左は原寸1254px。右は棚156px・帳296px・完了296px。比較台紙は横スクロールで原寸維持。</p></header><div class="row" id="row"></div><nav><a href="?facility=g4">新岐阜</a><a href="?facility=a9">竜泉寺</a><a href="?facility=g6">みのり</a><a href="compare.html">三印の小画面比較</a></nav></main>
+<script>
+const facilities={g4:['新岐阜サウナ / 承認済み基準','ref-shin-gifu-sauna.png'],a9:['竜泉寺の湯 名古屋守山本店 / 未承認試作','a9-ryusenji-moriyama.png'],g6:['湯どころ みのり / 未承認試作','g6-minori.png']};
+const [name,file]=facilities[new URLSearchParams(location.search).get('facility')]||facilities.g4;
+document.querySelector('#name').textContent=name;
+for(const [label,size] of [['原寸',1254],['棚',156],['帳',296],['押印完了',296]]){const figure=document.createElement('figure');const caption=document.createElement('figcaption');caption.textContent=`${label} / ${size} × ${size}px`;const img=document.createElement('img');img.src=file;img.alt=name;img.width=img.height=size;figure.append(caption,img);document.querySelector('#row').append(figure);}
+</script></html>
