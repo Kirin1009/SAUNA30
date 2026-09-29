@@ -1,0 +1,1080 @@
+{
+  "date": "2026-09-29T15:24:55.855Z",
+  "screens": [
+    {
+      "theme": "a",
+      "screen": "shelf",
+      "widths": [
+        {
+          "width": 320,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 219
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 122
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 120
+            }
+          ]
+        },
+        {
+          "width": 375,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 248
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 146
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 143
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 248
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 153
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 151
+            }
+          ]
+        },
+        {
+          "width": 414,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 248
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 166
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 163
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 248
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 201
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 198
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "a",
+      "screen": "rank",
+      "widths": [
+        {
+          "width": 320,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 158
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 82
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 82
+            }
+          ]
+        },
+        {
+          "width": 375,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 158
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 92
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 92
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 158
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 92
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 92
+            }
+          ]
+        },
+        {
+          "width": 414,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 158
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 92
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 92
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 158
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 92
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 92
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "b",
+      "screen": "shelf",
+      "widths": [
+        {
+          "width": 320,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 109
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 109
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 109
+            }
+          ]
+        },
+        {
+          "width": 375,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 128
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 128
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 128
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 135
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 135
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 135
+            }
+          ]
+        },
+        {
+          "width": 414,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 148
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 148
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 148
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 875,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 182
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 182
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 182
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "b",
+      "screen": "rank",
+      "widths": [
+        {
+          "width": 320,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 154
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 115
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 115
+            }
+          ]
+        },
+        {
+          "width": 375,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 154
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 115
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 115
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 154
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 115
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 115
+            }
+          ]
+        },
+        {
+          "width": 414,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 154
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 115
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 115
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 154
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 115
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 115
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "c",
+      "screen": "shelf",
+      "widths": [
+        {
+          "width": 320,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 254
+            },
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 64
+            }
+          ]
+        },
+        {
+          "width": 375,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 286
+            },
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 64
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 290
+            },
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 64
+            }
+          ]
+        },
+        {
+          "width": 414,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 290
+            },
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 64
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 290
+            },
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 64
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 64
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "c",
+      "screen": "rank",
+      "widths": [
+        {
+          "width": 320,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 202
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 66
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 66
+            }
+          ]
+        },
+        {
+          "width": 375,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 212
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 66
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 66
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 212
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 66
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 66
+            }
+          ]
+        },
+        {
+          "width": 414,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 212
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 66
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 66
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "overflow": false,
+          "outside": [],
+          "clipped": [],
+          "height": 844,
+          "images": [
+            {
+              "src": "images/ref-shin-gifu-sauna.png",
+              "loaded": true,
+              "width": 212
+            },
+            {
+              "src": "images/a9-ryusenji-moriyama.png",
+              "loaded": true,
+              "width": 66
+            },
+            {
+              "src": "images/g6-minori.png",
+              "loaded": true,
+              "width": 66
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "interactions": [
+    "a/shelf: image modal, Escape and focus return",
+    "a: ranking axes reorder fixture, legacy stays separate",
+    "a/rank: image modal, Escape and focus return",
+    "b/shelf: image modal, Escape and focus return",
+    "b: ranking axes reorder fixture, legacy stays separate",
+    "b/rank: image modal, Escape and focus return",
+    "c/shelf: image modal, Escape and focus return",
+    "c: ranking axes reorder fixture, legacy stays separate",
+    "c/rank: image modal, Escape and focus return",
+    "gallery: thumbnail selection updates art, title and position",
+    "shelf/ranking navigation works"
+  ],
+  "contrast": [
+    {
+      "theme": "a",
+      "pair": "ink/paper",
+      "ratio": 13.078380650311013,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "muted/paper",
+      "ratio": 6.6486773152203025,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "ink/surface",
+      "ratio": 13.87819564782845,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "muted/surface",
+      "ratio": 7.055280546350503,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "accent-ink/accent",
+      "ratio": 6.999104998033518,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "focus/paper",
+      "ratio": 6.929779583163584,
+      "min": 3
+    },
+    {
+      "theme": "a",
+      "pair": "rendered heading/screen",
+      "ratio": 13.078380650311013,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "ink/paper",
+      "ratio": 11.572187461500523,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "muted/paper",
+      "ratio": 6.9960359829978955,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "ink/surface",
+      "ratio": 14.312805051294855,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "muted/surface",
+      "ratio": 8.652892937452378,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "accent-ink/accent",
+      "ratio": 9.284235332603352,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "focus/paper",
+      "ratio": 5.595885852329772,
+      "min": 3
+    },
+    {
+      "theme": "b",
+      "pair": "ink/wood",
+      "ratio": 5.942005024773497,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "muted/wood-lit",
+      "ratio": 5.52984859288068,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "rendered heading/screen",
+      "ratio": 11.572187461500523,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "ink/paper",
+      "ratio": 14.981859542732433,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "muted/paper",
+      "ratio": 9.01349435285082,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "ink/surface",
+      "ratio": 12.0989306274794,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "muted/surface",
+      "ratio": 7.27904587379611,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "accent-ink/accent",
+      "ratio": 10.22635719783665,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "focus/paper",
+      "ratio": 11.66026907112157,
+      "min": 3
+    },
+    {
+      "theme": "c",
+      "pair": "rendered heading/screen",
+      "ratio": 14.981859542732433,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "ink/paper",
+      "ratio": 13.078380650311013,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "muted/paper",
+      "ratio": 6.6486773152203025,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "ink/surface",
+      "ratio": 13.87819564782845,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "muted/surface",
+      "ratio": 7.055280546350503,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "accent-ink/accent",
+      "ratio": 6.999104998033518,
+      "min": 4.5
+    },
+    {
+      "theme": "a",
+      "pair": "focus/paper",
+      "ratio": 6.929779583163584,
+      "min": 3
+    },
+    {
+      "theme": "a",
+      "pair": "rendered heading/screen",
+      "ratio": 13.078380650311013,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "ink/paper",
+      "ratio": 11.572187461500523,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "muted/paper",
+      "ratio": 6.9960359829978955,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "ink/surface",
+      "ratio": 14.312805051294855,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "muted/surface",
+      "ratio": 8.652892937452378,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "accent-ink/accent",
+      "ratio": 9.284235332603352,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "focus/paper",
+      "ratio": 5.595885852329772,
+      "min": 3
+    },
+    {
+      "theme": "b",
+      "pair": "ink/wood",
+      "ratio": 5.942005024773497,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "muted/wood-lit",
+      "ratio": 5.52984859288068,
+      "min": 4.5
+    },
+    {
+      "theme": "b",
+      "pair": "rendered heading/screen",
+      "ratio": 11.572187461500523,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "ink/paper",
+      "ratio": 14.981859542732433,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "muted/paper",
+      "ratio": 9.01349435285082,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "ink/surface",
+      "ratio": 12.0989306274794,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "muted/surface",
+      "ratio": 7.27904587379611,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "accent-ink/accent",
+      "ratio": 10.22635719783665,
+      "min": 4.5
+    },
+    {
+      "theme": "c",
+      "pair": "focus/paper",
+      "ratio": 11.66026907112157,
+      "min": 3
+    },
+    {
+      "theme": "c",
+      "pair": "rendered heading/screen",
+      "ratio": 14.981859542732433,
+      "min": 4.5
+    }
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "storageWrites": []
+}

@@ -1,0 +1,9 @@
+{
+  "date": "2026-09-30",
+  "scope": "Three alternative shelf/ranking prototypes, not a production design-system change",
+  "stack": "Existing standalone HTML/CSS/JS prototypes; no build step",
+  "baseline": "Cream paper, local Japanese fonts, text-led headings and generated round seals",
+  "assets": "Three adopted PNGs from PR 69, copied without changing their bytes",
+  "constraints": ["No totonoi changes", "No external fonts or display dependencies", "Six screens first; five-screen expansion after selection"],
+  "themeStatus": "A/B/C are intentionally different alternatives, none selected"
+}

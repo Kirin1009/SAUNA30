@@ -1,0 +1,53 @@
+/* Proposal-only tokens. No production design-system changes. */
+:root {
+  --font-body: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-brand: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+  --font-number: "Avenir Next", "Hiragino Kaku Gothic ProN", sans-serif;
+  --color-paper: oklch(96% .023 85);
+  --color-surface: oklch(98% .018 85);
+  --color-ground: oklch(91% .028 80);
+  --color-ink: oklch(28% .025 60);
+  --color-muted: oklch(45% .03 60);
+  --color-rule: oklch(79% .035 80);
+  --color-accent: oklch(47% .16 30);
+  --color-accent-ink: oklch(98% .018 85);
+  --color-focus: oklch(43% .12 240);
+  --color-shadow: oklch(22% .03 60 / .22);
+  --color-shadow-deep: oklch(16% .02 60 / .5);
+  --color-glint: oklch(99% .01 80 / .72);
+  --color-grain: oklch(40% .05 65 / .07);
+  --color-wood: oklch(70% .077 65);
+  --color-wood-edge: oklch(53% .069 60);
+  --color-wood-lit: oklch(82% .07 70);
+  --color-clear: transparent;
+  --space-xs: 4px; --space-sm: 8px; --space-md: 16px;
+  --space-lg: 24px; --space-xl: 32px;
+  --text-xs: 11px; --text-sm: 13px; --text-body: 15px;
+  --text-title: 21px; --text-large: 32px;
+  --radius-control: 8px;
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --dur-short: 220ms;
+}
+[data-theme="b"] {
+  --color-paper: oklch(89% .04 75);
+  --color-ground: oklch(77% .07 65);
+  --color-surface: oklch(96% .03 80);
+  --color-rule: oklch(71% .06 65);
+  --color-accent: oklch(38% .08 230);
+  --color-ink: oklch(25% .035 55);
+  --color-muted: oklch(39% .035 55);
+}
+[data-theme="c"] {
+  --color-paper: oklch(23% .035 240);
+  --color-ground: oklch(18% .03 240);
+  --color-surface: oklch(30% .033 240);
+  --color-ink: oklch(96% .023 85);
+  --color-muted: oklch(80% .025 85);
+  --color-rule: oklch(45% .03 240);
+  --color-accent: oklch(84% .09 75);
+  --color-accent-ink: oklch(23% .035 240);
+  --color-focus: oklch(88% .1 80);
+  --color-shadow: oklch(9% .02 240 / .5);
+  --color-glint: oklch(78% .05 85 / .15);
+  --color-grain: oklch(82% .03 85 / .03);
+}
